@@ -4,19 +4,6 @@ Plataforma internacional dedicada al mundo de la vela, de EXISSAILING LLC. Reún
 
 App móvil para iOS y Android (con versión web) construida con **React Native (Expo)** y un backend en **Django**.
 
-## Estado
-
-Plan de 8 semanas para la Fase 1 (MVP).
-
-| Semana | Contenido | Estado |
-|---|---|---|
-| 1 | Registro, login (email, Google, Apple), verificación de email, recuperación de contraseña, navegación con tema oscuro, español e inglés | ✅ |
-| 2 | Perfil de navegante, perfil de embarcación, panel de administración, subida de fotos | ✅ |
-| 3–4 | Calendario de regatas, páginas de evento, resultados, noticias | Pendiente |
-| 5–6 | Directorio de marinas, profesionales y meteorología semanal | Pendiente |
-| 7 | Planeta 3D, contenido educativo y membresía Premium | Pendiente |
-| 8 | Pruebas y publicación en App Store, Google Play y web | Pendiente |
-
 ## Estructura
 
 ```
