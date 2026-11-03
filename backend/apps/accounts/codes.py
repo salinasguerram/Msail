@@ -106,3 +106,7 @@ def _send(user, purpose, code):
     )
     message.attach_alternative(html, "text/html")
     message.send()
+
+    if settings.EMAIL_BACKEND.endswith("console.EmailBackend"):
+        # Modo local: el email no sale de la PC. Se deja el código bien visible en la terminal de Django.
+        print(f"\n{'=' * 60}\n  MSAIL (modo local, sin envio de emails)\n  Codigo para {user.email}: {code}\n{'=' * 60}\n", flush=True)

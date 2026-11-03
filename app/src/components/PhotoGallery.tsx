@@ -25,10 +25,11 @@ export function PhotoGallery({ photos, editable = false, uploading = false, onAd
 
   async function run(action?: (photo: Photo) => Promise<void> | void) {
     if (!open || !action) return;
+    const photo = open;
+    setOpen(null);
     setBusy(true);
     try {
-      await action(open);
-      setOpen(null);
+      await action(photo);
     } finally {
       setBusy(false);
     }

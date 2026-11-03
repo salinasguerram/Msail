@@ -7,6 +7,7 @@ export type CrewMember = {
   user_id: number | null;
   name: string;
   display_name: string;
+  avatar: string | null;
   role: SailingRole | '';
   is_active: boolean;
 };
@@ -82,7 +83,8 @@ export const createBoat = (data: BoatInput) => api<Boat>('/boats/mine/', { metho
 export const updateBoat = (id: number, data: BoatInput) => api<Boat>(`/boats/${id}/`, { method: 'PATCH', body: data });
 export const deleteBoat = (id: number) => api(`/boats/${id}/`, { method: 'DELETE' });
 
-export const addCrew = (boatId: number, data: { name: string; role: SailingRole | '' }) =>
+/** Con `user_id` se vincula a un navegante de MSAIL; si no, alcanza con el nombre. */
+export const addCrew = (boatId: number, data: { user_id?: number; name?: string; role: SailingRole | '' }) =>
   api<CrewMember>(`/boats/${boatId}/crew/`, { method: 'POST', body: data });
 export const updateCrew = (boatId: number, id: number, data: Partial<Pick<CrewMember, 'name' | 'role' | 'is_active'>>) =>
   api<CrewMember>(`/boats/${boatId}/crew/${id}/`, { method: 'PATCH', body: data });

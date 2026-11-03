@@ -9,6 +9,7 @@ dj-database-url==3.1.2
 Django==5.2.19
 django-cors-headers==4.9.0
 django-storages==1.14.6
+django-unfold==0.110.1
 djangorestframework==3.18.3
 djangorestframework_simplejwt==5.5.1
 google-auth==2.62.1

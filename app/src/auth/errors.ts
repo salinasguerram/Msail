@@ -5,6 +5,11 @@ import { ApiError, NetworkError } from '@/api/client';
 /** Convierte un error de la API en un mensaje para mostrar arriba del formulario. */
 export function errorMessage(error: unknown, t: TFunction): string {
   if (error instanceof NetworkError) return t('auth.networkError');
+  if (error instanceof ApiError && error.status === 429) {
+    // Se superó el límite de intentos de esa acción: se muestra cuánto falta.
+    const seconds = Number((error.data as { retry_after?: number } | null)?.retry_after);
+    return seconds > 0 ? t('auth.throttledWait', { seconds }) : t('auth.throttled');
+  }
   if (error instanceof ApiError && error.summary) return error.summary;
   return t('auth.genericError');
 }

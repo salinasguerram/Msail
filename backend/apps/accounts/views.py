@@ -51,10 +51,12 @@ def revoke_sessions(user):
 class AuthView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "auth"
+    throttle_scope = "login"
 
 
 class RegisterView(AuthView):
+    throttle_scope = "register"
+
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -76,7 +78,7 @@ class LoginView(AuthView):
 
 class RefreshView(TokenRefreshView):
     throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "auth"
+    throttle_scope = "refresh"
 
 
 class LogoutView(APIView):
@@ -103,7 +105,7 @@ class MeView(generics.RetrieveUpdateAPIView):
 class VerifyEmailView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "auth"
+    throttle_scope = "verify_code"
 
     def post(self, request):
         serializer = VerifyEmailSerializer(data=request.data)
@@ -123,7 +125,7 @@ class VerifyEmailView(APIView):
 class ResendVerificationView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "auth"
+    throttle_scope = "send_code"
 
     def post(self, request):
         if request.user.email_verified:
@@ -137,6 +139,8 @@ class ResendVerificationView(APIView):
 
 class PasswordResetRequestView(AuthView):
     """Siempre responde lo mismo, exista o no la cuenta, para no revelar qué emails están registrados."""
+
+    throttle_scope = "send_code"
 
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
@@ -152,6 +156,7 @@ class PasswordResetRequestView(AuthView):
 
 
 class PasswordResetConfirmView(AuthView):
+    throttle_scope = "verify_code"
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

@@ -1,7 +1,10 @@
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Count, Min, Q
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from apps.geo.models import Region
 from apps.sailing.models import BoatClass, Club
 
 from .models import ProfilePhoto, RaceResult, SailorProfile, SailingRole
@@ -39,6 +42,37 @@ class SailorBoatField(serializers.PrimaryKeyRelatedField):
             return Boat.objects.none()
         user = request.user
         return Boat.objects.filter(Q(owner=user) | Q(crew__user=user)).distinct()
+
+
+class RegionSummarySerializer(serializers.ModelSerializer):
+    name = serializers.CharField(read_only=True)
+    country = serializers.CharField(source="country.iso_code", read_only=True)
+
+    class Meta:
+        model = Region
+        fields = ["id", "name", "slug", "country"]
+
+
+def avatar_url(user, request):
+    profile = getattr(user, "sailor_profile", None)
+    if not profile or not profile.avatar:
+        return None
+    url = profile.avatar.url
+    return request.build_absolute_uri(url) if request and not url.startswith("http") else url
+
+
+class CrewCandidateSerializer(serializers.ModelSerializer):
+    """Lo que se muestra al encontrar a alguien por email: nombre y foto."""
+
+    user_id = serializers.IntegerField(source="id", read_only=True)
+    avatar = serializers.SerializerMethodField()
+
+    class Meta:
+        model = get_user_model()
+        fields = ["user_id", "first_name", "last_name", "avatar"]
+
+    def get_avatar(self, user):
+        return avatar_url(user, self.context.get("request"))
 
 
 class RaceResultSerializer(serializers.ModelSerializer):
@@ -90,6 +124,10 @@ class SailorProfileSerializer(serializers.ModelSerializer):
     home_club_id = serializers.PrimaryKeyRelatedField(
         source="home_club", queryset=Club.objects.all(), write_only=True, required=False, allow_null=True
     )
+    region = RegionSummarySerializer(read_only=True)
+    region_id = serializers.PrimaryKeyRelatedField(
+        source="region", queryset=Region.objects.all(), write_only=True, required=False, allow_null=True
+    )
     roles = serializers.ListField(
         child=serializers.ChoiceField(choices=SailingRole.choices), required=False, max_length=len(SailingRole)
     )
@@ -111,6 +149,8 @@ class SailorProfileSerializer(serializers.ModelSerializer):
             "avatar",
             "bio",
             "city",
+            "region",
+            "region_id",
             "home_club",
             "home_club_id",
             "experience_level",
@@ -128,6 +168,10 @@ class SailorProfileSerializer(serializers.ModelSerializer):
         return list(dict.fromkeys(value))  # sin repetidos, manteniendo el orden
 
     def validate(self, attrs):
+        region = attrs.get("region")
+        country = self.instance.user.country if self.instance else None
+        if region and country and region.country_id != country.id:
+            raise serializers.ValidationError({"region_id": [_("La región no pertenece a tu país.")]})
         run_model_clean(SailorProfile, attrs, self.instance)
         return attrs
 
@@ -145,4 +189,36 @@ class PublicSailorProfileSerializer(SailorProfileSerializer):
     """Lo que ve otro usuario: sin los datos de configuración del perfil."""
 
     class Meta(SailorProfileSerializer.Meta):
-        fields = [f for f in SailorProfileSerializer.Meta.fields if f not in ("home_club_id", "is_public")]
+        fields = [f for f in SailorProfileSerializer.Meta.fields if f not in ("home_club_id", "region_id", "is_public")]
+
+
+class ResultDetailSerializer(RaceResultSerializer):
+    """Un resultado visto por cualquiera: quién lo logró y con qué barco."""
+
+    sailor = serializers.SerializerMethodField()
+    boat_detail = serializers.SerializerMethodField()
+    is_mine = serializers.SerializerMethodField()
+
+    class Meta(RaceResultSerializer.Meta):
+        fields = RaceResultSerializer.Meta.fields + ["sailor", "boat_detail", "is_mine"]
+
+    def get_sailor(self, result):
+        user = result.profile.user
+        return {
+            "user_id": user.id,
+            "name": user.get_full_name() or user.email.split("@")[0],
+            "avatar": avatar_url(user, self.context.get("request")),
+        }
+
+    def get_boat_detail(self, result):
+        boat = result.boat
+        if not boat:
+            return None
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        visible = boat.is_public or (user and user.is_authenticated and (boat.owner_id == user.id or boat.crew.filter(user=user).exists()))
+        return {"id": boat.id, "name": boat.name, "sail_number": boat.sail_number} if visible else None
+
+    def get_is_mine(self, result):
+        request = self.context.get("request")
+        return bool(request and request.user.is_authenticated and result.profile.user_id == request.user.id)

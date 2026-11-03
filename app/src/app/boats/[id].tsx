@@ -4,50 +4,29 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { addCrew, formatMeters, getBoat, removeCrew, type Boat } from '@/api/boats';
-import { deleteBoatPhoto, pickImage, setBoatCover, uploadBoatPhoto } from '@/api/photos';
-import { SAILING_ROLES, type SailingRole } from '@/api/profiles';
+import { formatMeters, getBoat, removeCrew, type Boat, type CrewMember } from '@/api/boats';
+import { deleteBoatPhoto, pickImage, setBoatCover, uploadBoatPhoto, type Photo } from '@/api/photos';
 import { className, useBoatClasses } from '@/api/useBoatClasses';
-import { errorMessage, fieldError } from '@/auth/errors';
+import { errorMessage } from '@/auth/errors';
+import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
-import { Chip, ChipGroup } from '@/components/Chip';
-import { confirmAction } from '@/components/FormSection';
+import { CoverPicker } from '@/components/CoverPicker';
+import { CrewSearch } from '@/components/CrewSearch';
+import { useDialogs } from '@/components/Dialogs';
 import { PhotoGallery } from '@/components/PhotoGallery';
 import { Screen } from '@/components/Screen';
-import { TextField } from '@/components/TextField';
 import { colors, radius, spacing, typography } from '@/theme';
 
 export default function BoatDetailScreen() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const classes = useBoatClasses();
+  const { confirm, notify } = useDialogs();
   const [boat, setBoat] = useState<Boat | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [uploading, setUploading] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
-
-  async function addPhoto() {
-    if (!boat) return;
-    setPhotoError(null);
-    const asset = await pickImage();
-    if (!asset) return;
-    setUploading(true);
-    try {
-      await uploadBoatPhoto(boat.id, asset);
-      load();
-    } catch (e) {
-      setPhotoError(errorMessage(e, t));
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function removePhoto(photoId: number) {
-    if (!boat || !(await confirmAction(t('photos.confirmDelete'), t('photos.delete'), t('common.cancel')))) return;
-    await deleteBoatPhoto(boat.id, photoId);
-    load();
-  }
+  const [choosingCover, setChoosingCover] = useState(false);
 
   const load = useCallback(() => {
     setError(null);
@@ -55,6 +34,53 @@ export default function BoatDetailScreen() {
   }, [id]);
 
   useFocusEffect(load);
+
+  async function addPhoto() {
+    if (!boat) return;
+    const asset = await pickImage();
+    if (!asset) return;
+    setUploading(true);
+    try {
+      await uploadBoatPhoto(boat.id, asset);
+      notify(t('photos.added'));
+      load();
+    } catch (e) {
+      notify(errorMessage(e, t), 'error');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removePhoto(photo: Photo) {
+    if (!boat) return;
+    const ok = await confirm({
+      title: t('photos.confirmDelete'),
+      message: photo.is_cover ? t('photos.confirmDeleteCover') : undefined,
+      confirmLabel: t('photos.delete'),
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteBoatPhoto(boat.id, photo.id);
+      notify(t('photos.deleted'));
+      load();
+    } catch (e) {
+      notify(errorMessage(e, t), 'error');
+    }
+  }
+
+  async function makeCover(photo: Photo) {
+    if (!boat) return;
+    setChoosingCover(false);
+    if (photo.is_cover) return;
+    try {
+      await setBoatCover(boat.id, photo.id);
+      notify(t('photos.coverUpdated'));
+      load();
+    } catch (e) {
+      notify(errorMessage(e, t), 'error');
+    }
+  }
 
   if (!boat) {
     return (
@@ -89,7 +115,18 @@ export default function BoatDetailScreen() {
 
   return (
     <Screen>
-      {boat.cover ? <Image source={{ uri: boat.cover }} style={styles.hero} accessibilityLabel={boat.name} /> : null}
+      {boat.cover ? (
+        <View>
+          <Image source={{ uri: boat.cover }} style={styles.hero} accessibilityLabel={boat.name} />
+          {boat.is_owner && boat.photos.length > 1 ? (
+            <Pressable accessibilityRole="button" onPress={() => setChoosingCover(true)} style={styles.coverButton}>
+              <Ionicons name="images-outline" size={16} color="#fff" />
+              <Text style={styles.coverButtonText}>{t('photos.changeCover')}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+
       <Card style={styles.header}>
         <View style={styles.icon}>
           <Ionicons name="boat" size={30} color={colors.primary} />
@@ -140,20 +177,23 @@ export default function BoatDetailScreen() {
 
       {(boat.photos.length > 0 || boat.is_owner) && (
         <Card>
-          <Text style={typography.label}>{t('photos.title')}</Text>
+          <View style={styles.cardHeader}>
+            <Text style={typography.label}>{t('photos.title')}</Text>
+            {boat.is_owner && boat.photos.length > 1 ? (
+              <Pressable accessibilityRole="button" onPress={() => setChoosingCover(true)} hitSlop={8}>
+                <Text style={styles.link}>{t('photos.changeCover')}</Text>
+              </Pressable>
+            ) : null}
+          </View>
           {boat.photos.length === 0 ? <Text style={typography.caption}>{t('photos.emptyBoat')}</Text> : null}
           <PhotoGallery
             photos={boat.photos}
             editable={boat.is_owner}
             uploading={uploading}
             onAdd={addPhoto}
-            onDelete={(photo) => removePhoto(photo.id)}
-            onSetCover={async (photo) => {
-              await setBoatCover(boat.id, photo.id);
-              load();
-            }}
+            onDelete={removePhoto}
+            onSetCover={makeCover}
           />
-          {photoError ? <Text style={{ color: colors.danger }}>{photoError}</Text> : null}
         </Card>
       )}
 
@@ -165,7 +205,12 @@ export default function BoatDetailScreen() {
           <Text style={typography.caption}>{t('boats.noHistory')}</Text>
         ) : (
           boat.history.map((entry) => (
-            <View key={entry.id} style={styles.result}>
+            <Pressable
+              key={entry.id}
+              accessibilityRole="button"
+              onPress={() => router.push({ pathname: '/results/[id]', params: { id: String(entry.id) } })}
+              style={({ pressed }) => [styles.result, pressed && { opacity: 0.7 }]}
+            >
               <View style={[styles.position, entry.position <= 3 && styles.podium]}>
                 <Text style={[styles.positionText, entry.position <= 3 && { color: '#fff' }]}>{entry.position}º</Text>
               </View>
@@ -179,41 +224,35 @@ export default function BoatDetailScreen() {
                     .join(' · ')}
                 </Text>
               </View>
-            </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </Pressable>
           ))
         )}
       </Card>
+
+      <CoverPicker visible={choosingCover} photos={boat.photos} onSelect={makeCover} onClose={() => setChoosingCover(false)} />
     </Screen>
   );
 }
 
 function CrewCard({ boat, onChange }: { boat: Boat; onChange: () => void }) {
   const { t } = useTranslation();
-  const [name, setName] = useState('');
-  const [role, setRole] = useState<SailingRole | ''>('');
-  const [adding, setAdding] = useState(false);
-  const [error, setError] = useState<unknown>(null);
+  const { confirm, notify } = useDialogs();
 
-  async function add() {
-    if (!name.trim()) return;
-    setAdding(true);
-    setError(null);
+  async function remove(member: CrewMember) {
+    const ok = await confirm({
+      title: t('crew.confirmRemove', { name: member.display_name }),
+      confirmLabel: t('boats.removeCrew'),
+      destructive: true,
+    });
+    if (!ok) return;
     try {
-      await addCrew(boat.id, { name: name.trim(), role });
-      setName('');
-      setRole('');
+      await removeCrew(boat.id, member.id);
+      notify(t('crew.removed', { name: member.display_name }));
       onChange();
     } catch (e) {
-      setError(e);
-    } finally {
-      setAdding(false);
+      notify(errorMessage(e, t), 'error');
     }
-  }
-
-  async function remove(memberId: number) {
-    if (!(await confirmAction(t('boats.removeCrew'), t('boats.removeCrew'), t('common.cancel')))) return;
-    await removeCrew(boat.id, memberId).catch(setError);
-    onChange();
   }
 
   return (
@@ -222,40 +261,27 @@ function CrewCard({ boat, onChange }: { boat: Boat; onChange: () => void }) {
       {boat.crew.length === 0 ? <Text style={typography.caption}>{t('boats.noCrew')}</Text> : null}
       {boat.crew.map((member) => (
         <View key={member.id} style={styles.crewRow}>
-          <Ionicons name="person-circle-outline" size={28} color={member.is_active ? colors.primary : colors.textMuted} />
+          <Avatar uri={member.avatar} initials={member.display_name.slice(0, 2).toUpperCase()} size={36} />
           <View style={{ flex: 1 }}>
             <Text style={typography.body}>{member.display_name}</Text>
             <Text style={typography.caption}>
-              {[member.role ? t(`sailor.roles.${member.role}`) : null, member.is_active ? null : t('boats.formerCrew')]
+              {[
+                member.role ? t(`sailor.roles.${member.role}`) : null,
+                member.user_id ? t('crew.onMsail') : null,
+                member.is_active ? null : t('boats.formerCrew'),
+              ]
                 .filter(Boolean)
                 .join(' · ')}
             </Text>
           </View>
           {boat.is_owner && (
-            <Pressable accessibilityRole="button" accessibilityLabel={t('boats.removeCrew')} hitSlop={8} onPress={() => remove(member.id)}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('boats.removeCrew')} hitSlop={8} onPress={() => remove(member)}>
               <Ionicons name="close-circle-outline" size={22} color={colors.textMuted} />
             </Pressable>
           )}
         </View>
       ))}
-
-      {boat.is_owner && (
-        <View style={styles.addCrew}>
-          <TextField
-            label={t('boats.crewName')}
-            value={name}
-            onChangeText={setName}
-            error={fieldError(error, 'name')}
-            onSubmitEditing={add}
-          />
-          <ChipGroup>
-            {SAILING_ROLES.map((r) => (
-              <Chip key={r} label={t(`sailor.roles.${r}`)} selected={role === r} onPress={() => setRole(role === r ? '' : r)} />
-            ))}
-          </ChipGroup>
-          <Button title={t('boats.addCrew')} variant="secondary" onPress={add} loading={adding} disabled={!name.trim()} />
-        </View>
-      )}
+      {boat.is_owner ? <CrewSearch boat={boat} onAdded={onChange} /> : null}
     </Card>
   );
 }
@@ -271,6 +297,21 @@ function Stat({ value, label }: { value: number; label: string }) {
 
 const styles = StyleSheet.create({
   hero: { width: '100%', aspectRatio: 16 / 9, borderRadius: radius.lg, backgroundColor: colors.surfaceRaised },
+  coverButton: {
+    position: 'absolute',
+    right: spacing.md,
+    bottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(5,11,24,0.78)',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  coverButtonText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   icon: {
     width: 60,
@@ -294,6 +335,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   statValue: { color: colors.text, fontSize: 24, fontWeight: '800' },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  link: { color: colors.primary, fontWeight: '700', fontSize: 14 },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -303,7 +346,6 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   crewRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xs },
-  addCrew: { gap: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
   result: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
   position: {
     width: 44,

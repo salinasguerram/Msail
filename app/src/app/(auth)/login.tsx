@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,6 +11,7 @@ import { TextField } from '@/components/TextField';
 export default function LoginScreen() {
   const { t } = useTranslation();
   const { login } = useAuth();
+  const { next } = useLocalSearchParams<{ next?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -27,7 +28,9 @@ export default function LoginScreen() {
     setError(null);
     try {
       await login(email, password);
-      router.dismissTo('/profile');
+      // Solo rutas internas de la app, nunca una dirección externa.
+      if (next?.startsWith('/') && !next.startsWith('//')) router.replace(next as Href);
+      else router.dismissTo('/profile');
     } catch (e) {
       setError(errorMessage(e, t));
     } finally {

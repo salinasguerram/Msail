@@ -8,18 +8,16 @@ import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/theme';
 
 type Shortcut = {
-  key: 'races' | 'marinas' | 'professionals' | 'weather' | 'learning' | 'news';
+  key: 'marinas' | 'professionals' | 'learning';
   icon: ComponentProps<typeof Ionicons>['name'];
   href: Href;
 };
 
+// Regatas, Noticias y Clima ya están en la barra de abajo: acá van solo las secciones sin pestaña.
 const SHORTCUTS: Shortcut[] = [
-  { key: 'races', icon: 'trophy-outline', href: '/races' },
   { key: 'marinas', icon: 'boat-outline', href: '/marinas' },
   { key: 'professionals', icon: 'construct-outline', href: '/professionals' },
-  { key: 'weather', icon: 'partly-sunny-outline', href: '/weather' },
   { key: 'learning', icon: 'school-outline', href: '/learning' },
-  { key: 'news', icon: 'newspaper-outline', href: '/news' },
 ];
 
 export default function ExploreScreen() {
@@ -55,7 +53,6 @@ export default function ExploreScreen() {
         </View>
       </View>
 
-      <Text style={typography.label}>{t('explore.quickAccess')}</Text>
       <View style={styles.grid}>
         {SHORTCUTS.map(({ key, icon, href }) => (
           <Pressable

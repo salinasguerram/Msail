@@ -44,6 +44,14 @@ class SailorProfile(models.Model):
     avatar = models.ImageField(_("foto de perfil"), upload_to="avatars/", blank=True)
     bio = models.TextField(_("sobre mí"), max_length=1000, blank=True)
     city = models.CharField(_("ciudad"), max_length=120, blank=True)
+    region = models.ForeignKey(
+        "geo.Region",
+        verbose_name=_("región náutica"),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sailors",
+    )
     home_club = models.ForeignKey(
         "sailing.Club",
         verbose_name=_("club"),

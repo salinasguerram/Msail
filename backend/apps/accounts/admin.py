@@ -1,21 +1,40 @@
 from django.contrib import admin, messages
+from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import Group
 from django.utils.translation import gettext_lazy as _
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+from unfold.admin import ModelAdmin, TabularInline
+from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
 from .codes import CodeCooldown, issue_code
 from .models import EmailCode, SocialAccount, User
 from .views import revoke_sessions
 
 
-class SocialAccountInline(admin.TabularInline):
+class SocialAccountInline(TabularInline):
     model = SocialAccount
     extra = 0
     readonly_fields = ["provider", "uid", "created_at"]
     can_delete = True
 
 
+# Las sesiones (tokens) se gestionan con "Desactivar", no hace falta verlas en el panel.
+admin.site.unregister(OutstandingToken)
+admin.site.unregister(BlacklistedToken)
+admin.site.unregister(Group)
+
+
+@admin.register(Group)
+class GroupAdmin(BaseGroupAdmin, ModelAdmin):
+    pass
+
+
 @admin.register(User)
-class UserAdmin(BaseUserAdmin):
+class UserAdmin(BaseUserAdmin, ModelAdmin):
+    form = UserChangeForm
+    add_form = UserCreationForm
+    change_password_form = AdminPasswordChangeForm
     ordering = ["-date_joined"]
     list_display = ["email", "first_name", "last_name", "country", "email_verified", "is_active", "is_staff", "date_joined"]
     list_filter = ["is_active", "email_verified", "is_staff", "groups", "preferred_language", "country"]

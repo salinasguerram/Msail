@@ -1,23 +1,46 @@
+from django.contrib.auth import get_user_model
 from django.db.models import Count, Min, Q
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from apps.geo.models import Country
 from apps.profiles.models import RaceResult
-from apps.profiles.serializers import ClubSummarySerializer, run_model_clean
+from apps.profiles.serializers import ClubSummarySerializer, avatar_url, run_model_clean
 from apps.sailing.models import BoatClass, Club
 
 from .models import Boat, BoatPhoto, CrewMember
 
 
 class CrewMemberSerializer(serializers.ModelSerializer):
-    user_id = serializers.IntegerField(read_only=True)
+    # Se elige al tripulante buscándolo por su email exacto (cualquier cuenta activa).
+    user_id = serializers.PrimaryKeyRelatedField(
+        source="user",
+        queryset=get_user_model().objects.filter(is_active=True),
+        required=False,
+        allow_null=True,
+    )
     display_name = serializers.CharField(read_only=True)
+    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = CrewMember
-        fields = ["id", "user_id", "name", "display_name", "role", "is_active"]
+        fields = ["id", "user_id", "name", "display_name", "avatar", "role", "is_active"]
+
+    def get_avatar(self, member):
+        return avatar_url(member.user, self.context.get("request")) if member.user_id else None
 
     def validate(self, attrs):
+        user = attrs.get("user")
+        boat_id = self.instance.boat_id if self.instance else self.context["view"].kwargs.get("boat_id")
+        if user:
+            boat = Boat.objects.filter(pk=boat_id).first()
+            if boat and boat.owner_id == user.id:
+                raise serializers.ValidationError({"user_id": [_("El dueño ya forma parte de la embarcación.")]})
+            duplicate = CrewMember.objects.filter(boat_id=boat_id, user=user)
+            if self.instance:
+                duplicate = duplicate.exclude(pk=self.instance.pk)
+            if duplicate.exists():
+                raise serializers.ValidationError({"user_id": [_("Ya está en la tripulación.")]})
         run_model_clean(CrewMember, attrs, self.instance)
         return attrs
 

@@ -40,7 +40,8 @@ class DashboardTests(AdminPanelTestCase):
         self.assertEqual(cards["Usuarios activos"], 2)
         self.assertEqual(len(response.context["dashboard"]["signups"]), 14)
         self.assertContains(response, "Altas de los últimos 14 días")
-        self.assertContains(response, "MSAIL <span>LEAGUE</span>", html=False)
+        self.assertContains(response, "MSAIL LEAGUE")
+        self.assertContains(response, "http://localhost:8081")  # "Ver el sitio" lleva a la app
 
     def test_regular_user_cannot_enter(self):
         self.client.force_login(self.sailor)
@@ -50,6 +51,7 @@ class DashboardTests(AdminPanelTestCase):
     def test_all_changelists_load(self):
         for name in [
             "accounts_user",
+            "auth_group",
             "geo_country",
             "geo_region",
             "sailing_boatclass",
@@ -117,7 +119,7 @@ class ModerationTests(AdminPanelTestCase):
 
 class RolesTests(AdminPanelTestCase):
     def make_staff(self, group_name):
-        user = User.objects.create_user(email=f"{group_name.lower()}@msail.com", password="x-segura-123", is_staff=True)
+        user = User.objects.create_user(email=f"{group_name.lower()}@msail.com", password="x-segura-123", is_staff=True, email_verified=True)
         user.groups.add(Group.objects.get(name=group_name))
         self.client.force_login(user)
         return user

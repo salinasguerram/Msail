@@ -1,9 +1,12 @@
+from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 from rest_framework import generics, permissions, status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.core.photos import PhotoUploadSerializer, UploadThrottle, check_limit
@@ -13,12 +16,14 @@ from .serializers import (
     ProfilePhotoSerializer,
     PublicSailorProfileSerializer,
     RaceResultSerializer,
+    ResultDetailSerializer,
     SailorProfileSerializer,
+    CrewCandidateSerializer,
 )
 
 
 def profile_queryset():
-    return SailorProfile.objects.select_related("user__country", "home_club__country").prefetch_related(
+    return SailorProfile.objects.select_related("user__country", "home_club__country", "region__country").prefetch_related(
         "boat_classes", "photos", "results__boat_class", "results__boat"
     )
 
@@ -133,3 +138,39 @@ class MyPhotoDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return ProfilePhoto.objects.filter(profile__user=self.request.user)
+
+
+class SailorLookupView(APIView):
+    """
+    Busca un navegante por su email exacto (?email=), para sumarlo a una tripulación.
+    Con el email no hay dudas entre dos personas con el mismo nombre. Solo devuelve el
+    nombre y la foto, nunca el email ni el resto del perfil.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "lookup"  # evita probar emails en masa
+
+    def get(self, request):
+        email = get_user_model().objects.normalize_email(request.query_params.get("email", ""))
+        if "@" not in email:
+            return Response({"email": [_("Ingresá un email válido.")]}, status=status.HTTP_400_BAD_REQUEST)
+        if email == request.user.email:
+            return Response({"detail": _("Ese es tu propio email.")}, status=status.HTTP_400_BAD_REQUEST)
+        user = get_user_model().objects.filter(email=email, is_active=True).select_related("sailor_profile").first()
+        if user is None:
+            return Response({"detail": _("No hay ninguna cuenta de MSAIL con ese email.")}, status=status.HTTP_404_NOT_FOUND)
+        return Response(CrewCandidateSerializer(user, context={"request": request}).data)
+
+
+class ResultDetailView(generics.RetrieveAPIView):
+    """Un resultado. Se ve si el perfil del navegante es público o si es propio."""
+
+    serializer_class = ResultDetailSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        visible = Q(profile__is_public=True, profile__user__is_active=True)
+        if self.request.user.is_authenticated:
+            visible |= Q(profile__user=self.request.user)
+        return RaceResult.objects.filter(visible).select_related("profile__user__sailor_profile", "boat", "boat_class")

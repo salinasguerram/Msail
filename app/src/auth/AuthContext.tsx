@@ -31,6 +31,8 @@ type AuthContextValue = {
   requestPasswordReset: (email: string) => Promise<void>;
   confirmPasswordReset: (email: string, code: string, newPassword: string) => Promise<void>;
   updateLanguage: (language: 'es' | 'en') => Promise<void>;
+  /** Nombre, apellido y país de la cuenta. */
+  updateMe: (data: Partial<Pick<User, 'first_name' | 'last_name' | 'country'>>) => Promise<User>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -101,6 +103,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateLanguage: async (language) => {
         await setLanguage(language);
         if (user) setUser(await api<User>('/auth/me/', { method: 'PATCH', body: { preferred_language: language } }));
+      },
+      updateMe: async (data) => {
+        const updated = await api<User>('/auth/me/', { method: 'PATCH', body: data });
+        setUser(updated);
+        return updated;
       },
     }),
     [user, loading, startSession],

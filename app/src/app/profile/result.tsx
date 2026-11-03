@@ -15,9 +15,11 @@ import {
 } from '@/api/profiles';
 import { useBoatClasses } from '@/api/useBoatClasses';
 import { errorMessage, fieldError } from '@/auth/errors';
+import { withAuth } from '@/auth/withAuth';
 import { Button } from '@/components/Button';
 import { Chip, ChipGroup } from '@/components/Chip';
-import { confirmAction, FormSection } from '@/components/FormSection';
+import { useDialogs } from '@/components/Dialogs';
+import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { colors, spacing } from '@/theme';
@@ -25,11 +27,14 @@ import { goBack } from '@/utils/navigation';
 
 const isDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value));
 
-export default function ResultScreen() {
+export default withAuth(ResultScreen);
+
+function ResultScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const classes = useBoatClasses();
+  const { confirm, notify } = useDialogs();
 
   const [loaded, setLoaded] = useState(!id);
   const [event, setEvent] = useState('');
@@ -100,6 +105,7 @@ export default function ResultScreen() {
     try {
       if (id) await updateResult(Number(id), data);
       else await createResult(data);
+      notify(t('result.saved'));
       goBack('/profile');
     } catch (e) {
       setApiError(e);
@@ -110,10 +116,11 @@ export default function ResultScreen() {
 
   async function remove() {
     if (!id) return;
-    const ok = await confirmAction(t('result.confirmDelete'), t('result.delete'), t('common.cancel'));
+    const ok = await confirm({ title: t('result.confirmDelete'), confirmLabel: t('result.delete'), destructive: true });
     if (!ok) return;
     try {
       await deleteResult(Number(id));
+      notify(t('result.deleted'));
       goBack('/profile');
     } catch (e) {
       setApiError(e);

@@ -1,11 +1,12 @@
 from django.contrib import admin, messages
+from unfold.admin import ModelAdmin, TabularInline
 
 from apps.core.images import thumbnail_html
 
 from .models import ProfilePhoto, RaceResult, SailorProfile
 
 
-class ProfilePhotoInline(admin.TabularInline):
+class ProfilePhotoInline(TabularInline):
     model = ProfilePhoto
     extra = 0
     fields = ["preview", "image", "caption", "created_at"]
@@ -16,7 +17,7 @@ class ProfilePhotoInline(admin.TabularInline):
         return thumbnail_html(obj.image)
 
 
-class RaceResultInline(admin.TabularInline):
+class RaceResultInline(TabularInline):
     model = RaceResult
     extra = 0
     autocomplete_fields = ["boat_class"]
@@ -24,7 +25,7 @@ class RaceResultInline(admin.TabularInline):
 
 
 @admin.register(SailorProfile)
-class SailorProfileAdmin(admin.ModelAdmin):
+class SailorProfileAdmin(ModelAdmin):
     list_display = ["avatar_preview", "user", "experience_level", "home_club", "available_as_crew", "is_public", "updated_at"]
     list_filter = ["experience_level", "available_as_crew", "is_public", "boat_classes"]
     search_fields = ["user__email", "user__first_name", "user__last_name", "city"]
@@ -45,7 +46,7 @@ class SailorProfileAdmin(admin.ModelAdmin):
 
 
 @admin.register(RaceResult)
-class RaceResultAdmin(admin.ModelAdmin):
+class RaceResultAdmin(ModelAdmin):
     list_display = ["event_name", "date", "profile", "boat_class", "position", "fleet_size"]
     list_filter = ["boat_class", "date"]
     search_fields = ["event_name", "profile__user__email", "boat_name"]

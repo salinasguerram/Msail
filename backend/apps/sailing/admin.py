@@ -1,10 +1,11 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 
 from .models import BoatClass, Club
 
 
 @admin.register(BoatClass)
-class BoatClassAdmin(admin.ModelAdmin):
+class BoatClassAdmin(ModelAdmin):
     list_display = ["name", "category", "is_olympic", "crew_size"]
     list_filter = ["category", "is_olympic"]
     search_fields = ["name"]
@@ -12,7 +13,7 @@ class BoatClassAdmin(admin.ModelAdmin):
 
 
 @admin.register(Club)
-class ClubAdmin(admin.ModelAdmin):
+class ClubAdmin(ModelAdmin):
     list_display = ["name", "city", "country", "is_verified"]
     list_filter = ["is_verified", "country__continent", "country"]
     search_fields = ["name", "city"]

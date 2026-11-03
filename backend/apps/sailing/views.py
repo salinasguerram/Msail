@@ -3,7 +3,7 @@
 from django.db.models import Q
 from rest_framework import generics, permissions, serializers
 
-from apps.geo.models import Country
+from apps.geo.models import Country, Region
 
 from .models import BoatClass, Club
 
@@ -20,6 +20,15 @@ class CountrySerializer(serializers.ModelSerializer):
     class Meta:
         model = Country
         fields = ["iso_code", "name", "continent", "latitude", "longitude"]
+
+
+class RegionSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(read_only=True)
+    country = serializers.CharField(source="country.iso_code")
+
+    class Meta:
+        model = Region
+        fields = ["id", "name", "slug", "country", "latitude", "longitude"]
 
 
 class ClubSerializer(serializers.ModelSerializer):
@@ -59,3 +68,16 @@ class ClubListView(generics.ListAPIView):
         if country:
             queryset = queryset.filter(country__iso_code=country)
         return queryset
+
+
+class RegionListView(generics.ListAPIView):
+    """Filtro: ?country=CL"""
+
+    serializer_class = RegionSerializer
+    permission_classes = [permissions.AllowAny]
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = Region.objects.select_related("country")
+        country = self.request.query_params.get("country", "").strip().upper()
+        return queryset.filter(country__iso_code=country) if country else queryset

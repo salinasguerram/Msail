@@ -1,11 +1,12 @@
 from django.contrib import admin, messages
+from unfold.admin import ModelAdmin, TabularInline
 
 from apps.core.images import thumbnail_html
 
 from .models import Boat, BoatPhoto, CrewMember
 
 
-class BoatPhotoInline(admin.TabularInline):
+class BoatPhotoInline(TabularInline):
     model = BoatPhoto
     extra = 0
     fields = ["preview", "image", "caption", "is_cover", "created_at"]
@@ -16,7 +17,7 @@ class BoatPhotoInline(admin.TabularInline):
         return thumbnail_html(obj.image)
 
 
-class CrewMemberInline(admin.TabularInline):
+class CrewMemberInline(TabularInline):
     model = CrewMember
     extra = 0
     autocomplete_fields = ["user"]
@@ -24,7 +25,7 @@ class CrewMemberInline(admin.TabularInline):
 
 
 @admin.register(Boat)
-class BoatAdmin(admin.ModelAdmin):
+class BoatAdmin(ModelAdmin):
     list_display = ["name", "sail_number", "boat_class", "owner", "home_port", "country", "is_public"]
     list_filter = ["is_public", "boat_class", "country"]
     search_fields = ["name", "sail_number", "model", "owner__email", "home_port"]

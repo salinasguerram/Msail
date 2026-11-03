@@ -1,10 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import { Tabs } from 'expo-router/js-tabs';
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, type ColorValue } from 'react-native';
+import { Platform, Pressable, type ColorValue } from 'react-native';
 
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -13,6 +14,27 @@ function tabIcon(name: IconName, focusedName: IconName) {
     <Ionicons name={focused ? focusedName : name} color={color as string} size={size} />
   );
 }
+
+/** Flecha que vuelve a Explorar. La usan todas las secciones para que se vean y naveguen igual. */
+function BackToHome() {
+  const { t } = useTranslation();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t('common.backHome')}
+      hitSlop={12}
+      onPress={() => router.navigate('/')}
+      style={{ paddingHorizontal: spacing.lg }}
+    >
+      <Ionicons name="arrow-back" size={24} color={colors.text} />
+    </Pressable>
+  );
+}
+
+const section = { headerLeft: () => <BackToHome /> };
+// Secciones que se abren desde Explorar: comparten encabezado y barra inferior, pero no tienen pestaña propia.
+// (Ocultar con `href: null` en esta versión también bloquea la navegación: se oculta solo el botón.)
+const hidden = { ...section, tabBarButton: () => null, tabBarItemStyle: { display: 'none' as const } };
 
 export default function TabsLayout() {
   const { t } = useTranslation();
@@ -38,19 +60,25 @@ export default function TabsLayout() {
         name="index"
         options={{ title: t('tabs.explore'), headerShown: false, tabBarIcon: tabIcon('globe-outline', 'globe') }}
       />
-      <Tabs.Screen name="races" options={{ title: t('tabs.races'), tabBarIcon: tabIcon('trophy-outline', 'trophy') }} />
+      <Tabs.Screen
+        name="races"
+        options={{ ...section, title: t('tabs.races'), tabBarIcon: tabIcon('trophy-outline', 'trophy') }}
+      />
       <Tabs.Screen
         name="news"
-        options={{ title: t('tabs.news'), tabBarIcon: tabIcon('newspaper-outline', 'newspaper') }}
+        options={{ ...section, title: t('tabs.news'), tabBarIcon: tabIcon('newspaper-outline', 'newspaper') }}
       />
       <Tabs.Screen
         name="weather"
-        options={{ title: t('tabs.weather'), tabBarIcon: tabIcon('partly-sunny-outline', 'partly-sunny') }}
+        options={{ ...section, title: t('tabs.weather'), tabBarIcon: tabIcon('partly-sunny-outline', 'partly-sunny') }}
       />
       <Tabs.Screen
         name="profile"
         options={{ title: t('tabs.profile'), tabBarIcon: tabIcon('person-circle-outline', 'person-circle') }}
       />
+      <Tabs.Screen name="marinas" options={{ ...hidden, title: t('sections.marinas.title') }} />
+      <Tabs.Screen name="professionals" options={{ ...hidden, title: t('sections.professionals.title') }} />
+      <Tabs.Screen name="learning" options={{ ...hidden, title: t('sections.learning.title') }} />
     </Tabs>
   );
 }

@@ -55,7 +55,7 @@ class BoatDetailView(generics.RetrieveUpdateDestroyAPIView):
         return (
             visible_boats(self.request.user)
             .select_related("owner", "boat_class", "country", "home_club__country")
-            .prefetch_related("crew__user", "photos")
+            .prefetch_related("crew__user__sailor_profile", "photos")
         )
 
 

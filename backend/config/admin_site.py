@@ -1,16 +1,35 @@
 import csv
 
 from django.contrib import admin
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.utils import timezone
+from unfold.forms import AuthenticationForm
+from unfold.sites import UnfoldAdminSite
 
 from .dashboard import build_dashboard
 
+EMAIL_NOT_VERIFIED = "Tu cuenta tiene que tener el email verificado para entrar al panel."
 
-class MsailAdminSite(admin.AdminSite):
-    site_header = "MSAIL LEAGUE · Administración"
+
+class MsailLoginForm(AuthenticationForm):
+    """Login del panel: además de ser staff, la cuenta tiene que tener el email verificado."""
+
+    def confirm_login_allowed(self, user):
+        super().confirm_login_allowed(user)
+        if user.is_staff and not user.email_verified:
+            raise ValidationError(EMAIL_NOT_VERIFIED, code="email_not_verified")
+
+
+class MsailAdminSite(UnfoldAdminSite):
+    site_header = "MSAIL LEAGUE"
     site_title = "MSAIL LEAGUE"
     index_title = "Panel de administración"
+    login_form = MsailLoginForm
+
+    def has_permission(self, request):
+        # También corta el acceso a quien tenía la sesión abierta y perdió la verificación.
+        return super().has_permission(request) and getattr(request.user, "email_verified", False)
 
     def index(self, request, extra_context=None):
         extra_context = {**(extra_context or {}), "dashboard": build_dashboard()}

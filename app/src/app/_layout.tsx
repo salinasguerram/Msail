@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, View } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/auth/AuthContext';
+import { DialogsProvider } from '@/components/Dialogs';
 import { restoreLanguage } from '@/i18n';
 import { colors, navigationTheme } from '@/theme';
 
@@ -33,13 +34,11 @@ function RootStack() {
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false, presentation: 'modal' }} />
-      <Stack.Screen name="marinas" options={{ title: t('sections.marinas.title') }} />
-      <Stack.Screen name="professionals" options={{ title: t('sections.professionals.title') }} />
-      <Stack.Screen name="learning" options={{ title: t('sections.learning.title') }} />
       <Stack.Screen name="profile/edit" options={{ title: t('editProfile.title') }} />
       <Stack.Screen name="profile/result" options={{ title: t('result.newTitle') }} />
       <Stack.Screen name="boats/[id]" options={{ title: t('boats.detailTitle') }} />
       <Stack.Screen name="boats/edit" options={{ title: t('boats.newTitle') }} />
+      <Stack.Screen name="results/[id]" options={{ title: t('result.detailTitle') }} />
     </Stack>
   );
 }
@@ -56,8 +55,10 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={navigationTheme}>
       <AuthProvider>
-        <StatusBar style="light" />
-        <RootStack />
+        <DialogsProvider>
+          <StatusBar style="light" />
+          <RootStack />
+        </DialogsProvider>
       </AuthProvider>
     </ThemeProvider>
   );

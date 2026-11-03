@@ -14,7 +14,7 @@ import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Chip, ChipGroup } from '@/components/Chip';
-import { chooseAction, confirmAction } from '@/components/FormSection';
+import { useDialogs } from '@/components/Dialogs';
 import { LanguagePicker } from '@/components/LanguagePicker';
 import { PhotoGallery } from '@/components/PhotoGallery';
 import { Screen } from '@/components/Screen';
@@ -49,6 +49,7 @@ export default function ProfileScreen() {
 function SignedInProfile({ user }: { user: User }) {
   const { t } = useTranslation();
   const { logout } = useAuth();
+  const { confirm, choose, notify } = useDialogs();
   const classes = useBoatClasses();
   const [profile, setProfile] = useState<SailorProfile | null>(null);
   const [boats, setBoats] = useState<BoatSummary[]>([]);
@@ -61,15 +62,25 @@ function SignedInProfile({ user }: { user: User }) {
   async function changeAvatar() {
     setPhotoError(null);
     if (profile?.avatar) {
-      const choice = await chooseAction(t('photos.changeAvatar'), [
-        { key: 'change', label: t('photos.chooseAvatar') },
-        { key: 'remove', label: t('photos.removeAvatar'), destructive: true },
-      ], t('common.cancel'));
+      const choice = await choose({
+        title: t('photos.changeAvatar'),
+        choices: [
+          { key: 'change', label: t('photos.chooseAvatar') },
+          { key: 'remove', label: t('photos.removeAvatar'), destructive: true },
+        ],
+      });
       if (choice === 'remove') {
+        if (!(await confirm({ title: t('photos.confirmRemoveAvatar'), confirmLabel: t('photos.removeAvatar'), destructive: true }))) return;
         setAvatarBusy(true);
-        await deleteAvatar().catch((e) => setPhotoError(errorMessage(e, t)));
-        setAvatarBusy(false);
-        load();
+        try {
+          await deleteAvatar();
+          setProfile((p) => (p ? { ...p, avatar: null } : p));
+          notify(t('photos.avatarRemoved'));
+        } catch (e) {
+          notify(errorMessage(e, t), 'error');
+        } finally {
+          setAvatarBusy(false);
+        }
         return;
       }
       if (choice !== 'change') return;
@@ -80,8 +91,9 @@ function SignedInProfile({ user }: { user: User }) {
     try {
       const { avatar } = await uploadAvatar(asset);
       setProfile((p) => (p ? { ...p, avatar } : p));
+      notify(t('photos.avatarUpdated'));
     } catch (e) {
-      setPhotoError(errorMessage(e, t));
+      notify(errorMessage(e, t), 'error');
     } finally {
       setAvatarBusy(false);
     }
@@ -95,6 +107,7 @@ function SignedInProfile({ user }: { user: User }) {
     try {
       const photo = await uploadProfilePhoto(asset);
       setProfile((p) => (p ? { ...p, photos: [photo, ...p.photos] } : p));
+      notify(t('photos.added'));
     } catch (e) {
       setPhotoError(errorMessage(e, t));
     } finally {
@@ -103,9 +116,14 @@ function SignedInProfile({ user }: { user: User }) {
   }
 
   async function removePhoto(id: number) {
-    if (!(await confirmAction(t('photos.confirmDelete'), t('photos.delete'), t('common.cancel')))) return;
-    await deleteProfilePhoto(id);
-    setProfile((p) => (p ? { ...p, photos: p.photos.filter((x) => x.id !== id) } : p));
+    if (!(await confirm({ title: t('photos.confirmDelete'), message: t('photos.confirmDeleteText'), confirmLabel: t('photos.delete'), destructive: true }))) return;
+    try {
+      await deleteProfilePhoto(id);
+      setProfile((p) => (p ? { ...p, photos: p.photos.filter((x) => x.id !== id) } : p));
+      notify(t('photos.deleted'));
+    } catch (e) {
+      notify(errorMessage(e, t), 'error');
+    }
   }
 
   const load = useCallback(() => {
@@ -181,6 +199,7 @@ function SignedInProfile({ user }: { user: User }) {
               value={profile.experience_level ? t(`sailor.experience.${profile.experience_level}`) : null}
             />
             <InfoRow label={t('profile.sailingSince')} value={profile.sailing_since?.toString()} />
+            <InfoRow label={t('editProfile.region')} value={profile.region?.name} />
             <InfoRow label={t('profile.club')} value={profile.home_club?.name} />
             <InfoRow label={t('profile.city')} value={profile.city} />
             {profile.available_as_crew && (

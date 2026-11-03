@@ -3,7 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
-from apps.sailing.views import BoatClassListView, ClubListView, CountryListView
+from apps.sailing.views import BoatClassListView, ClubListView, CountryListView, RegionListView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -12,6 +12,7 @@ urlpatterns = [
     path("api/boats/", include("apps.boats.urls")),
     path("api/boat-classes/", BoatClassListView.as_view(), name="boat-classes"),
     path("api/countries/", CountryListView.as_view(), name="countries"),
+    path("api/regions/", RegionListView.as_view(), name="regions"),
     path("api/clubs/", ClubListView.as_view(), name="clubs"),
 ]
 

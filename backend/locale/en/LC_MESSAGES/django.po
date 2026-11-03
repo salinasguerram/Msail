@@ -83,3 +83,23 @@ msgstr "Unsupported format. Use JPG, PNG or WEBP."
 
 msgid "Llegaste al máximo de %(limit)s fotos."
 msgstr "You reached the maximum of %(limit)s photos."
+
+# Perfil, tripulación
+msgid "La región no pertenece a tu país."
+msgstr "The region doesn't belong to your country."
+
+msgid "El dueño ya forma parte de la embarcación."
+msgstr "The owner is already part of the boat."
+
+msgid "Ya está en la tripulación."
+msgstr "Already in the crew."
+
+# Buscar tripulante por email
+msgid "Ingresá un email válido."
+msgstr "Enter a valid email."
+
+msgid "Ese es tu propio email."
+msgstr "That's your own email."
+
+msgid "No hay ninguna cuenta de MSAIL con ese email."
+msgstr "There's no MSAIL account with that email."

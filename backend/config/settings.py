@@ -33,6 +33,7 @@ ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 
 
 INSTALLED_APPS = [
+    "unfold.apps.BasicAppConfig",  # tema del panel; "Basic" para que use el sitio propio de MSAIL
     "config.apps.MsailAdminConfig",  # admin de Django con el panel de MSAIL
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -136,10 +137,17 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    # Límites por acción (por IP si no hay sesión, por usuario si la hay).
     "DEFAULT_THROTTLE_RATES": {
-        "auth": "10/min",
+        "login": "10/min",
+        "register": "5/min",
+        "refresh": "30/min",
+        "send_code": "5/min",
+        "verify_code": "10/min",
+        "lookup": "20/min",
         "uploads": "30/hour",
     },
+    "EXCEPTION_HANDLER": "config.exceptions.api_exception_handler",
 }
 
 # La app guarda el refresh token en el almacenamiento seguro del celular,
@@ -161,12 +169,17 @@ APPLE_CLIENT_IDS = env_list("APPLE_CLIENT_IDS")
 
 
 # Email: en local se imprime en la consola; en producción sale por Twilio SendGrid (SMTP).
-EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+# Con SENDGRID_API_KEY (o EMAIL_HOST_PASSWORD) definida se envía por SMTP; si no, se muestra en la consola.
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD") or os.getenv("SENDGRID_API_KEY", "")
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend" if EMAIL_HOST_PASSWORD else "django.core.mail.backends.console.EmailBackend",
+)
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.sendgrid.net")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "apikey")
-EMAIL_HOST_PASSWORD = os.getenv("SENDGRID_API_KEY", "")
 EMAIL_USE_TLS = True
+EMAIL_TIMEOUT = 15
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "MSAIL LEAGUE <no-reply@msailleague.com>")
 
 # Códigos de verificación y recuperación de contraseña enviados por email.
@@ -204,3 +217,90 @@ PHOTO_MAX_UPLOAD_MB = 10
 PHOTO_MAX_SIDE_PX = 1600
 AVATAR_SIDE_PX = 512
 DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
+
+
+# Panel de administración (Unfold) con la identidad de MSAIL.
+# "Ver el sitio" lleva a la app (en local, la versión web de Expo).
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:8081")
+
+
+def _admin_link(title, icon, url_name):
+    from django.urls import reverse_lazy
+
+    return {"title": title, "icon": icon, "link": reverse_lazy(url_name)}
+
+
+UNFOLD = {
+    "SITE_TITLE": "MSAIL LEAGUE",
+    "SITE_HEADER": "MSAIL LEAGUE",
+    "SITE_SUBHEADER": "Panel de administración",
+    "SITE_URL": FRONTEND_URL,
+    "SITE_SYMBOL": "sailing",
+    "THEME": "dark",
+    "BORDER_RADIUS": "10px",
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": False,
+    "LOGIN": {"form": "config.admin_site.MsailLoginForm"},
+    "COLORS": {
+        # Azul noche de la app (950 = fondo, 100 = texto)
+        "base": {
+            "50": "#f3f6fb",
+            "100": "#e6edf7",
+            "200": "#c4d0e3",
+            "300": "#a9b6cc",
+            "400": "#7f8fab",
+            "500": "#4a5b7c",
+            "600": "#2c3d5f",
+            "700": "#1c2c4d",
+            "800": "#11213f",
+            "900": "#0b1730",
+            "950": "#050b18",
+        },
+        # Azul eléctrico de MSAIL (500 = #2F8CFF)
+        "primary": {
+            "50": "#eaf3ff",
+            "100": "#d4e6ff",
+            "200": "#a9ceff",
+            "300": "#7db5ff",
+            "400": "#529dff",
+            "500": "#2f8cff",
+            "600": "#1f6fd6",
+            "700": "#1958ad",
+            "800": "#144485",
+            "900": "#0f325f",
+            "950": "#0a213f",
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": "General",
+                "items": [_admin_link("Resumen", "dashboard", "admin:index")],
+            },
+            {
+                "title": "Comunidad",
+                "items": [
+                    _admin_link("Usuarios", "person", "admin:accounts_user_changelist"),
+                    _admin_link("Perfiles de navegante", "badge", "admin:profiles_sailorprofile_changelist"),
+                    _admin_link("Resultados", "emoji_events", "admin:profiles_raceresult_changelist"),
+                    _admin_link("Embarcaciones", "sailing", "admin:boats_boat_changelist"),
+                ],
+            },
+            {
+                "title": "Catálogos",
+                "items": [
+                    _admin_link("Clubes", "groups", "admin:sailing_club_changelist"),
+                    _admin_link("Clases de embarcación", "category", "admin:sailing_boatclass_changelist"),
+                    _admin_link("Países", "public", "admin:geo_country_changelist"),
+                    _admin_link("Regiones náuticas", "location_on", "admin:geo_region_changelist"),
+                ],
+            },
+            {
+                "title": "Equipo MSAIL",
+                "items": [_admin_link("Roles (grupos)", "admin_panel_settings", "admin:auth_group_changelist")],
+            },
+        ],
+    },
+}

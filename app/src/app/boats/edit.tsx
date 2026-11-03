@@ -6,10 +6,12 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { createBoat, deleteBoat, getBoat, updateBoat, type BoatInput } from '@/api/boats';
 import { useBoatClasses } from '@/api/useBoatClasses';
 import { errorMessage, fieldError } from '@/auth/errors';
+import { withAuth } from '@/auth/withAuth';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Chip, ChipGroup } from '@/components/Chip';
-import { confirmAction, FormSection, ToggleRow } from '@/components/FormSection';
+import { useDialogs } from '@/components/Dialogs';
+import { FormSection, ToggleRow } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { colors, spacing } from '@/theme';
@@ -54,11 +56,14 @@ const INTEGERS = ['year_built', 'displacement_kg'] as const;
 
 const isNumber = (value: string) => value === '' || (/^\d+([.,]\d{1,2})?$/.test(value) && Number(value.replace(',', '.')) > 0);
 
-export default function BoatFormScreen() {
+export default withAuth(BoatFormScreen);
+
+function BoatFormScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const classes = useBoatClasses();
+  const { confirm, notify } = useDialogs();
   const [form, setForm] = useState<Form>(EMPTY);
   const [boatClass, setBoatClass] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(true);
@@ -138,6 +143,7 @@ export default function BoatFormScreen() {
     try {
       if (id) await updateBoat(Number(id), data);
       else await createBoat(data);
+      notify(t('boats.saved'));
       goBack('/profile');
     } catch (e) {
       setApiError(e);
@@ -148,9 +154,10 @@ export default function BoatFormScreen() {
 
   async function remove() {
     if (!id) return;
-    if (!(await confirmAction(t('boats.confirmDelete'), t('boats.delete'), t('common.cancel')))) return;
+    if (!(await confirm({ title: t('boats.delete'), message: t('boats.confirmDelete'), confirmLabel: t('boats.delete'), destructive: true }))) return;
     try {
       await deleteBoat(Number(id));
+      notify(t('boats.deleted'));
       // El detalle de la embarcación ya no existe: se vuelve directo al perfil.
       router.dismissTo('/profile');
     } catch (e) {
