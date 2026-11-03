@@ -1,0 +1,69 @@
+{% extends "admin/index.html" %}
+
+{% block content %}
+{% if dashboard %}
+<section class="msail-dashboard" aria-label="Resumen">
+  <div class="msail-cards">
+    {% for card in dashboard.cards %}
+    <div class="msail-card">
+      <div class="label">{{ card.label }}</div>
+      <div class="value">{{ card.value }}</div>
+      <div class="hint">{{ card.hint }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="msail-panels">
+    <div class="msail-panel">
+      <h3>Altas de los últimos 14 días</h3>
+      <div class="msail-bars" role="img" aria-label="Altas por día">
+        {% for entry in dashboard.signups %}
+        <div class="bar" style="height: {{ entry.height }}%" title="{{ entry.day|date:'d/m' }}: {{ entry.total }}"></div>
+        {% endfor %}
+      </div>
+      <div class="msail-bars-axis">
+        <span>{{ dashboard.signups.0.day|date:"d/m" }}</span>
+        <span>hoy</span>
+      </div>
+    </div>
+
+    <div class="msail-panel">
+      <h3>Últimos usuarios</h3>
+      <ul>
+        {% for u in dashboard.recent_users %}
+        <li>
+          <a href="{% url 'admin:accounts_user_change' u.pk %}">{{ u.get_full_name|default:u.email }}</a>
+          <span class="muted">· {{ u.date_joined|date:"d/m/Y" }}{% if not u.email_verified %} · sin verificar{% endif %}</span>
+        </li>
+        {% empty %}
+        <li class="muted">Todavía no hay usuarios.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="msail-panel">
+      <h3>Clases más navegadas</h3>
+      <ol>
+        {% for c in dashboard.top_classes %}
+        <li>{{ c.name }} <span class="muted">· {{ c.total }}</span></li>
+        {% empty %}
+        <li class="muted">Sin datos todavía.</li>
+        {% endfor %}
+      </ol>
+    </div>
+
+    <div class="msail-panel">
+      <h3>Países con más usuarios</h3>
+      <ol>
+        {% for c in dashboard.top_countries %}
+        <li>{{ c.country__name_es }} <span class="muted">· {{ c.total }}</span></li>
+        {% empty %}
+        <li class="muted">Sin datos todavía.</li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+</section>
+{% endif %}
+{{ block.super }}
+{% endblock %}
