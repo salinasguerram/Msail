@@ -1,0 +1,9 @@
+{% extends "accounts/emails/base.html" %}
+{% block lang %}es{% endblock %}
+{% block content %}
+<p style="margin:0 0 12px;font-size:18px;color:#ffffff;">¡Bienvenido a bordo{% if user.first_name %}, {{ user.first_name }}{% endif %}!</p>
+<p style="margin:0;">Ingresá este código en la app para verificar tu email:</p>
+{% endblock %}
+{% block footer %}
+<p style="margin:0;font-size:13px;color:#7f8fab;">El código vence en {{ ttl_minutes }} minutos. Si no creaste una cuenta en MSAIL LEAGUE, ignorá este mensaje.</p>
+{% endblock %}

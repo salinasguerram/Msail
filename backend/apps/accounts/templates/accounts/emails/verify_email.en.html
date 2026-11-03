@@ -1,0 +1,9 @@
+{% extends "accounts/emails/base.html" %}
+{% block lang %}en{% endblock %}
+{% block content %}
+<p style="margin:0 0 12px;font-size:18px;color:#ffffff;">Welcome aboard{% if user.first_name %}, {{ user.first_name }}{% endif %}!</p>
+<p style="margin:0;">Enter this code in the app to verify your email:</p>
+{% endblock %}
+{% block footer %}
+<p style="margin:0;font-size:13px;color:#7f8fab;">The code expires in {{ ttl_minutes }} minutes. If you didn't create a MSAIL LEAGUE account, you can ignore this message.</p>
+{% endblock %}

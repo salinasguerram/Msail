@@ -1,0 +1,85 @@
+# Traducciones al inglés de los mensajes propios de MSAIL LEAGUE.
+# Los mensajes de Django y DRF (campos requeridos, contraseñas débiles, etc.) ya vienen traducidos.
+# Después de editar este archivo: python scripts/compile_messages.py
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+
+# Registro y login
+msgid "Ya existe una cuenta con este email."
+msgstr "An account with this email already exists."
+
+msgid "Email o contraseña incorrectos."
+msgstr "Incorrect email or password."
+
+msgid "Cuenta desactivada."
+msgstr "This account has been deactivated."
+
+# Códigos por email
+msgid "El código tiene 6 dígitos."
+msgstr "The code has 6 digits."
+
+msgid "Código incorrecto o vencido."
+msgstr "Incorrect or expired code."
+
+msgid "Esperá unos segundos antes de pedir otro código."
+msgstr "Please wait a few seconds before requesting another code."
+
+msgid "El email ya está verificado."
+msgstr "Your email is already verified."
+
+msgid "Te enviamos un nuevo código."
+msgstr "We sent you a new code."
+
+msgid "Si el email está registrado, te enviamos un código."
+msgstr "If the email is registered, we sent you a code."
+
+# Login con Google y Apple
+msgid "El login con Google no está configurado."
+msgstr "Sign in with Google is not configured."
+
+msgid "Token de Google inválido."
+msgstr "Invalid Google token."
+
+msgid "Token de Google emitido para otra aplicación."
+msgstr "Google token was issued for another application."
+
+msgid "El login con Apple no está configurado."
+msgstr "Sign in with Apple is not configured."
+
+msgid "Token de Apple inválido."
+msgstr "Invalid Apple token."
+
+msgid "El proveedor no confirmó el email de la cuenta."
+msgstr "The provider did not confirm the account email."
+
+# Perfil de navegante
+msgid "Puesto a bordo inválido."
+msgstr "Invalid on-board role."
+
+msgid "El año no puede ser futuro."
+msgstr "The year can't be in the future."
+
+msgid "El puesto no puede ser mayor que la cantidad de barcos."
+msgstr "The position can't be greater than the number of boats."
+
+msgid "La fecha no puede ser futura."
+msgstr "The date can't be in the future."
+
+# Embarcaciones
+msgid "Indicá el nombre del tripulante."
+msgstr "Enter the crew member's name."
+
+# Fotos
+msgid "La foto supera el tamaño máximo de %(mb)s MB."
+msgstr "The photo exceeds the maximum size of %(mb)s MB."
+
+msgid "El archivo no es una imagen válida."
+msgstr "The file is not a valid image."
+
+msgid "Formato no soportado. Usá JPG, PNG o WEBP."
+msgstr "Unsupported format. Use JPG, PNG or WEBP."
+
+msgid "Llegaste al máximo de %(limit)s fotos."
+msgstr "You reached the maximum of %(limit)s photos."

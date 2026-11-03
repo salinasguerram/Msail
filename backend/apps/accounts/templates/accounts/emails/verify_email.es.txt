@@ -1,0 +1,9 @@
+{% autoescape off %}¡Bienvenido a bordo{% if user.first_name %}, {{ user.first_name }}{% endif %}!
+
+Ingresá este código en la app para verificar tu email:
+
+{{ code }}
+
+El código vence en {{ ttl_minutes }} minutos. Si no creaste una cuenta en MSAIL LEAGUE, ignorá este mensaje.
+
+MSAIL LEAGUE{% endautoescape %}

@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "MSAIL LEAGUE",
+    "slug": "msail-league",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.exissailing.msailleague"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#050b18",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.exissailing.msailleague"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-localization",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MSAIL LEAGUE usa tus fotos para tu perfil de navegante y tus embarcaciones.",
+          "cameraPermission": "MSAIL LEAGUE usa la cámara para sacar fotos de tu perfil y tus embarcaciones."
+        }
+      ]
+    ],
+    "scheme": "msailleague",
+    "backgroundColor": "#050b18",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
