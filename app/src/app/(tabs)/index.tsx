@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, type Href } from 'expo-router';
-import type { ComponentProps } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 
+import { Brand } from '@/components/Brand';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/theme';
 
@@ -20,16 +21,25 @@ const SHORTCUTS: Shortcut[] = [
   { key: 'learning', icon: 'school-outline', href: '/learning' },
 ];
 
+const GLOBE_MIN = 180;
+const GLOBE_MAX = 360;
+
 export default function ExploreScreen() {
   const { t } = useTranslation();
+  const [globeSize, setGlobeSize] = useState(260);
+
+  // El globo ocupa el espacio libre entre el título y los botones: se ajusta al lado más corto,
+  // así nunca tapa el título (en la web, con pantallas anchas) ni empuja los botones.
+  function fitGlobe(event: LayoutChangeEvent) {
+    const { width, height } = event.nativeEvent.layout;
+    const size = Math.round(Math.min(width, height - 40, GLOBE_MAX));
+    setGlobeSize(Math.max(GLOBE_MIN, size));
+  }
 
   return (
-    <Screen edges={['top', 'left', 'right']}>
-      <View style={styles.brand}>
-        <Ionicons name="navigate" size={22} color={colors.primary} />
-        <Text style={styles.brandText}>
-          MSAIL <Text style={{ color: colors.primary }}>LEAGUE</Text>
-        </Text>
+    <Screen edges={['top', 'left', 'right']} contentStyle={styles.page}>
+      <View style={{ marginTop: spacing.sm }}>
+        <Brand />
       </View>
 
       <View style={styles.hero}>
@@ -42,9 +52,9 @@ export default function ExploreScreen() {
       </View>
 
       {/* Lugar reservado para el planeta 3D (semana 7). */}
-      <View style={styles.globe} accessibilityLabel={t('explore.globeSoon')}>
-        <View style={styles.globeInner}>
-          <Ionicons name="earth" size={96} color={colors.primary} />
+      <View style={styles.globeArea} onLayout={fitGlobe} accessibilityLabel={t('explore.globeSoon')}>
+        <View style={[styles.globe, { width: globeSize, height: globeSize, borderRadius: globeSize / 2 }]}>
+          <Ionicons name="earth" size={Math.round(globeSize * 0.32)} color={colors.primary} />
         </View>
         <View style={styles.globeBadge}>
           <Text style={styles.globeBadgeText}>
@@ -71,22 +81,17 @@ export default function ExploreScreen() {
 }
 
 const styles = StyleSheet.create({
-  brand: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  brandText: { color: colors.text, fontSize: 18, fontWeight: '800', letterSpacing: 2 },
+  // Ocupa todo el alto disponible: el globo se estira y los botones quedan pegados abajo.
+  page: { flexGrow: 1 },
   hero: { gap: spacing.sm },
   heroTitle: { ...typography.title, fontSize: 32, lineHeight: 38, textTransform: 'uppercase' },
-  globe: {
-    aspectRatio: 1,
-    maxHeight: 340,
-    alignSelf: 'center',
-    width: '100%',
+  globeArea: {
+    flex: 1,
+    minHeight: GLOBE_MIN + 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  globeInner: {
-    width: '78%',
-    aspectRatio: 1,
-    borderRadius: 999,
+  globe: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.primary,
@@ -98,8 +103,7 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   globeBadge: {
-    position: 'absolute',
-    bottom: spacing.sm,
+    marginTop: -spacing.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs + 2,
     borderRadius: radius.pill,
@@ -107,7 +111,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  globeBadgeText: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
+  globeBadgeText: { color: colors.textMuted, fontSize: 12, fontWeight: '600', textAlign: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   tile: {
     flexBasis: '30%',

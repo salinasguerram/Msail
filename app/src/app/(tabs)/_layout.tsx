@@ -5,6 +5,7 @@ import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, type ColorValue } from 'react-native';
 
+import { Brand } from '@/components/Brand';
 import { colors, spacing } from '@/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -44,6 +45,9 @@ export default function TabsLayout() {
         headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.text,
         headerShadowVisible: false,
+        // En el encabezado va la marca; la sección en la que estás se ve resaltada en la barra de abajo.
+        headerTitle: () => <Brand size={16} />,
+        headerTitleAlign: 'center',
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,

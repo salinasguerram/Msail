@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { colors, spacing } from '@/theme';
@@ -9,15 +9,17 @@ type Props = {
   scroll?: boolean;
   /** Bordes con margen seguro. Las pantallas con header o tabs no necesitan el de arriba/abajo. */
   edges?: Edge[];
+  /** Estilos extra del contenedor del contenido (ej. `flexGrow: 1` para ocupar toda la altura). */
+  contentStyle?: ViewStyle;
 };
 
-export function Screen({ children, scroll = true, edges = ['left', 'right'] }: Props) {
+export function Screen({ children, scroll = true, edges = ['left', 'right'], contentStyle }: Props) {
   const content = scroll ? (
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView contentContainerStyle={[styles.content, contentStyle]} keyboardShouldPersistTaps="handled">
       {children}
     </ScrollView>
   ) : (
-    <View style={[styles.content, styles.fill]}>{children}</View>
+    <View style={[styles.content, styles.fill, contentStyle]}>{children}</View>
   );
 
   return (
