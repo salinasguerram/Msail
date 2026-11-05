@@ -10,6 +10,7 @@ urlpatterns = [
     path("api/auth/", include("apps.accounts.urls")),
     path("api/profiles/", include("apps.profiles.urls")),
     path("api/boats/", include("apps.boats.urls")),
+    path("api/events/", include("apps.events.urls")),
     path("api/boat-classes/", BoatClassListView.as_view(), name="boat-classes"),
     path("api/countries/", CountryListView.as_view(), name="countries"),
     path("api/regions/", RegionListView.as_view(), name="regions"),

@@ -19,6 +19,7 @@ ADMIN_MODELS = {
     "sailing": ["boatclass", "club"],
     "profiles": ["sailorprofile", "raceresult"],
     "boats": ["boat", "crewmember"],
+    "events": ["event"],
 }
 
 MODERATOR_PERMISSIONS = {
@@ -27,6 +28,7 @@ MODERATOR_PERMISSIONS = {
     "sailing": {"boatclass": ["view"], "club": ["view", "add", "change"]},
     "profiles": {"sailorprofile": ["view", "change"], "raceresult": ["view", "change", "delete"]},
     "boats": {"boat": ["view", "change"], "crewmember": ["view", "change", "delete"]},
+    "events": {"event": ["view", "add", "change"]},
 }
 
 

@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "apps.sailing",
     "apps.profiles",
     "apps.boats",
+    "apps.events",
 ]
 
 MIDDLEWARE = [
@@ -249,6 +250,9 @@ UNFOLD = {
     "SITE_SUBHEADER": "Panel de administración",
     "SITE_URL": FRONTEND_URL,
     "SITE_SYMBOL": "sailing",
+    "SITE_FAVICONS": [
+        {"rel": "icon", "type": "image/png", "sizes": "192x192", "href": lambda request: _static("msail/favicon.png")},
+    ],
     "THEME": "dark",
     "BORDER_RADIUS": "10px",
     "SHOW_HISTORY": True,
@@ -296,12 +300,16 @@ UNFOLD = {
                 "items": [_admin_link("Resumen", "dashboard", "admin:index")],
             },
             {
+                "title": "Calendario",
+                "items": [_admin_link("Regatas", "sailing", "admin:events_event_changelist")],
+            },
+            {
                 "title": "Comunidad",
                 "items": [
                     _admin_link("Usuarios", "person", "admin:accounts_user_changelist"),
                     _admin_link("Perfiles de navegante", "badge", "admin:profiles_sailorprofile_changelist"),
                     _admin_link("Resultados", "emoji_events", "admin:profiles_raceresult_changelist"),
-                    _admin_link("Embarcaciones", "sailing", "admin:boats_boat_changelist"),
+                    _admin_link("Embarcaciones", "directions_boat", "admin:boats_boat_changelist"),
                 ],
             },
             {
