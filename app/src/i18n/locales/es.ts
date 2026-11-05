@@ -264,6 +264,10 @@ const es = {
     confirmRemove: '¿Quitar a {{name}} de la tripulación?',
   },
   calendar: {
+    search: 'Buscar regatas',
+    searchPlaceholder: 'Buscar regatas, países, clases…',
+    clearSearch: 'Borrar búsqueda',
+    noSearchResults: 'No encontramos regatas para «{{q}}».',
     upcoming: 'Próximas',
     live: 'En curso',
     past: 'Pasadas',

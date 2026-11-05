@@ -5,6 +5,8 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import generics, permissions, serializers
 
+from apps.core.text import normalize
+
 from .models import Event, EventType
 from .serializers import EventListSerializer
 
@@ -26,6 +28,8 @@ class EventListView(generics.ListAPIView):
       ?when=upcoming|live|past   próximas (incluye las en curso), en curso, o pasadas
       ?country=ES  ?region=<id>  ?club=<id>  ?class=<slug>  ?type=offshore
       ?from=AAAA-MM-DD  ?to=AAAA-MM-DD   regatas que ocurren (aunque sea en parte) dentro del rango
+      ?q=texto   busca en nombre, ciudad, sede, organizador, país, región y clases; sin importar tildes
+                 ni mayúsculas, y cada palabra tiene que aparecer ("fastnet 2027").
     Las próximas se ordenan de la más cercana a la más lejana; las pasadas, de la más reciente hacia atrás.
     """
 
@@ -64,6 +68,9 @@ class EventListView(generics.ListAPIView):
             if event_type not in EventType.values:
                 raise serializers.ValidationError({"type": [f"Valores posibles: {', '.join(EventType.values)}."]})
             queryset = queryset.filter(event_type=event_type)
+
+        for word in normalize(params.get("q", "")).split()[:8]:
+            queryset = queryset.filter(search_text__contains=word)
 
         # Rango de fechas: entra toda regata que se cruce con el rango.
         start = parse_date(params.get("from"), "from")

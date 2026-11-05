@@ -266,6 +266,10 @@ const en: Translations = {
     confirmRemove: 'Remove {{name}} from the crew?',
   },
   calendar: {
+    search: 'Search regattas',
+    searchPlaceholder: 'Search regattas, countries, classes…',
+    clearSearch: 'Clear search',
+    noSearchResults: 'No regattas found for “{{q}}”.',
     upcoming: 'Upcoming',
     live: 'Live',
     past: 'Past',

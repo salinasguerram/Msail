@@ -3,6 +3,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from apps.core.text import normalize
 from apps.geo.models import Located
 
 
@@ -58,6 +59,8 @@ class Event(Located):
     website = models.URLField(_("sitio oficial"), blank=True)
     entry_url = models.URLField(_("link de inscripción"), blank=True)
     is_published = models.BooleanField(_("publicada"), default=True)
+    # Texto normalizado (sin tildes, en minúsculas) para el buscador. Se arma solo al guardar.
+    search_text = models.TextField(editable=False, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -86,6 +89,22 @@ class Event(Located):
     @property
     def organizer(self):
         return self.organizer_club.name if self.organizer_club_id else self.organizer_name
+
+    def build_search_text(self):
+        parts = [self.name, self.city, self.venue, self.organizer_name]
+        if self.organizer_club_id:
+            parts.append(self.organizer_club.name)
+        if self.country_id:
+            parts += [self.country.name_es, self.country.name_en, self.country.iso_code]
+        if self.region_id:
+            parts += [self.region.name_es, self.region.name_en]
+        if self.pk:
+            parts += list(self.boat_classes.values_list("name", flat=True))
+        return normalize(" ".join(p for p in parts if p))
+
+    def save(self, *args, **kwargs):
+        self.search_text = self.build_search_text()
+        super().save(*args, **kwargs)
 
     def clean(self):
         if self.end_date and self.start_date and self.end_date < self.start_date:

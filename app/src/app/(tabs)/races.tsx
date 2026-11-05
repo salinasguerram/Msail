@@ -1,6 +1,7 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { getCountries, searchClubs, type Club, type Country } from '@/api/catalogs';
 import { EVENT_TYPES, getEvents, type EventFilters, type EventSummary, type EventType, type EventWhen } from '@/api/events';
@@ -14,6 +15,7 @@ import { SelectField } from '@/components/SelectField';
 import { colors, radius, spacing, typography } from '@/theme';
 
 const WHEN: EventWhen[] = ['upcoming', 'live', 'past'];
+const SEARCH_DEBOUNCE_MS = 350;
 
 // Sin filtros, el mensaje vacío depende de la pestaña (ej. "No hay regatas en curso en este momento").
 const EMPTY_MESSAGE = {
@@ -42,6 +44,7 @@ export default function RacesScreen() {
   const { t, i18n } = useTranslation();
   const classes = useBoatClasses();
   const [filters, setFilters] = useState<EventFilters>({ when: 'upcoming' });
+  const [search, setSearch] = useState('');
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [count, setCount] = useState(0);
   const [nextPage, setNextPage] = useState<number | null>(null);
@@ -54,6 +57,14 @@ export default function RacesScreen() {
   useEffect(() => {
     getCountries().then(setCountries).catch(() => {});
   }, [i18n.language]);
+
+  // Busca mientras se escribe, esperando a que haya una pausa.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilters((f) => (f.q ?? '') === search.trim() ? f : { ...f, q: search.trim() || null });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Los clubes se filtran por el país elegido (si hay uno).
   useEffect(() => {
@@ -93,7 +104,7 @@ export default function RacesScreen() {
   }
 
   const set = (patch: Partial<EventFilters>) => setFilters((f) => ({ ...f, ...patch }));
-  const hasFilters = Boolean(filters.type || filters.country || filters.club || filters.boatClass || filters.month);
+  const hasFilters = Boolean(filters.q || filters.type || filters.country || filters.club || filters.boatClass || filters.month);
   const months = useMemo(() => monthOptions(filters.when, i18n.language), [filters.when, i18n.language]);
 
   // Agrupa por mes de inicio, respetando el orden que manda la API.
@@ -113,6 +124,26 @@ export default function RacesScreen() {
 
   return (
     <Screen>
+      <View style={styles.search}>
+        <Ionicons name="search" size={18} color={colors.textMuted} />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder={t('calendar.searchPlaceholder')}
+          placeholderTextColor={colors.textMuted}
+          style={styles.searchInput}
+          accessibilityLabel={t('calendar.search')}
+          autoCorrect={false}
+          returnKeyType="search"
+          onSubmitEditing={() => setFilters((f) => ({ ...f, q: search.trim() || null }))}
+        />
+        {search ? (
+          <Pressable accessibilityRole="button" accessibilityLabel={t('calendar.clearSearch')} hitSlop={10} onPress={() => setSearch('')}>
+            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+          </Pressable>
+        ) : null}
+      </View>
+
       <View style={styles.segment} role="tablist">
         {WHEN.map((when) => {
           const selected = filters.when === when;
@@ -184,7 +215,14 @@ export default function RacesScreen() {
       <View style={styles.summary}>
         <Text style={typography.caption}>{loading ? ' ' : t('calendar.count', { count })}</Text>
         {hasFilters ? (
-          <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setFilters({ when: filters.when })}>
+          <Pressable
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={() => {
+              setSearch('');
+              setFilters({ when: filters.when });
+            }}
+          >
             <Text style={styles.link}>{t('calendar.clearFilters')}</Text>
           </Pressable>
         ) : null}
@@ -202,7 +240,7 @@ export default function RacesScreen() {
 
       {!loading && !error && events.length === 0 ? (
         <Card style={{ alignItems: 'center' }}>
-          <Text style={typography.caption}>{hasFilters ? t('calendar.empty') : t(EMPTY_MESSAGE[filters.when])}</Text>
+          <Text style={typography.caption}>{filters.q ? t('calendar.noSearchResults', { q: filters.q }) : hasFilters ? t('calendar.empty') : t(EMPTY_MESSAGE[filters.when])}</Text>
         </Card>
       ) : null}
 
@@ -280,6 +318,18 @@ function EventRow({ event, classLabel }: { event: EventSummary; classLabel: (slu
 }
 
 const styles = StyleSheet.create({
+  search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 48,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  searchInput: { flex: 1, color: colors.text, fontSize: 16, paddingVertical: spacing.sm },
   segment: {
     flexDirection: 'row',
     backgroundColor: colors.surface,

@@ -32,6 +32,8 @@ export type EventFilters = {
   boatClass?: string | null;
   /** Mes como 'AAAA-MM': se piden las regatas que caen (aunque sea en parte) en ese mes. */
   month?: string | null;
+  /** Texto libre: nombre, ciudad, sede, organizador, país o clase (sin importar tildes). */
+  q?: string | null;
 };
 
 type Page<T> = { count: number; next: string | null; results: T[] };
@@ -44,6 +46,7 @@ function monthRange(month: string) {
 
 export function getEvents(filters: EventFilters, page = 1) {
   const query = new URLSearchParams({ when: filters.when, page: String(page) });
+  if (filters.q?.trim()) query.set('q', filters.q.trim());
   if (filters.type) query.set('type', filters.type);
   if (filters.country) query.set('country', filters.country);
   if (filters.club) query.set('club', String(filters.club));

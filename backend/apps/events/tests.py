@@ -120,3 +120,52 @@ class EventModelTests(TestCase):
         self.assertEqual(Event.objects.count(), total)
         self.assertEqual(Event.objects.get(slug="bacardi-cup-2027-100a-edicion").organizer, "Coral Reef Yacht Club")
         self.assertTrue(Event.objects.filter(organizer_club__isnull=True).exclude(organizer_name="").exists())
+
+
+class CalendarSearchTests(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_base", stdout=StringIO())
+        cls.es = Country.objects.get(iso_code="ES")
+        cls.br = Country.objects.get(iso_code="BR")
+        cls.club = Club.objects.create(name="Real Club Náutico Test", slug="rcn-test", country=cls.es)
+        cls.sofia = Event.objects.create(
+            name="Trofeo Princesa Sofía", slug="sofia", event_type=EventType.OLYMPIC,
+            start_date=days(20), end_date=days(25), country=cls.es, city="Palma", organizer_club=cls.club,
+        )
+        cls.sofia.boat_classes.set([BoatClass.objects.get(slug="49er")])
+        cls.rio = Event.objects.create(
+            name="Regata Buenos Aires – Río", slug="ba-rio", event_type=EventType.OFFSHORE,
+            start_date=days(40), country=cls.br, city="Río de Janeiro", organizer_name="Yacht Club Argentino",
+        )
+
+    def names(self, q):
+        return [e["name"] for e in self.client.get("/api/events/", {"q": q}).data["results"]]
+
+    def test_ignores_accents_and_case(self):
+        self.assertEqual(self.names("sofia"), ["Trofeo Princesa Sofía"])
+        self.assertEqual(self.names("SOFÍA"), ["Trofeo Princesa Sofía"])
+        self.assertEqual(self.names("rio"), ["Regata Buenos Aires – Río"])
+
+    def test_searches_city_country_organizer_and_class(self):
+        self.assertEqual(self.names("palma"), ["Trofeo Princesa Sofía"])
+        self.assertEqual(self.names("españa"), ["Trofeo Princesa Sofía"])
+        self.assertEqual(self.names("brazil"), ["Regata Buenos Aires – Río"])  # nombre del país en inglés
+        self.assertEqual(self.names("yacht club argentino"), ["Regata Buenos Aires – Río"])
+        self.assertEqual(self.names("nautico"), ["Trofeo Princesa Sofía"])
+        self.assertEqual(self.names("49er"), ["Trofeo Princesa Sofía"])
+
+    def test_every_word_must_match(self):
+        self.assertEqual(self.names("sofia palma"), ["Trofeo Princesa Sofía"])
+        self.assertEqual(self.names("sofia janeiro"), [])
+
+    def test_combines_with_filters(self):
+        response = self.client.get("/api/events/", {"q": "regata", "country": "ES"})
+        self.assertEqual(response.data["count"], 0)
+
+    def test_index_updates_when_classes_or_club_change(self):
+        self.sofia.boat_classes.add(BoatClass.objects.get(slug="nacra-17"))
+        self.assertEqual(self.names("nacra"), ["Trofeo Princesa Sofía"])
+        self.club.name = "Club de Vela Renombrado"
+        self.club.save()
+        self.assertEqual(self.names("renombrado"), ["Trofeo Princesa Sofía"])
