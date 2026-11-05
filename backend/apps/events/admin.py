@@ -1,7 +1,14 @@
 from django.contrib import admin
-from unfold.admin import ModelAdmin
+from unfold.admin import ModelAdmin, TabularInline
 
-from .models import Event
+from .models import Event, EventCategory
+
+
+class EventCategoryInline(TabularInline):
+    model = EventCategory
+    extra = 0
+    fields = ["order", "name", "boat_class", "notes"]
+    autocomplete_fields = ["boat_class"]
 
 
 @admin.register(Event)
@@ -13,6 +20,7 @@ class EventAdmin(ModelAdmin):
     autocomplete_fields = ["country", "region", "organizer_club"]
     filter_horizontal = ["boat_classes"]
     date_hierarchy = "start_date"
+    inlines = [EventCategoryInline]
     fieldsets = (
         (None, {"fields": ("name", "slug", "event_type", "is_published")}),
         ("Fechas", {"fields": ("start_date", "end_date")}),

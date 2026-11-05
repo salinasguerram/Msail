@@ -111,3 +111,29 @@ class Event(Located):
             raise ValidationError({"end_date": _("La fecha de fin no puede ser anterior al inicio.")})
         if self.region_id and self.country_id and self.region.country_id != self.country_id:
             raise ValidationError({"region": _("La región no pertenece al país elegido.")})
+
+
+class EventCategory(models.Model):
+    """División en la que se compite dentro de una regata (ej. "IRC General", "Doble mano", "Sub-21")."""
+
+    event = models.ForeignKey(Event, verbose_name=_("regata"), on_delete=models.CASCADE, related_name="categories")
+    name = models.CharField(_("nombre"), max_length=120)
+    boat_class = models.ForeignKey(
+        "sailing.BoatClass",
+        verbose_name=_("clase"),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="event_categories",
+    )
+    notes = models.CharField(_("detalle"), max_length=200, blank=True)
+    order = models.PositiveSmallIntegerField(_("orden"), default=0)
+
+    class Meta:
+        verbose_name = _("categoría")
+        verbose_name_plural = _("categorías")
+        ordering = ["order", "name"]
+        constraints = [models.UniqueConstraint(fields=["event", "name"], name="unique_category_per_event")]
+
+    def __str__(self):
+        return self.name

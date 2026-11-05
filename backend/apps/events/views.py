@@ -8,7 +8,7 @@ from rest_framework import generics, permissions, serializers
 from apps.core.text import normalize
 
 from .models import Event, EventType
-from .serializers import EventListSerializer
+from .serializers import EventDetailSerializer, EventListSerializer
 
 WHEN_CHOICES = ("upcoming", "live", "past")
 
@@ -82,3 +82,18 @@ class EventListView(generics.ListAPIView):
 
         ordering = ("-start_date", "name") if when == "past" else ("start_date", "name")
         return queryset.distinct().order_by(*ordering)
+
+
+class EventDetailView(generics.RetrieveAPIView):
+    """Página de una regata publicada, por su slug."""
+
+    serializer_class = EventDetailSerializer
+    permission_classes = [permissions.AllowAny]
+    lookup_field = "slug"
+
+    def get_queryset(self):
+        return (
+            Event.objects.filter(is_published=True)
+            .select_related("country", "region", "organizer_club")
+            .prefetch_related("boat_classes", "categories__boat_class")
+        )

@@ -1,0 +1,245 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
+import { useCallback, useEffect, useLayoutEffect, useState, type ComponentProps } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { getEvent, type EventDetail } from '@/api/events';
+import { ApiError } from '@/api/client';
+import { className, useBoatClasses } from '@/api/useBoatClasses';
+import { errorMessage } from '@/auth/errors';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { Screen } from '@/components/Screen';
+import { colors, radius, spacing, typography } from '@/theme';
+import { goBack } from '@/utils/navigation';
+
+const parseDate = (value: string) => new Date(`${value}T12:00:00`);
+
+function daysUntil(value: string) {
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  return Math.round((parseDate(value).getTime() - today.getTime()) / 86_400_000);
+}
+
+export default function EventScreen() {
+  const { t, i18n } = useTranslation();
+  const navigation = useNavigation();
+  const { slug } = useLocalSearchParams<{ slug: string }>();
+  const classes = useBoatClasses();
+  const [event, setEvent] = useState<EventDetail | null>(null);
+  const [error, setError] = useState<unknown>(null);
+
+  const load = useCallback(() => {
+    setError(null);
+    getEvent(slug).then(setEvent).catch(setError);
+  }, [slug]);
+
+  useEffect(load, [load]);
+
+  // El encabezado (y la pestaña del navegador, en la web) muestra el nombre de la regata.
+  useLayoutEffect(() => {
+    if (event) navigation.setOptions({ title: event.name });
+  }, [navigation, event]);
+
+  if (!event) {
+    const notFound = error instanceof ApiError && error.status === 404;
+    return (
+      <Screen>
+        {error ? (
+          <Card style={{ alignItems: 'center' }}>
+            <Text style={typography.body}>{notFound ? t('event.notFound') : errorMessage(error, t)}</Text>
+            <Button
+              title={notFound ? t('event.backToCalendar') : t('profile.retry')}
+              variant="ghost"
+              onPress={notFound ? () => goBack('/races') : load}
+            />
+          </Card>
+        ) : (
+          <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xxl }} />
+        )}
+      </Screen>
+    );
+  }
+
+  const longDate = (value: string) =>
+    parseDate(value).toLocaleDateString(i18n.language, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+  const remaining = daysUntil(event.start_date);
+  const statusLabel =
+    event.status === 'live'
+      ? t('event.live')
+      : event.status === 'finished'
+        ? t('event.finished')
+        : remaining === 0
+          ? t('event.today')
+          : t('event.inDays', { count: remaining });
+  const hasCoords = event.latitude !== null && event.longitude !== null;
+  const mapUrl = hasCoords ? `https://www.google.com/maps/search/?api=1&query=${event.latitude},${event.longitude}` : null;
+  // Sede, ciudad, región y país, sin repetir (ej. ciudad y región "Sídney").
+  const place = [event.venue, event.city, event.region, event.country_name].filter(
+    (line, index, all): line is string => !!line && all.findIndex((other) => other?.toLowerCase() === line.toLowerCase()) === index,
+  );
+
+  return (
+    <Screen>
+      <Card style={styles.hero}>
+        <View style={styles.badges}>
+          <Text style={styles.typeTag}>{t(`calendar.types.${event.event_type}`)}</Text>
+          <View style={[styles.status, event.status === 'live' && styles.statusLive, event.status === 'finished' && styles.statusDone]}>
+            <Text style={[styles.statusText, event.status === 'live' && { color: '#fff' }]}>{statusLabel}</Text>
+          </View>
+        </View>
+        <Text style={styles.name}>{event.name}</Text>
+        <Text style={[typography.body, { color: colors.textMuted }]}>
+          {[event.city, event.country_name].filter(Boolean).join(' · ')}
+        </Text>
+      </Card>
+
+      <Card>
+        <Text style={typography.label}>{t('event.dates')}</Text>
+        {event.end_date ? (
+          <>
+            <InfoRow icon="calendar-outline" label={t('event.start')} value={longDate(event.start_date)} />
+            <InfoRow icon="flag-outline" label={t('event.end')} value={longDate(event.end_date)} />
+            {event.duration_days ? <Text style={typography.caption}>{t('event.days', { count: event.duration_days })}</Text> : null}
+          </>
+        ) : (
+          <InfoRow icon="flag-outline" label={t('event.startOnly')} value={longDate(event.start_date)} />
+        )}
+      </Card>
+
+      <Card>
+        <Text style={typography.label}>{t('event.location')}</Text>
+        {place.map((line, index) => (
+          <Text key={line} style={index === 0 ? [typography.body, { fontWeight: '700' }] : typography.body}>
+            {line}
+          </Text>
+        ))}
+        {mapUrl ? (
+          <Button title={t('event.openMap')} variant="secondary" onPress={() => Linking.openURL(mapUrl)} />
+        ) : null}
+      </Card>
+
+      {event.organizer ? (
+        <Card>
+          <Text style={typography.label}>{t('event.organizer')}</Text>
+          <View style={styles.organizer}>
+            <View style={styles.organizerIcon}>
+              <Ionicons name={event.organizer_club ? 'people' : 'ribbon-outline'} size={22} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[typography.body, { fontWeight: '700' }]}>{event.organizer}</Text>
+              {event.organizer_club?.city ? <Text style={typography.caption}>{event.organizer_club.city}</Text> : null}
+            </View>
+          </View>
+          {event.organizer_club?.website ? (
+            <LinkRow label={event.organizer_club.website.replace(/^https?:\/\//, '').replace(/\/$/, '')} url={event.organizer_club.website} />
+          ) : null}
+        </Card>
+      ) : null}
+
+      {event.categories.length > 0 || event.boat_classes.length > 0 ? (
+        <Card>
+          <Text style={typography.label}>{event.categories.length > 0 ? t('event.categories') : t('event.classes')}</Text>
+          {event.categories.length > 0
+            ? event.categories.map((category) => (
+                <View key={category.name} style={styles.category}>
+                  <Ionicons name="trophy-outline" size={18} color={colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={typography.body}>{category.name}</Text>
+                    {category.notes ? <Text style={typography.caption}>{category.notes}</Text> : null}
+                  </View>
+                </View>
+              ))
+            : (
+              <View style={styles.tags}>
+                {event.boat_classes.map((slug) => (
+                  <Text key={slug} style={styles.classTag}>
+                    {className(classes, slug)}
+                  </Text>
+                ))}
+              </View>
+            )}
+        </Card>
+      ) : null}
+
+      {event.description ? (
+        <Card>
+          <Text style={typography.label}>{t('event.about')}</Text>
+          <Text style={typography.body}>{event.description}</Text>
+        </Card>
+      ) : null}
+
+      {event.website ? <Button title={t('event.website')} onPress={() => Linking.openURL(event.website)} /> : null}
+    </Screen>
+  );
+}
+
+function InfoRow({ icon, label, value }: { icon: ComponentProps<typeof Ionicons>['name']; label: string; value: string }) {
+  return (
+    <View style={styles.infoRow}>
+      <Ionicons name={icon} size={18} color={colors.primary} />
+      <Text style={[typography.caption, { width: 64 }]}>{label}</Text>
+      <Text style={[typography.body, { flex: 1 }]}>{value.charAt(0).toUpperCase() + value.slice(1)}</Text>
+    </View>
+  );
+}
+
+function LinkRow({ label, url }: { label: string; url: string }) {
+  return (
+    <Pressable accessibilityRole="link" onPress={() => Linking.openURL(url)} style={styles.link} hitSlop={6}>
+      <Ionicons name="open-outline" size={16} color={colors.primary} />
+      <Text style={styles.linkText}>{label}</Text>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  hero: { gap: spacing.sm, paddingVertical: spacing.xl },
+  badges: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
+  typeTag: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  status: { borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 3, backgroundColor: colors.surfaceRaised },
+  statusLive: { backgroundColor: colors.live },
+  statusDone: { backgroundColor: colors.background },
+  statusText: { color: colors.text, fontSize: 12, fontWeight: '700' },
+  name: { ...typography.title, fontSize: 26, lineHeight: 32 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 2 },
+  organizer: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  organizerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  link: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
+  linkText: { color: colors.primary, fontWeight: '600' },
+  category: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  classTag: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '600',
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+});

@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -274,7 +275,11 @@ function EventRow({ event, classLabel }: { event: EventSummary; classLabel: (slu
   const extra = event.boat_classes.length - classes.length;
 
   return (
-    <View style={[styles.row, live && { borderColor: colors.live }]}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push({ pathname: '/events/[slug]', params: { slug: event.slug } })}
+      style={({ pressed }) => [styles.row, live && { borderColor: colors.live }, pressed && { opacity: 0.75 }]}
+    >
       <View style={[styles.date, live && { borderColor: colors.live }]}>
         <Text style={styles.dateDays} numberOfLines={1} adjustsFontSizeToFit>
           {days}
@@ -313,7 +318,8 @@ function EventRow({ event, classLabel }: { event: EventSummary; classLabel: (slu
           </Text>
         ) : null}
       </View>
-    </View>
+      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ alignSelf: 'center' }} />
+    </Pressable>
   );
 }
 

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Event
+from .models import Event, EventCategory
 
 
 class EventListSerializer(serializers.ModelSerializer):
@@ -35,3 +35,39 @@ class EventListSerializer(serializers.ModelSerializer):
             "latitude",
             "longitude",
         ]
+
+
+class EventCategorySerializer(serializers.ModelSerializer):
+    boat_class = serializers.SlugRelatedField(slug_field="slug", read_only=True)
+
+    class Meta:
+        model = EventCategory
+        fields = ["name", "boat_class", "notes"]
+
+
+class EventDetailSerializer(EventListSerializer):
+    """Página de la regata: todo lo del calendario más organizador completo, categorías y textos."""
+
+    organizer_club = serializers.SerializerMethodField()
+    categories = EventCategorySerializer(many=True, read_only=True)
+    duration_days = serializers.SerializerMethodField()
+
+    class Meta(EventListSerializer.Meta):
+        fields = EventListSerializer.Meta.fields + [
+            "categories",
+            "description",
+            "website",
+            "entry_url",
+            "duration_days",
+        ]
+
+    def get_organizer_club(self, event):
+        club = event.organizer_club
+        if not club:
+            return None
+        return {"id": club.id, "name": club.name, "city": club.city, "website": club.website}
+
+    def get_duration_days(self, event):
+        if not event.end_date:
+            return None
+        return (event.end_date - event.start_date).days + 1

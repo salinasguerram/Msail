@@ -58,3 +58,19 @@ export function getEvents(filters: EventFilters, page = 1) {
   }
   return api<Page<EventSummary>>(`/events/?${query}`, { auth: false });
 }
+
+export type EventCategory = { name: string; boat_class: string | null; notes: string };
+
+export type EventDetail = Omit<EventSummary, 'organizer_club'> & {
+  organizer_club: { id: number; name: string; city: string; website: string } | null;
+  categories: EventCategory[];
+  description: string;
+  website: string;
+  entry_url: string;
+  /** Días que dura (null si solo se conoce la largada). */
+  duration_days: number | null;
+  latitude: string | null;
+  longitude: string | null;
+};
+
+export const getEvent = (slug: string) => api<EventDetail>(`/events/${encodeURIComponent(slug)}/`, { auth: false });

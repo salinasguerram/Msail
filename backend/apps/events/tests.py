@@ -169,3 +169,29 @@ class CalendarSearchTests(APITestCase):
         self.club.name = "Club de Vela Renombrado"
         self.club.save()
         self.assertEqual(self.names("renombrado"), ["Trofeo Princesa Sofía"])
+
+
+class EventDetailTests(CalendarTestCase):
+    def test_detail_by_slug_with_categories_and_organizer(self):
+        from .models import EventCategory
+
+        EventCategory.objects.create(event=self.live, name="J/70 Open", boat_class=BoatClass.objects.get(slug="j70"), order=1)
+        EventCategory.objects.create(event=self.live, name="Sub-21", order=2)
+        response = self.client.get(f"/api/events/{self.live.slug}/")
+        self.assertEqual(response.status_code, 200)
+        data = response.data
+        self.assertEqual(data["status"], "live")
+        self.assertEqual(data["duration_days"], 4)
+        self.assertEqual(data["organizer_club"]["name"], "Club Test")
+        self.assertEqual(data["region"], self.miami.name)
+        self.assertEqual([c["name"] for c in data["categories"]], ["J/70 Open", "Sub-21"])
+        self.assertEqual(data["categories"][0]["boat_class"], "j70")
+
+    def test_start_only_event_has_no_duration(self):
+        data = self.client.get(f"/api/events/{self.later.slug}/").data
+        self.assertIsNone(data["duration_days"])
+        self.assertIsNone(data["organizer_club"])
+
+    def test_unpublished_or_missing_is_404(self):
+        self.assertEqual(self.client.get(f"/api/events/{self.hidden.slug}/").status_code, 404)
+        self.assertEqual(self.client.get("/api/events/no-existe/").status_code, 404)
