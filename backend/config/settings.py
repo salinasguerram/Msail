@@ -17,15 +17,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 
+def env(name, default=""):
+    """Variable de entorno; una línea vacía en el .env (`CLAVE=`) cuenta como no definida."""
+    return os.environ.get(name) or default
+
+
 def env_bool(name, default=False):
-    return os.getenv(name, str(default)).lower() in ("1", "true", "yes")
+    return env(name, str(default)).lower() in ("1", "true", "yes")
 
 
 def env_list(name, default=""):
-    return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
+    return [item.strip() for item in env(name, default).split(",") if item.strip()]
 
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-insecure-solo-para-desarrollo-local-cambiar-en-produccion")
+SECRET_KEY = env("DJANGO_SECRET_KEY", "dev-insecure-solo-para-desarrollo-local-cambiar-en-produccion")
 
 DEBUG = env_bool("DJANGO_DEBUG", True)
 
@@ -90,8 +95,9 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 # Base de datos: Supabase (PostgreSQL) vía DATABASE_URL; SQLite si no está definida.
 DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+    # `or`: si DATABASE_URL está vacía en el .env (como viene en el ejemplo), también se usa SQLite.
+    "default": dj_database_url.parse(
+        env("DATABASE_URL") or f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
         conn_max_age=600,
     )
 }
@@ -121,6 +127,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]  # ajustes propios del panel (static/msail/)
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -170,17 +177,17 @@ APPLE_CLIENT_IDS = env_list("APPLE_CLIENT_IDS")
 
 # Email: en local se imprime en la consola; en producción sale por Twilio SendGrid (SMTP).
 # Con SENDGRID_API_KEY (o EMAIL_HOST_PASSWORD) definida se envía por SMTP; si no, se muestra en la consola.
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD") or os.getenv("SENDGRID_API_KEY", "")
-EMAIL_BACKEND = os.getenv(
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD") or env("SENDGRID_API_KEY", "")
+EMAIL_BACKEND = env(
     "EMAIL_BACKEND",
     "django.core.mail.backends.smtp.EmailBackend" if EMAIL_HOST_PASSWORD else "django.core.mail.backends.console.EmailBackend",
 )
-EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.sendgrid.net")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "apikey")
+EMAIL_HOST = env("EMAIL_HOST", "smtp.sendgrid.net")
+EMAIL_PORT = int(env("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", "apikey")
 EMAIL_USE_TLS = True
 EMAIL_TIMEOUT = 15
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "MSAIL LEAGUE <no-reply@msailleague.com>")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "MSAIL LEAGUE <no-reply@msailleague.com>")
 
 # Códigos de verificación y recuperación de contraseña enviados por email.
 EMAIL_CODE_TTL_MINUTES = 15
@@ -190,21 +197,21 @@ EMAIL_CODE_RESEND_SECONDS = 60
 
 # Archivos subidos (fotos). En local se guardan en backend/media/; en producción, en Supabase Storage
 # (compatible con S3). Se activa definiendo SUPABASE_STORAGE_BUCKET y sus credenciales.
-SUPABASE_STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "")
+SUPABASE_STORAGE_BUCKET = env("SUPABASE_STORAGE_BUCKET", "")
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
 }
 if SUPABASE_STORAGE_BUCKET:
-    SUPABASE_PROJECT_URL = os.getenv("SUPABASE_PROJECT_URL", "").rstrip("/")  # https://<proyecto>.supabase.co
+    SUPABASE_PROJECT_URL = env("SUPABASE_PROJECT_URL", "").rstrip("/")  # https://<proyecto>.supabase.co
     STORAGES["default"] = {
         "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
             "bucket_name": SUPABASE_STORAGE_BUCKET,
             "endpoint_url": f"{SUPABASE_PROJECT_URL}/storage/v1/s3",
-            "region_name": os.getenv("SUPABASE_STORAGE_REGION", "us-east-1"),
-            "access_key": os.getenv("SUPABASE_S3_ACCESS_KEY_ID", ""),
-            "secret_key": os.getenv("SUPABASE_S3_SECRET_ACCESS_KEY", ""),
+            "region_name": env("SUPABASE_STORAGE_REGION", "us-east-1"),
+            "access_key": env("SUPABASE_S3_ACCESS_KEY_ID", ""),
+            "secret_key": env("SUPABASE_S3_SECRET_ACCESS_KEY", ""),
             # Bucket público: las fotos se sirven con URL fija, sin firma.
             "custom_domain": f"{SUPABASE_PROJECT_URL.removeprefix('https://')}/storage/v1/object/public/{SUPABASE_STORAGE_BUCKET}",
             "querystring_auth": False,
@@ -221,7 +228,13 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 
 # Panel de administración (Unfold) con la identidad de MSAIL.
 # "Ver el sitio" lleva a la app (en local, la versión web de Expo).
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:8081")
+FRONTEND_URL = env("FRONTEND_URL", "http://localhost:8081")
+
+
+def _static(path):
+    from django.templatetags.static import static
+
+    return static(path)
 
 
 def _admin_link(title, icon, url_name):
@@ -240,6 +253,9 @@ UNFOLD = {
     "BORDER_RADIUS": "10px",
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": False,
+    # La barra lateral recuerda si quedó abierta también en notebooks (ver static/msail/).
+    "STYLES": [lambda request: _static("msail/admin.css")],
+    "SCRIPTS": [lambda request: _static("msail/admin-sidebar.js")],
     "LOGIN": {"form": "config.admin_site.MsailLoginForm"},
     "COLORS": {
         # Azul noche de la app (950 = fondo, 100 = texto)

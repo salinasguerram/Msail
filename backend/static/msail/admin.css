@@ -1,0 +1,9 @@
+/*
+ * Desde 768 px la barra lateral del panel ocupa su lugar al lado del contenido
+ * (Unfold la pone encima del contenido hasta 1280 px). En celulares sigue encima, como menú.
+ */
+@media (min-width: 768px) {
+  div[x-show="sidebarOpen"] {
+    position: relative !important;
+  }
+}

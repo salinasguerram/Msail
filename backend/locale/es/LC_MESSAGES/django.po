@@ -1,0 +1,350 @@
+# Traducción al español de los textos del panel de administración (tema Unfold).
+# Unfold no trae traducción al español: sin esto, buscadores, filtros y botones salían en inglés.
+# Los mensajes propios de MSAIL ya están escritos en español y no necesitan entrada acá.
+# Después de editar este archivo: python scripts/compile_messages.py
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: es\n"
+
+msgid " By %(filter_title)s "
+msgstr " Por %(filter_title)s "
+
+msgid "%(class_name)s %(instance)s"
+msgstr "%(class_name)s %(instance)s"
+
+msgid "Action"
+msgstr "Acción"
+
+msgid "Add"
+msgstr "Agregar"
+
+msgid "Add row"
+msgstr "Agregar fila"
+
+msgid "After you've created a user, you’ll be able to edit more user options."
+msgstr "Después de crear el usuario vas a poder editar el resto de sus datos."
+
+msgid "All"
+msgstr "Todos"
+
+msgid "All applications"
+msgstr "Todas las secciones"
+
+msgid "Apply Filters"
+msgstr "Aplicar filtros"
+
+msgid "Available shortcuts"
+msgstr "Atajos disponibles"
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "Change"
+msgstr "Editar"
+
+msgid "Change password"
+msgstr "Cambiar contraseña"
+
+msgid "Changelist shortcuts"
+msgstr "Atajos de las listas"
+
+msgid "Choose file to upload"
+msgstr "Elegí un archivo para subir"
+
+msgid "Clear"
+msgstr "Limpiar"
+
+msgid "Clear all filters"
+msgstr "Quitar todos los filtros"
+
+msgid "Clear selection"
+msgstr "Quitar selección"
+
+msgid "Click here to select the objects across all pages"
+msgstr "Seleccionar los elementos de todas las páginas"
+
+msgid "Click to cancel"
+msgstr "Cancelar"
+
+msgid "Click to download"
+msgstr "Descargar"
+
+msgid "Close"
+msgstr "Cerrar"
+
+msgid "Command tool shortcuts"
+msgstr "Atajos del buscador"
+
+msgid "Create new record"
+msgstr "Crear nuevo"
+
+msgid "Dark"
+msgstr "Oscuro"
+
+msgid "Dataset not found. No action performed."
+msgstr "No se encontraron los datos. No se hizo ningún cambio."
+
+msgid "Date"
+msgstr "Fecha"
+
+msgid "Date from"
+msgstr "Desde"
+
+msgid "Date to"
+msgstr "Hasta"
+
+msgid "Date/time"
+msgstr "Fecha y hora"
+
+msgid "Delete"
+msgstr "Eliminar"
+
+msgid "False"
+msgstr "No"
+
+msgid "Filters"
+msgstr "Filtros"
+
+msgid "Forgotten your password or username?"
+msgstr "¿Olvidaste tu contraseña?"
+
+msgid "From"
+msgstr "Desde"
+
+msgid "General"
+msgstr "General"
+
+msgid "Global shortcuts"
+msgstr "Atajos generales"
+
+msgid "Go back"
+msgstr "Volver"
+
+msgid "Hide counts"
+msgstr "Ocultar cantidades"
+
+msgid "History"
+msgstr "Historial"
+
+msgid "Home"
+msgstr "Inicio"
+
+msgid "Image preview"
+msgstr "Vista previa"
+
+msgid "Light"
+msgstr "Claro"
+
+msgid "Log in"
+msgstr "Iniciar sesión"
+
+msgid "Log in again"
+msgstr "Volver a iniciar sesión"
+
+msgid "Log out"
+msgstr "Cerrar sesión"
+
+msgid "Navigate"
+msgstr "Navegar"
+
+msgid "Next"
+msgstr "Siguiente"
+
+msgid "No"
+msgstr "No"
+
+msgid "No data"
+msgstr "Sin datos"
+
+msgid "No results found"
+msgstr "No se encontraron resultados"
+
+msgid "No, take me back"
+msgstr "No, volver"
+
+msgid "Nothing matched your search"
+msgstr "No hay resultados para tu búsqueda"
+
+msgid "Objects"
+msgstr "Elementos"
+
+msgid "Open command tool"
+msgstr "Abrir el buscador"
+
+msgid "Open selection"
+msgstr "Abrir selección"
+
+msgid "Open selection in new tab"
+msgstr "Abrir selección en una pestaña nueva"
+
+msgid "Open shortcuts list"
+msgstr "Ver atajos de teclado"
+
+msgid "Please enter your old password, for security’s sake, and then enter your new password twice so we can verify you typed it in correctly."
+msgstr "Por seguridad, ingresá tu contraseña actual y después la nueva dos veces, para confirmar que la escribiste bien."
+
+msgid "Previous"
+msgstr "Anterior"
+
+msgid "Recent actions"
+msgstr "Acciones recientes"
+
+msgid "Recent searches"
+msgstr "Búsquedas recientes"
+
+msgid "Record picture"
+msgstr "Foto"
+
+msgid "Remove from sorting"
+msgstr "Quitar del orden"
+
+msgid "Reset filters"
+msgstr "Restablecer filtros"
+
+msgid "Return to site"
+msgstr "Volver al sitio"
+
+msgid "Run"
+msgstr "Ejecutar"
+
+msgid "Run the selected action"
+msgstr "Ejecutar la acción elegida"
+
+msgid "Save"
+msgstr "Guardar"
+
+msgid "Save and add another"
+msgstr "Guardar y agregar otro"
+
+msgid "Save and continue editing"
+msgstr "Guardar y seguir editando"
+
+msgid "Save and view"
+msgstr "Guardar y ver"
+
+msgid "Save as new"
+msgstr "Guardar como nuevo"
+
+msgid "Search apps and models..."
+msgstr "Buscar secciones…"
+
+msgid "Select"
+msgstr "Elegir"
+
+msgid "Select action"
+msgstr "Elegí una acción"
+
+msgid "Select action to run"
+msgstr "Elegí la acción a ejecutar"
+
+msgid "Select currency"
+msgstr "Elegí la moneda"
+
+msgid "Select format"
+msgstr "Elegí el formato"
+
+msgid "Select record"
+msgstr "Elegí un elemento"
+
+msgid "Select value"
+msgstr "Elegí un valor"
+
+msgid "Show all"
+msgstr "Ver todo"
+
+msgid "Show counts"
+msgstr "Mostrar cantidades"
+
+msgid "Submit"
+msgstr "Enviar"
+
+msgid "Summary"
+msgstr "Resumen"
+
+msgid "System"
+msgstr "Sistema"
+
+msgid "Thanks for spending some quality time with the web site today."
+msgstr "Gracias por tu tiempo en el panel."
+
+msgid "This item will be deleted."
+msgstr "Este elemento se va a eliminar."
+
+msgid "This object doesn’t have a change history. It probably wasn’t added via this admin site."
+msgstr "Este elemento no tiene historial de cambios. Probablemente no se creó desde este panel."
+
+msgid "This page yielded into no results."
+msgstr "Esta página no tiene resultados."
+
+msgid "Time"
+msgstr "Hora"
+
+msgid "To"
+msgstr "Hasta"
+
+msgid "Toggle dark/light mode"
+msgstr "Cambiar modo claro/oscuro"
+
+msgid "Toggle filter"
+msgstr "Mostrar u ocultar filtros"
+
+msgid "Toggle password visibility"
+msgstr "Mostrar u ocultar la contraseña"
+
+msgid "Toggle sidebar"
+msgstr "Mostrar u ocultar el menú"
+
+msgid "Toggle sorting"
+msgstr "Cambiar orden"
+
+msgid "True"
+msgstr "Sí"
+
+msgid "Type to search"
+msgstr "Escribí para buscar"
+
+msgid "Unknown"
+msgstr "Desconocido"
+
+msgid "Unknown content"
+msgstr "Contenido desconocido"
+
+msgid "User"
+msgstr "Usuario"
+
+msgid "Value"
+msgstr "Valor"
+
+msgid "View"
+msgstr "Ver"
+
+msgid "View on site"
+msgstr "Ver en el sitio"
+
+msgid "View site"
+msgstr "Ver el sitio"
+
+msgid "Welcome"
+msgstr "Hola"
+
+msgid "Yes"
+msgstr "Sí"
+
+msgid "Yes, I’m sure"
+msgstr "Sí, estoy seguro"
+
+msgid "You can not create nested object without parent"
+msgstr "No se puede crear un elemento anidado sin su elemento principal"
+
+msgid "You don’t have permission to view or edit anything."
+msgstr "No tenés permiso para ver ni editar nada."
+
+msgid "You have been successfully logged out from the administration"
+msgstr "Cerraste sesión en el panel"
+
+msgid "Your password was changed."
+msgstr "Tu contraseña se cambió."
+
+msgid "and"
+msgstr "y"
