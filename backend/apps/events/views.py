@@ -95,5 +95,5 @@ class EventDetailView(generics.RetrieveAPIView):
         return (
             Event.objects.filter(is_published=True)
             .select_related("country", "region", "organizer_club")
-            .prefetch_related("boat_classes", "categories__boat_class")
+            .prefetch_related("boat_classes", "categories__boat_class", "documents")
         )

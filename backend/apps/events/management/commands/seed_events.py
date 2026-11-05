@@ -15,7 +15,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils.text import slugify
 
-from apps.events.models import Event, EventCategory, EventType
+from apps.events.models import DocumentKind, Event, EventCategory, EventDocument, EventType
 from apps.geo.models import Country, Region
 from apps.sailing.models import BoatClass, Club
 
@@ -79,6 +79,10 @@ EVENTS = [
         "lat": -34.5933, "lng": -58.3698, "club": "yacht-club-argentino",
         "classes": ["orc"],
         "description": "XXVIII edición, organizada por el Yacht Club Argentino y el Iate Clube do Rio de Janeiro.",
+        "documents": [
+            ("Aviso de regata", DocumentKind.NOTICE_OF_RACE,
+             "https://www.icrj.com.br/velaicrj/images/aviso_regata/2026/02_fev/BA-Rio-2026_AR_red.pdf"),
+        ],
     },
     {
         "name": "Semana Internacional de Vela de Ilhabela 2026",
@@ -111,6 +115,10 @@ EVENTS = [
         "lat": 35.8930, "lng": 14.5180, "organizer": "Royal Malta Yacht Club y RORC",
         "classes": ["irc", "orc", "class40"], "website": "https://www.rolexmiddlesearace.com",
         "categories": [("IRC", "irc"), ("ORC", "orc"), ("Class40", "class40"), ("Doble mano", None)],
+        "documents": [
+            ("Notice of Race (Class40)", DocumentKind.NOTICE_OF_RACE,
+             "https://www.class40.com/media/pages/courses/saison-2026/middle-sea-race-2026/b7430c81d8-1782980888/notice-of-race.pdf"),
+        ],
         "description": "47ª edición. 606 millas náuticas alrededor de Sicilia. El plazo para terminar vence el 24 de octubre.",
     },
 ]
@@ -154,6 +162,9 @@ class Command(BaseCommand):
                 },
             )
             event.boat_classes.set([classes[s] for s in data["classes"] if s in classes])
+            # Documentos de ejemplo: solo links a PDFs publicados por los organizadores (no se borran los subidos al panel).
+            for i, (title, kind, url) in enumerate(data.get("documents", [])):
+                EventDocument.objects.update_or_create(event=event, url=url, defaults={"title": title, "kind": kind, "order": i})
             event.categories.all().delete()
             EventCategory.objects.bulk_create(
                 EventCategory(event=event, name=name, boat_class=classes.get(slug) if slug else None, order=i)

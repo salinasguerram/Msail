@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Event, EventCategory
+from .models import Event, EventCategory, EventDocument
 
 
 class EventListSerializer(serializers.ModelSerializer):
@@ -45,19 +45,53 @@ class EventCategorySerializer(serializers.ModelSerializer):
         fields = ["name", "boat_class", "notes"]
 
 
+class EventDocumentSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+    source = serializers.SerializerMethodField()
+    size_kb = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EventDocument
+        fields = ["id", "title", "kind", "url", "source", "size_kb"]
+
+    def get_url(self, document):
+        if not document.file:
+            return document.url
+        url = document.file.url
+        request = self.context.get("request")
+        return request.build_absolute_uri(url) if request and not url.startswith("http") else url
+
+    def get_source(self, document):
+        # "file": PDF subido a MSAIL; "link": documento publicado en el sitio del organizador.
+        return "file" if document.file else "link"
+
+    def get_size_kb(self, document):
+        if not document.file:
+            return None
+        try:
+            return round(document.file.size / 1024)
+        except (OSError, ValueError):
+            return None
+
+
 class EventDetailSerializer(EventListSerializer):
     """Página de la regata: todo lo del calendario más organizador completo, categorías y textos."""
 
     organizer_club = serializers.SerializerMethodField()
     categories = EventCategorySerializer(many=True, read_only=True)
+    documents = EventDocumentSerializer(many=True, read_only=True)
+    entries_open = serializers.BooleanField(read_only=True)
     duration_days = serializers.SerializerMethodField()
 
     class Meta(EventListSerializer.Meta):
         fields = EventListSerializer.Meta.fields + [
             "categories",
+            "documents",
             "description",
             "website",
             "entry_url",
+            "entry_deadline",
+            "entries_open",
             "duration_days",
         ]
 

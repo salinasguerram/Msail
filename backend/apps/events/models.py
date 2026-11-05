@@ -58,6 +58,9 @@ class Event(Located):
     description = models.TextField(_("descripción"), blank=True)
     website = models.URLField(_("sitio oficial"), blank=True)
     entry_url = models.URLField(_("link de inscripción"), blank=True)
+    entry_deadline = models.DateField(
+        _("inscripción hasta"), null=True, blank=True, help_text=_("Último día para inscribirse. Vacío: hasta el inicio.")
+    )
     is_published = models.BooleanField(_("publicada"), default=True)
     # Texto normalizado (sin tildes, en minúsculas) para el buscador. Se arma solo al guardar.
     search_text = models.TextField(editable=False, blank=True, default="")
@@ -85,6 +88,15 @@ class Event(Located):
         if today <= self.last_day:
             return EventStatus.LIVE
         return EventStatus.FINISHED
+
+    @property
+    def entries_open(self):
+        """Hay link de inscripción y todavía se puede usar."""
+        if not self.entry_url:
+            return False
+        today = timezone.localdate()
+        limit = self.entry_deadline or self.start_date
+        return today <= limit
 
     @property
     def organizer(self):
@@ -137,3 +149,47 @@ class EventCategory(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class DocumentKind(models.TextChoices):
+    NOTICE_OF_RACE = "notice_of_race", _("Aviso de regata")
+    SAILING_INSTRUCTIONS = "sailing_instructions", _("Instrucciones de regata")
+    ENTRY_LIST = "entry_list", _("Lista de inscriptos")
+    RESULTS = "results", _("Resultados")
+    AMENDMENT = "amendment", _("Modificación / anexo")
+    OTHER = "other", _("Otro")
+
+
+PDF_MAX_MB = 20
+
+
+class EventDocument(models.Model):
+    """Documento oficial de una regata: un PDF subido al panel o un link al documento publicado por el organizador."""
+
+    event = models.ForeignKey(Event, verbose_name=_("regata"), on_delete=models.CASCADE, related_name="documents")
+    title = models.CharField(_("título"), max_length=200)
+    kind = models.CharField(_("tipo"), max_length=30, choices=DocumentKind.choices, default=DocumentKind.OTHER)
+    file = models.FileField(_("archivo PDF"), upload_to="event_documents/", blank=True)
+    url = models.URLField(_("o link al documento"), blank=True)
+    order = models.PositiveSmallIntegerField(_("orden"), default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("documento")
+        verbose_name_plural = _("documentos")
+        ordering = ["order", "created_at"]
+
+    def __str__(self):
+        return self.title
+
+    def clean(self):
+        if bool(self.file) == bool(self.url):
+            raise ValidationError(_("Subí un PDF o pegá un link, uno de los dos."))
+        if self.file and not getattr(self.file, "_committed", True):
+            # Archivo recién subido: se valida que sea un PDF de verdad y su tamaño.
+            if self.file.size > PDF_MAX_MB * 1024 * 1024:
+                raise ValidationError({"file": _("El PDF supera los %(mb)s MB.") % {"mb": PDF_MAX_MB}})
+            head = self.file.read(5)
+            self.file.seek(0)
+            if head != b"%PDF-":
+                raise ValidationError({"file": _("El archivo no es un PDF.")})

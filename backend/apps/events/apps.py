@@ -6,4 +6,9 @@ class EventsConfig(AppConfig):
     name = 'apps.events'
 
     def ready(self):
+        from apps.core.signals import connect
+
         from . import signals  # noqa: F401
+        from .models import EventDocument
+
+        connect(EventDocument)

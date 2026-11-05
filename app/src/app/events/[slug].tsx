@@ -108,6 +108,22 @@ export default function EventScreen() {
         )}
       </Card>
 
+      {event.entry_url && event.status !== 'finished' ? (
+        <Card style={styles.entry}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={[typography.body, { fontWeight: '700' }]}>
+              {event.entries_open ? t('event.entriesOpen') : t('event.entriesClosed')}
+            </Text>
+            {event.entries_open ? (
+              <Text style={typography.caption}>
+                {t('event.entriesUntil', { date: longDate(event.entry_deadline ?? event.start_date) })}
+              </Text>
+            ) : null}
+          </View>
+          {event.entries_open ? <Button title={t('event.enter')} onPress={() => Linking.openURL(event.entry_url)} /> : null}
+        </Card>
+      ) : null}
+
       <Card>
         <Text style={typography.label}>{t('event.location')}</Text>
         {place.map((line, index) => (
@@ -160,6 +176,38 @@ export default function EventScreen() {
                 ))}
               </View>
             )}
+        </Card>
+      ) : null}
+
+      {event.documents.length > 0 ? (
+        <Card>
+          <Text style={typography.label}>{t('event.documents')}</Text>
+          {event.documents.map((document) => (
+            <Pressable
+              key={document.id}
+              accessibilityRole="link"
+              accessibilityHint={t('event.openDocument')}
+              onPress={() => Linking.openURL(document.url)}
+              style={({ pressed }) => [styles.document, pressed && { opacity: 0.7 }]}
+            >
+              <View style={styles.pdfIcon}>
+                <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+                <Text style={styles.pdfText}>PDF</Text>
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[typography.body, { fontWeight: '600' }]}>{document.title}</Text>
+                <Text style={typography.caption}>
+                  {[
+                    t(`event.documentKinds.${document.kind}`),
+                    document.source === 'link' ? t('event.externalLink') : document.size_kb ? `${document.size_kb} KB` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Text>
+              </View>
+              <Ionicons name={document.source === 'link' ? 'open-outline' : 'download-outline'} size={18} color={colors.textMuted} />
+            </Pressable>
+          ))}
         </Card>
       ) : null}
 
@@ -223,6 +271,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   link: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
+  entry: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexWrap: 'wrap', borderColor: colors.primary },
+  document: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  pdfIcon: {
+    width: 44,
+    height: 48,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pdfText: { color: colors.primary, fontSize: 9, fontWeight: '800', letterSpacing: 1 },
   linkText: { color: colors.primary, fontWeight: '600' },
   category: {
     flexDirection: 'row',

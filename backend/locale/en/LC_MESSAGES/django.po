@@ -110,3 +110,13 @@ msgstr "The end date can't be before the start date."
 
 msgid "La región no pertenece al país elegido."
 msgstr "The region doesn't belong to the selected country."
+
+# Documentos de regata
+msgid "Subí un PDF o pegá un link, uno de los dos."
+msgstr "Upload a PDF or paste a link, one of the two."
+
+msgid "El PDF supera los %(mb)s MB."
+msgstr "The PDF is larger than %(mb)s MB."
+
+msgid "El archivo no es un PDF."
+msgstr "The file is not a PDF."

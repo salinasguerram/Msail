@@ -61,12 +61,29 @@ export function getEvents(filters: EventFilters, page = 1) {
 
 export type EventCategory = { name: string; boat_class: string | null; notes: string };
 
+export const DOCUMENT_KINDS = ['notice_of_race', 'sailing_instructions', 'entry_list', 'results', 'amendment', 'other'] as const;
+export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
+
+export type EventDocument = {
+  id: number;
+  title: string;
+  kind: DocumentKind;
+  url: string;
+  /** 'file': PDF subido a MSAIL; 'link': documento en el sitio del organizador. */
+  source: 'file' | 'link';
+  size_kb: number | null;
+};
+
 export type EventDetail = Omit<EventSummary, 'organizer_club'> & {
   organizer_club: { id: number; name: string; city: string; website: string } | null;
   categories: EventCategory[];
+  documents: EventDocument[];
   description: string;
   website: string;
   entry_url: string;
+  entry_deadline: string | null;
+  /** Hay link de inscripción y todavía está abierta. */
+  entries_open: boolean;
   /** Días que dura (null si solo se conoce la largada). */
   duration_days: number | null;
   latitude: string | null;
