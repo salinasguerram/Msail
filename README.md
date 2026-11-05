@@ -35,6 +35,7 @@ python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
 .venv\Scripts\python manage.py migrate
 .venv\Scripts\python manage.py seed_base
+.venv\Scripts\python manage.py seed_clubs   # clubes reales de ejemplo (opcional)
 .venv\Scripts\python manage.py createsuperuser
 .venv\Scripts\python manage.py runserver 0.0.0.0:8000
 ```

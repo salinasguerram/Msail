@@ -28,3 +28,23 @@ class ClubTests(TestCase):
         club.boat_classes.add(*BoatClass.objects.filter(slug__in=["j70", "optimist"]))
         self.assertEqual(club.boat_classes.count(), 2)
         self.assertIn(club, BoatClass.objects.get(slug="j70").clubs.all())
+
+
+class SeedClubsTests(TestCase):
+    def test_loads_real_clubs_idempotently(self):
+        call_command("seed_base", stdout=StringIO())
+        call_command("seed_clubs", stdout=StringIO())
+        total = Club.objects.count()
+        call_command("seed_clubs", stdout=StringIO())
+        self.assertEqual(Club.objects.count(), total)
+        self.assertGreaterEqual(Club.objects.filter(country__iso_code="US", region__slug="rhode-island-newport").count(), 2)
+        for iso in ["CL", "AR", "BR", "ES", "IT", "GB"]:
+            self.assertTrue(Club.objects.filter(country__iso_code=iso).exists(), iso)
+        self.assertFalse(Club.objects.filter(is_verified=True).exists())
+        self.assertFalse(Club.objects.filter(latitude__isnull=True).exists())
+
+    def test_requires_countries(self):
+        err = StringIO()
+        call_command("seed_clubs", stdout=StringIO(), stderr=err)
+        self.assertIn("seed_base", err.getvalue())
+        self.assertEqual(Club.objects.count(), 0)
