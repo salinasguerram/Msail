@@ -23,6 +23,7 @@ ADMIN_MODELS = {
     "notifications": ["notification"],
     "news": ["article"],
     "marinas": ["marina", "marinaphoto", "marinarate", "berthrequest"],
+    "professionals": ["professional", "professionalphoto", "specialty"],
 }
 
 MODERATOR_PERMISSIONS = {
@@ -43,6 +44,11 @@ MODERATOR_PERMISSIONS = {
     "marinas": {"marina": ["view", "add", "change"], "marinaphoto": ["view", "add", "change", "delete"],
                 "marinarate": ["view", "add", "change", "delete"],
                 "berthrequest": ["view", "change"]},
+    "professionals": {
+        "professional": ["view", "add", "change"],
+        "professionalphoto": ["view", "add", "change", "delete"],
+        "specialty": ["view"],
+    },
 }
 
 

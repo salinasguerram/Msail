@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.news",
     "apps.marinas",
+    "apps.professionals",
 ]
 
 MIDDLEWARE = [
@@ -321,6 +322,8 @@ UNFOLD = {
                         **_admin_link("Solicitudes de amarre", "move_to_inbox", "admin:marinas_berthrequest_changelist"),
                         "badge": "apps.marinas.admin.pending_badge",
                     },
+                    _admin_link("Profesionales", "engineering", "admin:professionals_professional_changelist"),
+                    _admin_link("Especialidades", "category", "admin:professionals_specialty_changelist"),
                 ],
             },
             {
