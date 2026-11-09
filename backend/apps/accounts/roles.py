@@ -22,6 +22,7 @@ ADMIN_MODELS = {
     "events": ["event", "eventcategory", "eventdocument", "eventresult", "eventmedia"],
     "notifications": ["notification"],
     "news": ["article"],
+    "marinas": ["marina", "marinaphoto"],
 }
 
 MODERATOR_PERMISSIONS = {
@@ -39,6 +40,7 @@ MODERATOR_PERMISSIONS = {
     },
     # Los moderadores escriben y corrigen noticias; borrar queda para los administradores.
     "news": {"article": ["view", "add", "change"]},
+    "marinas": {"marina": ["view", "add", "change"], "marinaphoto": ["view", "add", "change", "delete"]},
 }
 
 

@@ -1,0 +1,137 @@
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+from apps.core.text import normalize
+from apps.geo.models import Located
+
+# Servicios que se pueden informar. Que un servicio no esté marcado significa "no informado", no "no hay".
+SERVICES = [
+    ("water", _("Agua")),
+    ("electricity", _("Luz")),
+    ("showers", _("Duchas")),
+    ("fuel", _("Combustible")),
+    ("wifi", _("Wi-Fi")),
+    ("laundry", _("Lavandería")),
+    ("security", _("Seguridad 24 h")),
+    ("boatyard", _("Varadero / travel lift")),
+]
+SERVICE_KEYS = [key for key, _label in SERVICES]
+
+
+class Marina(Located):
+    """Marina o puerto deportivo del directorio."""
+
+    name = models.CharField(_("nombre"), max_length=200)
+    slug = models.SlugField(_("slug"), max_length=200, unique=True)
+    country = models.ForeignKey("geo.Country", verbose_name=_("país"), on_delete=models.PROTECT, related_name="marinas")
+    region = models.ForeignKey(
+        "geo.Region", verbose_name=_("región"), on_delete=models.SET_NULL, null=True, blank=True, related_name="marinas"
+    )
+    city = models.CharField(_("ciudad"), max_length=120)
+    address = models.CharField(_("dirección"), max_length=200, blank=True)
+    description = models.TextField(_("descripción"), blank=True)
+
+    # Contacto
+    website = models.URLField(_("sitio web"), blank=True)
+    email = models.EmailField(_("email"), blank=True)
+    phone = models.CharField(_("teléfono"), max_length=40, blank=True, help_text=_("Con código de país. Ej: +34 971 171 100"))
+    whatsapp = models.CharField(_("WhatsApp"), max_length=40, blank=True, help_text=_("Con código de país, solo números."))
+    vhf_channel = models.CharField(_("canal VHF"), max_length=10, blank=True)
+
+    # Capacidad
+    berths = models.PositiveIntegerField(_("amarres"), null=True, blank=True)
+    max_length_m = models.DecimalField(
+        _("eslora máxima (m)"), max_digits=5, decimal_places=1, null=True, blank=True, validators=[MinValueValidator(1)]
+    )
+    max_draft_m = models.DecimalField(
+        _("profundidad / calado máximo (m)"), max_digits=4, decimal_places=1, null=True, blank=True, validators=[MinValueValidator(0.5)]
+    )
+
+    # Servicios informados
+    water = models.BooleanField(_("agua"), default=False)
+    electricity = models.BooleanField(_("luz"), default=False)
+    showers = models.BooleanField(_("duchas"), default=False)
+    fuel = models.BooleanField(_("combustible"), default=False)
+    wifi = models.BooleanField(_("Wi-Fi"), default=False)
+    laundry = models.BooleanField(_("lavandería"), default=False)
+    security = models.BooleanField(_("seguridad 24 h"), default=False)
+    boatyard = models.BooleanField(_("varadero / travel lift"), default=False)
+
+    verified = models.BooleanField(
+        _("datos confirmados por la marina"),
+        default=False,
+        help_text=_("Sin marcar, la app avisa que los datos salen de fuentes públicas y conviene confirmarlos."),
+    )
+    is_published = models.BooleanField(_("publicada"), default=True)
+    search_text = models.TextField(editable=False, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("marina")
+        verbose_name_plural = _("marinas")
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def services(self):
+        return [key for key in SERVICE_KEYS if getattr(self, key)]
+
+    def build_search_text(self):
+        parts = [self.name, self.city, self.address, self.description]
+        if self.country_id:
+            parts += [self.country.name_es, self.country.name_en, self.country.iso_code]
+        if self.region_id:
+            parts += [self.region.name_es, self.region.name_en]
+        return normalize(" ".join(p for p in parts if p))
+
+    def save(self, *args, **kwargs):
+        self.search_text = self.build_search_text()
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        if self.region_id and self.country_id and self.region.country_id != self.country_id:
+            raise ValidationError({"region": _("La región no pertenece al país elegido.")})
+
+
+class MarinaPhoto(models.Model):
+    THUMB_SIDE = 480
+
+    marina = models.ForeignKey(Marina, verbose_name=_("marina"), on_delete=models.CASCADE, related_name="photos")
+    image = models.ImageField(_("foto"), upload_to="marinas/")
+    thumbnail = models.ImageField(upload_to="marinas/thumbs/", blank=True, editable=False)
+    caption = models.CharField(_("descripción"), max_length=200, blank=True)
+    credit = models.CharField(_("crédito"), max_length=120, blank=True)
+    order = models.PositiveSmallIntegerField(_("orden"), default=0, help_text=_("La primera es la portada."))
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("foto de la marina")
+        verbose_name_plural = _("fotos de la marina")
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.caption or f"Foto {self.pk}"
+
+    def clean(self):
+        if self.image and not getattr(self.image, "_committed", True):
+            from apps.core.images import process_image
+
+            process_image(self.image)  # valida que sea una imagen real
+            self.image.seek(0)
+
+    def save(self, *args, **kwargs):
+        from apps.core.images import process_image
+
+        if self.image and not getattr(self.image, "_committed", True):
+            # Foto nueva: se recomprime sin datos GPS y se genera la miniatura.
+            self.image.seek(0)
+            original = self.image.file
+            self.image = process_image(original)
+            original.seek(0)
+            self.thumbnail = process_image(original, max_side=self.THUMB_SIDE, square=True)
+        super().save(*args, **kwargs)

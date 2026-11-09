@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "apps.events",
     "apps.notifications",
     "apps.news",
+    "apps.marinas",
 ]
 
 MIDDLEWARE = [
@@ -308,6 +309,10 @@ UNFOLD = {
             {
                 "title": "Contenido",
                 "items": [_admin_link("Noticias", "newspaper", "admin:news_article_changelist")],
+            },
+            {
+                "title": "Directorios",
+                "items": [_admin_link("Marinas", "anchor", "admin:marinas_marina_changelist")],
             },
             {
                 "title": "Comunidad",
