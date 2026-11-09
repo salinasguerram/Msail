@@ -4,6 +4,8 @@ from django.db.models import F
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from apps.core.text import normalize
+
 
 class Highlight(models.TextChoices):
     NONE = "", _("Normal")
@@ -47,6 +49,8 @@ class Article(models.Model):
         _("fecha de publicación"), default=timezone.now, help_text=_("Si es futura, la noticia aparece recién en ese momento.")
     )
     views = models.PositiveIntegerField(_("lecturas"), default=0, editable=False)
+    # Título, bajada, texto, país, regata y clases sin tildes, para el buscador. Se arma solo al guardar.
+    search_text = models.TextField(editable=False, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -71,6 +75,16 @@ class Article(models.Model):
     @property
     def reading_minutes(self):
         return max(1, round(len(self.body.split()) / 200))
+
+    def build_search_text(self):
+        parts = [self.title, self.summary, self.body, self.author]
+        if self.country_id:
+            parts += [self.country.name_es, self.country.name_en, self.country.iso_code]
+        if self.event_id:
+            parts.append(self.event.name)
+        if self.pk:
+            parts += list(self.boat_classes.values_list("name", flat=True))
+        return normalize(" ".join(p for p in parts if p))
 
     def add_view(self):
         type(self).objects.filter(pk=self.pk).update(views=F("views") + 1)
@@ -97,4 +111,5 @@ class Article(models.Model):
             self.cover_thumb = thumb
         elif not self.cover and self.cover_thumb:
             self.cover_thumb = None
+        self.search_text = self.build_search_text()
         super().save(*args, **kwargs)

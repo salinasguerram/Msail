@@ -143,3 +143,48 @@ class CoverAndAdminTests(TestCase):
         call_command("seed_news", stdout=StringIO())
         self.assertEqual(dict(Article.objects.values_list("slug", "published_at")), first)
         self.assertTrue(all(Article.objects.values_list("title", flat=True)))
+
+
+class FilterTests(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_base", stdout=StringIO())
+        from apps.events.models import Event, EventType
+        from apps.geo.models import Country
+        from apps.sailing.models import BoatClass
+
+        cls.es = Country.objects.get(iso_code="ES")
+        cls.cl = Country.objects.get(iso_code="CL")
+        cls.event = Event.objects.create(
+            name="Copa del Rey", slug="copa-del-rey", event_type=EventType.INSHORE, start_date=timezone.localdate(), country=cls.es
+        )
+        a = article("nola-gana", country=cls.es, event=cls.event, body="Nola ganó en la bahía de Palma.")
+        a.boat_classes.set([BoatClass.objects.get(slug="orc")])
+        b = article("tensacon-gana", country=cls.cl, body="Tensacon ganó en Valparaíso.")
+        b.boat_classes.set([BoatClass.objects.get(slug="irc")])
+        article("borrador-es", country=cls.es, is_published=False)
+
+    def slugs(self, query):
+        return [a["slug"] for a in self.client.get(f"/api/news/{query}").data["results"]]
+
+    def test_filters_combine(self):
+        self.assertEqual(self.slugs("?country=es"), ["nola-gana"])
+        self.assertEqual(self.slugs("?class=irc"), ["tensacon-gana"])
+        self.assertEqual(self.slugs("?event=copa-del-rey"), ["nola-gana"])
+        self.assertEqual(self.slugs("?country=CL&class=orc"), [])
+
+    def test_search_ignores_accents_and_includes_classes(self):
+        self.assertEqual(self.slugs("?q=valparaiso"), ["tensacon-gana"])
+        self.assertEqual(self.slugs("?q=BAHIA nola"), ["nola-gana"])
+        self.assertEqual(self.slugs("?q=orc"), ["nola-gana"])  # la clase se suma al texto de búsqueda
+
+    def test_filter_options_only_list_what_has_news(self):
+        data = self.client.get("/api/news/filters/").data
+        self.assertEqual([c["value"] for c in data["countries"]], ["CL", "ES"])
+        self.assertEqual({c["value"] for c in data["classes"]}, {"irc", "orc"})
+        self.assertEqual(data["events"], [{"value": "copa-del-rey", "label": "Copa del Rey", "count": 1}])
+
+    def test_event_page_lists_its_news(self):
+        data = self.client.get("/api/events/copa-del-rey/").data
+        self.assertEqual(data["news_count"], 1)
+        self.assertEqual(data["news"][0]["slug"], "nola-gana")

@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from apps.news.models import Article
+from apps.news.serializers import ArticleCardSerializer
 from apps.profiles.models import RaceResult
 from apps.profiles.serializers import avatar_url
 
@@ -160,6 +162,8 @@ class EventDetailSerializer(EventListSerializer):
     media_preview = serializers.SerializerMethodField()
     is_following = serializers.SerializerMethodField()
     followers_count = serializers.SerializerMethodField()
+    news = serializers.SerializerMethodField()
+    news_count = serializers.SerializerMethodField()
 
     class Meta(EventListSerializer.Meta):
         fields = EventListSerializer.Meta.fields + [
@@ -179,6 +183,8 @@ class EventDetailSerializer(EventListSerializer):
             "media_preview",
             "is_following",
             "followers_count",
+            "news",
+            "news_count",
         ]
 
     def get_organizer_club(self, event):
@@ -201,6 +207,19 @@ class EventDetailSerializer(EventListSerializer):
 
     def get_followers_count(self, event):
         return event.follows.count()
+
+    NEWS_PREVIEW = 3
+
+    def event_news(self, event):
+        if not hasattr(event, "_visible_news"):
+            event._visible_news = Article.visible().filter(event=event).select_related("country", "event").prefetch_related("boat_classes")
+        return event._visible_news
+
+    def get_news(self, event):
+        return ArticleCardSerializer(self.event_news(event)[: self.NEWS_PREVIEW], many=True, context=self.context).data
+
+    def get_news_count(self, event):
+        return self.event_news(event).count()
 
     def get_media_count(self, event):
         return len(event.media.all())

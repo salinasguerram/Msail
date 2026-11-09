@@ -14,6 +14,7 @@ import { Card } from '@/components/Card';
 import { useDialogs } from '@/components/Dialogs';
 import { EventGallery } from '@/components/EventGallery';
 import { EventResults, EventSailors } from '@/components/EventResults';
+import { NewsRow } from '@/components/NewsCards';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/theme';
 import { goBack } from '@/utils/navigation';
@@ -268,6 +269,24 @@ export default function EventScreen() {
               <Ionicons name={document.source === 'link' ? 'open-outline' : 'download-outline'} size={18} color={colors.textMuted} />
             </Pressable>
           ))}
+        </Card>
+      ) : null}
+
+      {event.news_count > 0 ? (
+        <Card>
+          <Text style={typography.label}>{t('event.news', { count: event.news_count })}</Text>
+          <View>
+            {event.news.map((article) => (
+              <NewsRow key={article.id} article={article} />
+            ))}
+          </View>
+          {event.news_count > event.news.length ? (
+            <Button
+              title={t('event.allNews', { count: event.news_count })}
+              variant="secondary"
+              onPress={() => router.push({ pathname: '/news', params: { event: event.slug } })}
+            />
+          ) : null}
         </Card>
       ) : null}
 

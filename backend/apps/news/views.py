@@ -1,10 +1,12 @@
 from datetime import timedelta
 
-from django.db.models import Case, IntegerField, Value, When
+from django.db.models import Case, Count, IntegerField, Value, When
 from django.utils import timezone
 from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from apps.core.text import normalize
 
 from .models import Article, Highlight
 from .serializers import ArticleCardSerializer, ArticleDetailSerializer
@@ -57,13 +59,56 @@ class FrontPageView(APIView):
 
 
 class ArticleListView(generics.ListAPIView):
-    """Todas las noticias publicadas, de la más nueva a la más vieja."""
+    """
+    Noticias publicadas, de la más nueva a la más vieja. Filtros opcionales y combinables:
+      ?country=ES   ?class=<slug de clase>   ?event=<slug de la regata o campeonato>
+      ?q=texto   busca en título, bajada, texto, país, regata y clases (sin importar tildes; cada palabra tiene que aparecer)
+    """
 
     serializer_class = ArticleCardSerializer
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        return visible_articles()
+        return filter_articles(visible_articles(), self.request.query_params)
+
+
+def filter_articles(queryset, params):
+    if country := params.get("country", "").strip().upper():
+        queryset = queryset.filter(country__iso_code=country)
+    if boat_class := params.get("class", "").strip():
+        queryset = queryset.filter(boat_classes__slug=boat_class)
+    if event := params.get("event", "").strip():
+        queryset = queryset.filter(event__slug=event, event__is_published=True)
+    for word in normalize(params.get("q", "")).split()[:8]:
+        queryset = queryset.filter(search_text__contains=word)
+    return queryset.distinct()
+
+
+class FilterOptionsView(APIView):
+    """Países, clases y campeonatos que tienen noticias publicadas (para no ofrecer filtros vacíos)."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from apps.events.models import Event
+        from apps.geo.models import Country
+        from apps.sailing.models import BoatClass
+
+        visible = Article.visible().values("pk")
+        countries = Country.objects.filter(pk__in=Article.visible().values("country")).order_by("name_es")
+        classes = BoatClass.objects.filter(articles__in=visible).annotate(total=Count("articles", distinct=True)).order_by("name")
+        events = (
+            Event.objects.filter(is_published=True, articles__in=visible)
+            .annotate(total=Count("articles", distinct=True))
+            .order_by("-start_date")
+        )
+        return Response(
+            {
+                "countries": [{"value": c.iso_code, "label": c.name} for c in countries],
+                "classes": [{"value": c.slug, "label": c.name, "count": c.total} for c in classes],
+                "events": [{"value": e.slug, "label": e.name, "count": e.total} for e in events],
+            }
+        )
 
 
 class ArticleDetailView(generics.RetrieveAPIView):

@@ -1,4 +1,5 @@
 import { api } from '@/api/client';
+import type { ArticleCard } from '@/api/news';
 
 export const EVENT_TYPES = ['offshore', 'inshore', 'one_design', 'olympic', 'multihull', 'youth'] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
@@ -150,6 +151,9 @@ export type EventDetail = Omit<EventSummary, 'organizer_club'> & {
   /** La sigo (recibo avisos). Siempre false sin sesión. */
   is_following: boolean;
   followers_count: number;
+  /** Últimas noticias de la regata y cuántas hay en total. */
+  news: ArticleCard[];
+  news_count: number;
 };
 
 // Con token si hay sesión, para saber si la sigo.

@@ -9,6 +9,7 @@ class NewsConfig(AppConfig):
     def ready(self):
         from apps.core.signals import connect
 
+        from . import signals  # noqa: F401
         from .models import Article
 
         connect(Article)
