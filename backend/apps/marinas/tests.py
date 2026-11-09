@@ -112,3 +112,52 @@ class MarinaPhotoTests(TestCase):
         change = self.client.get(reverse("admin:marinas_marina_change", args=[self.marina.pk]))
         self.assertContains(change, "Servicios informados")
         self.assertContains(change, "/marinas/marina-test")
+
+
+class MarinaRateTests(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_base", stdout=StringIO())
+        from .models import MarinaRate, RateUnit
+
+        es = Country.objects.get(iso_code="ES")
+        cls.with_price = Marina.objects.create(name="Con Precio", slug="con-precio", country=es, city="Palma")
+        cls.without = Marina.objects.create(name="Sin Precio", slug="sin-precio", country=es, city="Palma")
+        MarinaRate.objects.create(marina=cls.with_price, label="Mensual", amount="900", unit=RateUnit.PER_BOAT_MONTH, order=2)
+        MarinaRate.objects.create(
+            marina=cls.with_price, label="Temporada alta", amount="4.90", currency="GBP", unit=RateUnit.PER_METER_NIGHT,
+            min_length_m="8", max_length_m="20", order=1,
+        )
+        cls.admin = get_user_model().objects.create_superuser(email="admin@msail.com", password="x-segura-123")
+
+    def test_headline_rate_and_detail(self):
+        rows = {m["slug"]: m for m in self.client.get("/api/marinas/").data["results"]}
+        self.assertEqual(
+            rows["con-precio"]["headline_rate"],
+            {
+                "id": rows["con-precio"]["headline_rate"]["id"], "label": "Temporada alta", "amount": 4.9, "currency": "GBP",
+                "unit": "meter_night", "min_length_m": 8.0, "max_length_m": 20.0,
+            },
+        )
+        self.assertIsNone(rows["sin-precio"]["headline_rate"])
+        detail = self.client.get("/api/marinas/con-precio/").data
+        self.assertEqual([r["label"] for r in detail["rates"]], ["Temporada alta", "Mensual"])
+        self.assertEqual(self.client.get("/api/marinas/sin-precio/").data["rates"], [])
+
+    def test_with_price_filter(self):
+        slugs = [m["slug"] for m in self.client.get("/api/marinas/?with_price=1").data["results"]]
+        self.assertEqual(slugs, ["con-precio"])  # una sola vez aunque tenga dos tarifas
+
+    def test_length_range_validation(self):
+        from .models import MarinaRate
+
+        with self.assertRaises(ValidationError):
+            MarinaRate(marina=self.without, label="Mal", amount="1", min_length_m="20", max_length_m="10").full_clean()
+
+    def test_rates_from_panel(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("admin:marinas_marina_change", args=[self.with_price.pk]))
+        html = response.content.decode().lower()
+        self.assertIn("tarifas orientativas", html)
+        self.assertIn("temporada alta", html)
+        self.assertIn("precio orientativo", html)

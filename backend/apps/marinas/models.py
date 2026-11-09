@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -58,6 +60,14 @@ class Marina(Located):
     laundry = models.BooleanField(_("lavandería"), default=False)
     security = models.BooleanField(_("seguridad 24 h"), default=False)
     boatyard = models.BooleanField(_("varadero / travel lift"), default=False)
+
+    # Precio orientativo (solo si la marina lo informa)
+    prices_updated_on = models.DateField(
+        _("precios informados el"), null=True, blank=True, help_text=_("Fecha en que la marina informó las tarifas.")
+    )
+    price_notes = models.CharField(
+        _("aclaraciones del precio"), max_length=300, blank=True, help_text=_("Ej: IVA incluido. Luz y agua aparte.")
+    )
 
     verified = models.BooleanField(
         _("datos confirmados por la marina"),
@@ -135,3 +145,49 @@ class MarinaPhoto(models.Model):
             original.seek(0)
             self.thumbnail = process_image(original, max_side=self.THUMB_SIDE, square=True)
         super().save(*args, **kwargs)
+
+
+class RateUnit(models.TextChoices):
+    PER_METER_NIGHT = "meter_night", _("por metro de eslora y noche")
+    PER_FOOT_NIGHT = "foot_night", _("por pie de eslora y noche")
+    PER_BOAT_NIGHT = "boat_night", _("por barco y noche")
+    PER_METER_MONTH = "meter_month", _("por metro de eslora y mes")
+    PER_BOAT_MONTH = "boat_month", _("por barco y mes")
+
+
+CURRENCIES = [
+    ("EUR", "EUR €"),
+    ("USD", "USD $"),
+    ("GBP", "GBP £"),
+    ("BRL", "BRL R$"),
+    ("ARS", "ARS $"),
+    ("CLP", "CLP $"),
+    ("UYU", "UYU $"),
+    ("AUD", "AUD $"),
+    ("NZD", "NZD $"),
+]
+
+
+class MarinaRate(models.Model):
+    """Tarifa orientativa informada por la marina (ej. "Temporada alta, por metro y noche")."""
+
+    marina = models.ForeignKey(Marina, verbose_name=_("marina"), on_delete=models.CASCADE, related_name="rates")
+    label = models.CharField(_("nombre"), max_length=120, help_text=_("Ej: Temporada alta (jun–sep), Amarre mensual."))
+    amount = models.DecimalField(_("importe"), max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
+    currency = models.CharField(_("moneda"), max_length=3, choices=CURRENCIES, default="EUR")
+    unit = models.CharField(_("unidad"), max_length=20, choices=RateUnit.choices, default=RateUnit.PER_METER_NIGHT)
+    min_length_m = models.DecimalField(_("desde eslora (m)"), max_digits=5, decimal_places=1, null=True, blank=True)
+    max_length_m = models.DecimalField(_("hasta eslora (m)"), max_digits=5, decimal_places=1, null=True, blank=True)
+    order = models.PositiveSmallIntegerField(_("orden"), default=0, help_text=_("La primera se muestra en el listado."))
+
+    class Meta:
+        verbose_name = _("tarifa")
+        verbose_name_plural = _("tarifas orientativas")
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"{self.label}: {self.amount} {self.currency} {self.get_unit_display()}"
+
+    def clean(self):
+        if self.min_length_m and self.max_length_m and self.min_length_m > self.max_length_m:
+            raise ValidationError({"max_length_m": _("La eslora máxima no puede ser menor que la mínima.")})

@@ -14,6 +14,7 @@ import { Screen } from '@/components/Screen';
 import { SelectField } from '@/components/SelectField';
 import { TextField } from '@/components/TextField';
 import { colors, radius, spacing, typography } from '@/theme';
+import { formatMoney } from '@/utils/marinaRates';
 
 const SEARCH_DEBOUNCE_MS = 350;
 const meters = (value: string) => value.replace(',', '.').replace(/[^\d.]/g, '').slice(0, 6);
@@ -50,7 +51,7 @@ export default function MarinasScreen() {
       const current = f.services ?? [];
       return { ...f, services: current.includes(service) ? current.filter((s) => s !== service) : [...current, service] };
     });
-  const hasFilters = Boolean(filters.q || filters.country || services.length || filters.length || filters.draft);
+  const hasFilters = Boolean(filters.q || filters.country || services.length || filters.length || filters.draft || filters.withPrice);
 
   function clear() {
     setSearch('');
@@ -111,6 +112,11 @@ export default function MarinasScreen() {
       </View>
 
       <View style={styles.chips}>
+        <Chip
+          label={t('marinas.withPrice')}
+          selected={!!filters.withPrice}
+          onPress={() => setFilters((f) => ({ ...f, withPrice: !f.withPrice }))}
+        />
         {MARINA_SERVICES.map((service) => (
           <Chip
             key={service}
@@ -173,7 +179,7 @@ function Results({ filters, hasFilters, onClear }: { filters: MarinaFilters; has
       ) : null}
 
       {marinas.map((marina) => (
-        <MarinaRow key={marina.id} marina={marina} />
+        <MarinaRow key={marina.id} marina={marina} length={filters.length ?? null} />
       ))}
 
       {error ? (
@@ -196,8 +202,9 @@ function Results({ filters, hasFilters, onClear }: { filters: MarinaFilters; has
   );
 }
 
-function MarinaRow({ marina }: { marina: MarinaSummary }) {
-  const { t } = useTranslation();
+function MarinaRow({ marina, length }: { marina: MarinaSummary; length: string | null }) {
+  const { t, i18n } = useTranslation();
+  const rate = marina.headline_rate;
   const sizes = [
     marina.max_length_m ? t('marinas.upToLength', { value: marina.max_length_m }) : null,
     marina.max_draft_m ? t('marinas.depthValue', { value: marina.max_draft_m }) : null,
@@ -206,7 +213,9 @@ function MarinaRow({ marina }: { marina: MarinaSummary }) {
   return (
     <Pressable
       accessibilityRole="link"
-      onPress={() => router.push({ pathname: '/marinas/[slug]', params: { slug: marina.slug } })}
+      onPress={() =>
+        router.push({ pathname: '/marinas/[slug]', params: length ? { slug: marina.slug, length } : { slug: marina.slug } })
+      }
       style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}
     >
       {marina.cover ? (
@@ -220,6 +229,11 @@ function MarinaRow({ marina }: { marina: MarinaSummary }) {
         <Text style={[typography.body, { fontWeight: '700' }]}>{marina.name}</Text>
         <Text style={typography.caption}>{[marina.city, marina.country_name].filter(Boolean).join(' · ')}</Text>
         {sizes.length ? <Text style={[typography.caption, { color: colors.text }]}>{sizes.join(' · ')}</Text> : null}
+        {rate ? (
+          <Text style={styles.price}>
+            {t('marinas.from', { price: formatMoney(rate.amount, rate.currency, i18n.language), unit: t(`marinas.units.${rate.unit}`) })}
+          </Text>
+        ) : null}
         {marina.services.length ? <MarinaServices services={marina.services} compact /> : null}
       </View>
       <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -258,4 +272,5 @@ const styles = StyleSheet.create({
   },
   cover: { width: 76, height: 76, borderRadius: radius.md },
   placeholder: { backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
+  price: { color: colors.primary, fontWeight: '700', fontSize: 13 },
 });

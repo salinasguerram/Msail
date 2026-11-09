@@ -24,7 +24,7 @@ def parse_meters(value, name):
 
 
 def published_marinas():
-    return Marina.objects.filter(is_published=True).select_related("country", "region").prefetch_related("photos")
+    return Marina.objects.filter(is_published=True).select_related("country", "region").prefetch_related("photos", "rates")
 
 
 class MarinaListView(generics.ListAPIView):
@@ -35,6 +35,7 @@ class MarinaListView(generics.ListAPIView):
       ?services=fuel,showers   tienen que tener todos los servicios pedidos
       ?length=12.5      entra un barco de esa eslora (m)
       ?draft=2.1        alcanza la profundidad para ese calado (m)
+      ?with_price=1     solo las que informan un precio orientativo
     Con ?length o ?draft quedan afuera las marinas que no informan ese dato.
     """
 
@@ -60,6 +61,8 @@ class MarinaListView(generics.ListAPIView):
             queryset = queryset.filter(max_length_m__gte=length)
         if draft := parse_meters(params.get("draft", ""), "draft"):
             queryset = queryset.filter(max_draft_m__gte=draft)
+        if params.get("with_price") in ("1", "true"):
+            queryset = queryset.filter(rates__isnull=False).distinct()
         return queryset.order_by("name")
 
 

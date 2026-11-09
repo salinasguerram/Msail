@@ -11,6 +11,7 @@ import { errorMessage } from '@/auth/errors';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { EventGallery } from '@/components/EventGallery';
+import { MarinaPrices } from '@/components/MarinaPrices';
 import { MarinaServices } from '@/components/MarinaServices';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/theme';
@@ -22,7 +23,8 @@ type IconName = ComponentProps<typeof Ionicons>['name'];
 export default function MarinaScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
-  const { slug } = useLocalSearchParams<{ slug: string }>();
+  // ?length=12 llega desde el listado si se filtró por eslora: precarga la estimación del precio.
+  const { slug, length } = useLocalSearchParams<{ slug: string; length?: string }>();
   const [marina, setMarina] = useState<MarinaDetail | null>(null);
   const [error, setError] = useState<unknown>(null);
 
@@ -110,6 +112,8 @@ export default function MarinaScreen() {
           <Stat icon="grid-outline" label={t('marinas.berths')} value={marina.berths ? String(marina.berths) : null} />
         </View>
       </Card>
+
+      <MarinaPrices marina={marina} initialLength={length} />
 
       <Card>
         <Text style={typography.label}>{t('marinas.servicesTitle')}</Text>

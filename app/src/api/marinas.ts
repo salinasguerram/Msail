@@ -4,6 +4,20 @@ import { api } from '@/api/client';
 export const MARINA_SERVICES = ['water', 'electricity', 'showers', 'fuel', 'wifi', 'laundry', 'security', 'boatyard'] as const;
 export type MarinaService = (typeof MARINA_SERVICES)[number];
 
+export type RateUnit = 'meter_night' | 'foot_night' | 'boat_night' | 'meter_month' | 'boat_month';
+
+/** Tarifa orientativa informada por la marina. */
+export type MarinaRate = {
+  id: number;
+  label: string;
+  amount: number;
+  currency: string;
+  unit: RateUnit;
+  /** Rango de eslora en metros al que aplica (null = sin límite). */
+  min_length_m: number | null;
+  max_length_m: number | null;
+};
+
 export type MarinaSummary = {
   id: number;
   slug: string;
@@ -21,6 +35,8 @@ export type MarinaSummary = {
   /** Datos confirmados por la marina. Si es false, salen de fuentes públicas. */
   verified: boolean;
   cover: string | null;
+  /** Primera tarifa informada (para el "desde ..." del listado). */
+  headline_rate: MarinaRate | null;
   latitude: string | null;
   longitude: string | null;
 };
@@ -36,6 +52,10 @@ export type MarinaDetail = MarinaSummary & {
   whatsapp: string;
   vhf_channel: string;
   photos: MarinaPhoto[];
+  rates: MarinaRate[];
+  /** Fecha (AAAA-MM-DD) en que la marina informó los precios. */
+  prices_updated_on: string | null;
+  price_notes: string;
 };
 
 export type MarinaFilters = {
@@ -46,6 +66,8 @@ export type MarinaFilters = {
   length?: string | null;
   /** Calado del barco en metros. */
   draft?: string | null;
+  /** Solo las que informan un precio orientativo. */
+  withPrice?: boolean;
 };
 
 type Page<T> = { count: number; next: string | null; results: T[] };
@@ -57,6 +79,7 @@ export function getMarinas(filters: MarinaFilters, page = 1) {
   if (filters.services?.length) query.set('services', filters.services.join(','));
   if (filters.length) query.set('length', filters.length);
   if (filters.draft) query.set('draft', filters.draft);
+  if (filters.withPrice) query.set('with_price', '1');
   return api<Page<MarinaSummary>>(`/marinas/?${query}`, { auth: false });
 }
 

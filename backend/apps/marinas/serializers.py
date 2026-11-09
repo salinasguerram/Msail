@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Marina, MarinaPhoto
+from .models import Marina, MarinaPhoto, MarinaRate
 
 
 def absolute(request, file):
@@ -29,6 +29,16 @@ class MarinaPhotoSerializer(serializers.ModelSerializer):
         return absolute(self.context.get("request"), photo.thumbnail or photo.image)
 
 
+class MarinaRateSerializer(serializers.ModelSerializer):
+    amount = serializers.FloatField(read_only=True)
+    min_length_m = serializers.FloatField(read_only=True, allow_null=True)
+    max_length_m = serializers.FloatField(read_only=True, allow_null=True)
+
+    class Meta:
+        model = MarinaRate
+        fields = ["id", "label", "amount", "currency", "unit", "min_length_m", "max_length_m"]
+
+
 class MarinaListSerializer(serializers.ModelSerializer):
     """Marina en el listado del directorio."""
 
@@ -39,6 +49,8 @@ class MarinaListSerializer(serializers.ModelSerializer):
     max_length_m = serializers.SerializerMethodField()
     max_draft_m = serializers.SerializerMethodField()
     cover = serializers.SerializerMethodField()
+    # Primera tarifa informada, para mostrar "desde ..." en el listado.
+    headline_rate = serializers.SerializerMethodField()
 
     class Meta:
         model = Marina
@@ -56,6 +68,7 @@ class MarinaListSerializer(serializers.ModelSerializer):
             "services",
             "verified",
             "cover",
+            "headline_rate",
             "latitude",
             "longitude",
         ]
@@ -66,6 +79,10 @@ class MarinaListSerializer(serializers.ModelSerializer):
     def get_max_draft_m(self, marina):
         return as_float(marina.max_draft_m)
 
+    def get_headline_rate(self, marina):
+        rates = list(marina.rates.all())
+        return MarinaRateSerializer(rates[0]).data if rates else None
+
     def get_cover(self, marina):
         # Las fotos vienen precargadas y ordenadas: la primera es la portada.
         photos = list(marina.photos.all())
@@ -74,6 +91,7 @@ class MarinaListSerializer(serializers.ModelSerializer):
 
 class MarinaDetailSerializer(MarinaListSerializer):
     photos = MarinaPhotoSerializer(many=True, read_only=True)
+    rates = MarinaRateSerializer(many=True, read_only=True)
 
     class Meta(MarinaListSerializer.Meta):
         fields = MarinaListSerializer.Meta.fields + [
@@ -85,4 +103,7 @@ class MarinaDetailSerializer(MarinaListSerializer):
             "whatsapp",
             "vhf_channel",
             "photos",
+            "rates",
+            "prices_updated_on",
+            "price_notes",
         ]
