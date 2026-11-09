@@ -10,6 +10,7 @@ class NotificationKind(models.TextChoices):
     ENTRIES = "entries", _("Cierre de inscripciones")
     NEWS = "news", _("Noticia nueva")
     BERTH = "berth", _("Respuesta a solicitud de amarre")
+    QUOTE = "quote", _("Respuesta a pedido de presupuesto")
 
 
 class Notification(models.Model):

@@ -1,6 +1,6 @@
 import { api } from '@/api/client';
 
-export type NotificationKind = 'results' | 'gallery' | 'dates' | 'starts' | 'entries' | 'news' | 'berth';
+export type NotificationKind = 'results' | 'gallery' | 'dates' | 'starts' | 'entries' | 'news' | 'berth' | 'quote';
 
 export type AppNotification = {
   id: number;

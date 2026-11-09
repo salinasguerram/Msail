@@ -151,6 +151,13 @@ export default function EventScreen() {
 
       <Card>
         <Text style={typography.label}>{t('event.dates')}</Text>
+        {hasCoords && (event.status === 'live' || (event.status === 'upcoming' && remaining <= 7)) ? (
+          <Button
+            title={t('weather.seeForecast')}
+            variant="secondary"
+            onPress={() => router.push({ pathname: '/weather', params: { place: `event:${event.slug}` } })}
+          />
+        ) : null}
         {event.end_date ? (
           <>
             <InfoRow icon="calendar-outline" label={t('event.start')} value={longDate(event.start_date)} />

@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "apps.news",
     "apps.marinas",
     "apps.professionals",
+    "apps.weather",
 ]
 
 MIDDLEWARE = [
@@ -153,6 +154,8 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "login": "10/min",
         "berth_request": "10/hour",
+        "quote_request": "10/hour",
+        "review": "20/hour",
         "register": "5/min",
         "refresh": "30/min",
         "send_code": "5/min",
@@ -237,6 +240,8 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 FRONTEND_URL = env("FRONTEND_URL", "http://localhost:8081")
 # Email del equipo que recibe el aviso de cada solicitud de amarre nueva (vacío: solo se ve en el panel).
 MARINA_REQUESTS_EMAIL = env("MARINA_REQUESTS_EMAIL")
+# Email del equipo que recibe una copia de cada pedido de presupuesto (si no se define, usa el de amarres).
+QUOTE_REQUESTS_EMAIL = env("QUOTE_REQUESTS_EMAIL") or MARINA_REQUESTS_EMAIL
 
 
 def _static(path):
@@ -323,6 +328,11 @@ UNFOLD = {
                         "badge": "apps.marinas.admin.pending_badge",
                     },
                     _admin_link("Profesionales", "engineering", "admin:professionals_professional_changelist"),
+                    {
+                        **_admin_link("Pedidos de presupuesto", "request_quote", "admin:professionals_quoterequest_changelist"),
+                        "badge": "apps.professionals.admin.pending_quotes_badge",
+                    },
+                    _admin_link("Reseñas", "reviews", "admin:professionals_review_changelist"),
                     _admin_link("Especialidades", "category", "admin:professionals_specialty_changelist"),
                 ],
             },

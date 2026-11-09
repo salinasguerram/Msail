@@ -11,9 +11,12 @@ import {
   type ProfessionalFilters,
   type ProfessionalSummary,
 } from '@/api/professionals';
+import { useAuth } from '@/auth/AuthContext';
 import { errorMessage } from '@/auth/errors';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { Chip } from '@/components/Chip';
+import { Stars } from '@/components/Reviews';
 import { Screen } from '@/components/Screen';
 import { SelectField } from '@/components/SelectField';
 import { colors, radius, spacing, typography } from '@/theme';
@@ -26,6 +29,7 @@ const EMPTY: ProfessionalFilterOptions = { specialties: [], countries: [] };
 /** Directorio de profesionales náuticos por especialidad y ubicación. */
 export default function ProfessionalsScreen() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [filters, setFilters] = useState<ProfessionalFilters>({});
   const [search, setSearch] = useState('');
   const [options, setOptions] = useState<ProfessionalFilterOptions>(EMPTY);
@@ -41,7 +45,7 @@ export default function ProfessionalsScreen() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const hasFilters = Boolean(filters.q || filters.specialty || filters.country);
+  const hasFilters = Boolean(filters.q || filters.specialty || filters.country || filters.byRating);
   function clear() {
     setSearch('');
     setFilters({});
@@ -49,6 +53,17 @@ export default function ProfessionalsScreen() {
 
   return (
     <Screen>
+      {user ? (
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => router.push('/professionals/quotes')}
+          style={({ pressed }) => [styles.myQuotes, pressed && { opacity: 0.7 }]}
+        >
+          <Ionicons name="document-text-outline" size={18} color={colors.primary} />
+          <Text style={[styles.link, { flex: 1 }]}>{t('quotes.myQuotes')}</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </Pressable>
+      ) : null}
       <View style={styles.search}>
         <Ionicons name="search" size={18} color={colors.textMuted} />
         <TextInput
@@ -99,6 +114,14 @@ export default function ProfessionalsScreen() {
         options={options.countries}
         onChange={(v) => setFilters((f) => ({ ...f, country: v }))}
       />
+
+      <View style={{ flexDirection: 'row' }}>
+        <Chip
+          label={t('reviews.bestRated')}
+          selected={!!filters.byRating}
+          onPress={() => setFilters((f) => ({ ...f, byRating: !f.byRating }))}
+        />
+      </View>
 
       <Results key={JSON.stringify(filters)} filters={filters} hasFilters={hasFilters} onClear={clear} />
     </Screen>
@@ -198,6 +221,14 @@ function ProfessionalRow({ professional }: { professional: ProfessionalSummary }
           </Text>
         ) : null}
         <Text style={typography.caption}>{[professional.city, professional.country_name].filter(Boolean).join(' · ')}</Text>
+        {professional.rating !== null ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Stars value={professional.rating} size={12} />
+            <Text style={typography.caption}>
+              {professional.rating.toFixed(1)} ({professional.reviews_count})
+            </Text>
+          </View>
+        ) : null}
       </View>
       <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
     </Pressable>
@@ -248,4 +279,14 @@ const styles = StyleSheet.create({
   logo: { width: 56, height: 56, borderRadius: 28 },
   placeholder: { backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
   initials: { color: colors.primary, fontWeight: '800', fontSize: 18 },
+  myQuotes: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
 });

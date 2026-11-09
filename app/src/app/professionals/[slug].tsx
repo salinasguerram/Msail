@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useState, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -11,6 +11,7 @@ import { errorMessage } from '@/auth/errors';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { EventGallery } from '@/components/EventGallery';
+import { Reviews, Stars } from '@/components/Reviews';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/theme';
 import { goBack } from '@/utils/navigation';
@@ -105,6 +106,14 @@ export default function ProfessionalScreen() {
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={styles.name}>{p.name}</Text>
             <Text style={[typography.body, { color: colors.textMuted }]}>{[p.city, p.country_name].filter(Boolean).join(' · ')}</Text>
+            {p.rating !== null ? (
+              <View style={styles.rating}>
+                <Stars value={p.rating} />
+                <Text style={typography.caption}>
+                  {p.rating.toFixed(1)} · {t('reviews.count', { count: p.reviews_count })}
+                </Text>
+              </View>
+            ) : null}
           </View>
         </View>
         {p.headline ? <Text style={[typography.body, { fontWeight: '600' }]}>{p.headline}</Text> : null}
@@ -119,6 +128,11 @@ export default function ProfessionalScreen() {
         {primary.map((contact) => (
           <Button key={contact.key} title={contact.label} onPress={() => Linking.openURL(contact.url)} />
         ))}
+        <Button
+          title={t('quotes.request')}
+          variant={primary.length ? 'secondary' : 'primary'}
+          onPress={() => router.push({ pathname: '/professionals/quote/[slug]', params: { slug: p.slug } })}
+        />
         {!p.verified ? (
           <View style={styles.notice}>
             <Ionicons name="information-circle-outline" size={18} color={colors.warning} />
@@ -160,6 +174,8 @@ export default function ProfessionalScreen() {
         </Card>
       ) : null}
 
+      <Reviews professional={p} onChange={fetchProfessional} />
+
       <Card>
         <Text style={typography.label}>{t('professionals.where')}</Text>
         {p.service_area ? (
@@ -179,6 +195,7 @@ export default function ProfessionalScreen() {
 const styles = StyleSheet.create({
   hero: { gap: spacing.md, paddingVertical: spacing.xl },
   identity: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  rating: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   logo: { width: 72, height: 72, borderRadius: 36 },
   placeholder: { backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
   initials: { color: colors.primary, fontWeight: '800', fontSize: 24 },

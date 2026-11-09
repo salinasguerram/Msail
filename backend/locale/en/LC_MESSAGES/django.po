@@ -200,3 +200,28 @@ msgstr "The marina takes boats up to %(max)s m LOA."
 
 msgid "La marina tiene %(max)s m de profundidad."
 msgstr "The marina has %(max)s m of depth."
+
+# Presupuestos de profesionales
+msgid "Recibimos tu pedido de presupuesto para %(professional)s."
+msgstr "We received your quote request for %(professional)s."
+
+msgid "Se lo enviamos al profesional, que te va a responder a este email."
+msgstr "We sent it to the professional, who will reply to this email."
+
+msgid "El equipo de MSAIL se lo hace llegar al profesional y te avisamos cuando responda."
+msgstr "The MSAIL team will pass it on to the professional and let you know when they answer."
+
+msgid "Seguí tus pedidos: %(link)s"
+msgstr "Track your requests: %(link)s"
+
+msgid "Pedido de presupuesto a %(professional)s"
+msgstr "Quote request to %(professional)s"
+
+msgid "Novedades de tu pedido a %(professional)s"
+msgstr "Update on your request to %(professional)s"
+
+msgid "Cambió el estado de tu pedido de presupuesto."
+msgstr "The status of your quote request changed."
+
+msgid "La fecha no puede ser en el pasado."
+msgstr "The date can't be in the past."
