@@ -84,7 +84,10 @@ class BoatSummarySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Boat
-        fields = ["id", "name", "boat_class", "model", "sail_number", "home_port", "country", "is_public", "cover"]
+        fields = [
+            "id", "name", "boat_class", "model", "sail_number", "home_port", "country", "is_public", "cover",
+            "length_m", "beam_m", "draft_m",
+        ]
 
     def get_cover(self, boat):
         return cover_url(boat, self.context.get("request"))

@@ -19,6 +19,7 @@ const ICONS: Record<NotificationKind, ComponentProps<typeof Ionicons>['name']> =
   starts: 'flag-outline',
   entries: 'create-outline',
   news: 'newspaper-outline',
+  berth: 'boat-outline',
 };
 
 export default withAuth(NotificationsScreen);
@@ -61,7 +62,8 @@ function NotificationsScreen() {
       setItems((list) => list.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
       markRead(item.id).catch(() => {});
     }
-    if (item.article) router.push({ pathname: '/news/[slug]', params: { slug: item.article } });
+    if (item.kind === 'berth') router.push('/marinas/requests');
+    else if (item.article) router.push({ pathname: '/news/[slug]', params: { slug: item.article } });
     else if (item.event) router.push({ pathname: '/events/[slug]', params: { slug: item.event } });
   }
 

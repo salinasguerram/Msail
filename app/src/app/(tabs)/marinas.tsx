@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { getMarinaCountries, getMarinas, MARINA_SERVICES, type MarinaFilters, type MarinaSummary } from '@/api/marinas';
+import { useAuth } from '@/auth/AuthContext';
 import { errorMessage } from '@/auth/errors';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -22,6 +23,7 @@ const meters = (value: string) => value.replace(',', '.').replace(/[^\d.]/g, '')
 /** Directorio de marinas con buscador y filtros por país, servicios y medidas del barco. */
 export default function MarinasScreen() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [filters, setFilters] = useState<MarinaFilters>({});
   const [search, setSearch] = useState('');
   const [length, setLength] = useState('');
@@ -62,6 +64,17 @@ export default function MarinasScreen() {
 
   return (
     <Screen>
+      {user ? (
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => router.push('/marinas/requests')}
+          style={({ pressed }) => [styles.myRequests, pressed && { opacity: 0.7 }]}
+        >
+          <Ionicons name="file-tray-full-outline" size={18} color={colors.primary} />
+          <Text style={[styles.link, { flex: 1 }]}>{t('berth.myRequests')}</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </Pressable>
+      ) : null}
       <View style={styles.search}>
         <Ionicons name="search" size={18} color={colors.textMuted} />
         <TextInput
@@ -273,4 +286,14 @@ const styles = StyleSheet.create({
   cover: { width: 76, height: 76, borderRadius: radius.md },
   placeholder: { backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
   price: { color: colors.primary, fontWeight: '700', fontSize: 13 },
+  myRequests: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
 });

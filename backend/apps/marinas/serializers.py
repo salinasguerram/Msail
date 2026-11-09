@@ -1,6 +1,11 @@
+from decimal import Decimal
+
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
-from .models import Marina, MarinaPhoto, MarinaRate
+from apps.boats.models import Boat
+
+from .models import BerthRequest, Marina, MarinaPhoto, MarinaRate, RequestStatus
 
 
 def absolute(request, file):
@@ -107,3 +112,94 @@ class MarinaDetailSerializer(MarinaListSerializer):
             "prices_updated_on",
             "price_notes",
         ]
+
+
+class BerthRequestCreateSerializer(serializers.ModelSerializer):
+    """Pedido de amarre. Si se elige un barco propio, completa nombre y medidas que falten."""
+
+    boat = serializers.PrimaryKeyRelatedField(queryset=Boat.objects.all(), required=False, allow_null=True)
+    boat_name = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    length_m = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True, min_value=Decimal("1"), max_value=Decimal("200"))
+    beam_m = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True, min_value=Decimal("0.5"), max_value=Decimal("50"))
+    draft_m = serializers.DecimalField(max_digits=4, decimal_places=2, required=False, allow_null=True, min_value=Decimal("0.1"), max_value=Decimal("20"))
+    contact_name = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    contact_email = serializers.EmailField(required=False, allow_blank=True)
+
+    class Meta:
+        model = BerthRequest
+        fields = [
+            "boat",
+            "boat_name",
+            "boat_type",
+            "length_m",
+            "beam_m",
+            "draft_m",
+            "arrival",
+            "departure",
+            "contact_name",
+            "contact_email",
+            "contact_phone",
+            "message",
+        ]
+
+    def validate_boat(self, boat):
+        user = self.context["request"].user
+        if boat and boat.owner_id != user.id:
+            raise serializers.ValidationError("Elegí uno de tus barcos.")
+        return boat
+
+    def validate(self, attrs):
+        user = self.context["request"].user
+        boat = attrs.get("boat")
+        if boat:
+            attrs["boat_name"] = attrs.get("boat_name") or boat.name
+            for field in ("length_m", "beam_m", "draft_m"):
+                if attrs.get(field) is None:
+                    attrs[field] = getattr(boat, field)
+        if not attrs.get("boat_name", "").strip():
+            raise serializers.ValidationError({"boat_name": ["Indicá el nombre del barco."]})
+        if attrs.get("length_m") is None:
+            raise serializers.ValidationError({"length_m": ["Indicá la eslora del barco."]})
+        attrs["contact_name"] = (attrs.get("contact_name") or user.get_full_name() or user.email).strip()
+        attrs["contact_email"] = attrs.get("contact_email") or user.email
+        candidate = BerthRequest(marina=self.context["marina"], user=user, **attrs)
+        try:
+            candidate.clean()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict) from exc
+        return attrs
+
+
+class BerthRequestSerializer(serializers.ModelSerializer):
+    """Solicitud vista por el navegante que la hizo."""
+
+    marina = serializers.SerializerMethodField()
+    nights = serializers.IntegerField(read_only=True)
+    can_cancel = serializers.SerializerMethodField()
+    length_m = serializers.FloatField()
+
+    class Meta:
+        model = BerthRequest
+        fields = [
+            "id",
+            "marina",
+            "boat_name",
+            "length_m",
+            "arrival",
+            "departure",
+            "nights",
+            "status",
+            "response",
+            "responded_at",
+            "created_at",
+            "can_cancel",
+        ]
+
+    def get_marina(self, request):
+        marina = request.marina
+        return {"slug": marina.slug, "name": marina.name, "city": marina.city, "country_name": marina.country.name}
+
+    def get_can_cancel(self, request):
+        from django.utils import timezone
+
+        return request.status in (RequestStatus.PENDING, RequestStatus.ACCEPTED) and request.arrival >= timezone.localdate()

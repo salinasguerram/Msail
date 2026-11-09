@@ -191,3 +191,84 @@ class MarinaRate(models.Model):
     def clean(self):
         if self.min_length_m and self.max_length_m and self.min_length_m > self.max_length_m:
             raise ValidationError({"max_length_m": _("La eslora máxima no puede ser menor que la mínima.")})
+
+
+
+class BoatType(models.TextChoices):
+    SAILBOAT = "sailboat", _("Velero")
+    CATAMARAN = "catamaran", _("Catamarán")
+    MOTOR = "motor", _("Lancha / motor")
+
+
+class RequestStatus(models.TextChoices):
+    PENDING = "pending", _("Pendiente")
+    ACCEPTED = "accepted", _("Aceptada")
+    REJECTED = "rejected", _("Rechazada")
+    CANCELLED = "cancelled", _("Cancelada por el navegante")
+
+
+MAX_NIGHTS = 365
+
+
+class BerthRequest(models.Model):
+    """Solicitud de amarre de un navegante. Llega al panel, donde el equipo la gestiona con la marina y responde."""
+
+    marina = models.ForeignKey(Marina, verbose_name=_("marina"), on_delete=models.CASCADE, related_name="requests")
+    user = models.ForeignKey("accounts.User", verbose_name=_("navegante"), on_delete=models.CASCADE, related_name="berth_requests")
+    boat = models.ForeignKey(
+        "boats.Boat", verbose_name=_("barco en MSAIL"), on_delete=models.SET_NULL, null=True, blank=True, related_name="berth_requests"
+    )
+    # Datos del velero (se copian del barco si se eligió uno; quedan fijos aunque el barco cambie).
+    boat_name = models.CharField(_("barco"), max_length=120)
+    boat_type = models.CharField(_("tipo"), max_length=20, choices=BoatType.choices, default=BoatType.SAILBOAT)
+    length_m = models.DecimalField(_("eslora (m)"), max_digits=5, decimal_places=2, validators=[MinValueValidator(Decimal("1"))])
+    beam_m = models.DecimalField(_("manga (m)"), max_digits=5, decimal_places=2, null=True, blank=True)
+    draft_m = models.DecimalField(_("calado (m)"), max_digits=4, decimal_places=2, null=True, blank=True)
+    # Fechas
+    arrival = models.DateField(_("llegada"))
+    departure = models.DateField(_("salida"))
+    # Contacto
+    contact_name = models.CharField(_("nombre de contacto"), max_length=120)
+    contact_email = models.EmailField(_("email de contacto"))
+    contact_phone = models.CharField(_("teléfono / WhatsApp"), max_length=40, blank=True)
+    message = models.TextField(_("mensaje"), blank=True, max_length=1000)
+
+    status = models.CharField(_("estado"), max_length=20, choices=RequestStatus.choices, default=RequestStatus.PENDING)
+    response = models.TextField(
+        _("respuesta al navegante"), blank=True, max_length=1000, help_text=_("La ve el navegante en la app y le llega por email.")
+    )
+    staff_notes = models.TextField(_("notas internas"), blank=True, help_text=_("Solo las ve el equipo de MSAIL."))
+    responded_at = models.DateTimeField(_("respondida el"), null=True, blank=True)
+    created_at = models.DateTimeField(_("pedida el"), auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("solicitud de amarre")
+        verbose_name_plural = _("solicitudes de amarre")
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["status", "-created_at"])]
+
+    def __str__(self):
+        return f"{self.boat_name} → {self.marina} ({self.arrival:%d/%m})"
+
+    @property
+    def nights(self):
+        return (self.departure - self.arrival).days if self.arrival and self.departure else 0
+
+    def clean(self):
+        from django.utils import timezone
+
+        errors = {}
+        if self.arrival and self._state.adding and self.arrival < timezone.localdate():
+            errors["arrival"] = _("La llegada no puede ser en el pasado.")
+        if self.arrival and self.departure:
+            if self.departure <= self.arrival:
+                errors["departure"] = _("La salida tiene que ser después de la llegada.")
+            elif self.nights > MAX_NIGHTS:
+                errors["departure"] = _("La estadía no puede superar los %(max)s días.") % {"max": MAX_NIGHTS}
+        if self.marina_id and self.length_m and self.marina.max_length_m and self.length_m > self.marina.max_length_m:
+            errors["length_m"] = _("La marina recibe barcos de hasta %(max)s m de eslora.") % {"max": self.marina.max_length_m}
+        if self.marina_id and self.draft_m and self.marina.max_draft_m and self.draft_m > self.marina.max_draft_m:
+            errors["draft_m"] = _("La marina tiene %(max)s m de profundidad.") % {"max": self.marina.max_draft_m}
+        if errors:
+            raise ValidationError(errors)

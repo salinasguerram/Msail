@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useState, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -89,6 +89,15 @@ export default function MarinaScreen() {
             .filter((p, i, all): p is string => !!p && all.indexOf(p) === i)
             .join(' · ')}
         </Text>
+        <Button
+          title={t('berth.request')}
+          onPress={() =>
+            router.push({
+              pathname: '/marinas/request/[slug]',
+              params: length ? { slug: marina.slug, length } : { slug: marina.slug },
+            })
+          }
+        />
         {!marina.verified ? (
           <View style={styles.notice}>
             <Ionicons name="information-circle-outline" size={18} color={colors.warning} />

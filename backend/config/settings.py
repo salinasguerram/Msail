@@ -151,6 +151,7 @@ REST_FRAMEWORK = {
     # Límites por acción (por IP si no hay sesión, por usuario si la hay).
     "DEFAULT_THROTTLE_RATES": {
         "login": "10/min",
+        "berth_request": "10/hour",
         "register": "5/min",
         "refresh": "30/min",
         "send_code": "5/min",
@@ -233,6 +234,8 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 # Panel de administración (Unfold) con la identidad de MSAIL.
 # "Ver el sitio" lleva a la app (en local, la versión web de Expo).
 FRONTEND_URL = env("FRONTEND_URL", "http://localhost:8081")
+# Email del equipo que recibe el aviso de cada solicitud de amarre nueva (vacío: solo se ve en el panel).
+MARINA_REQUESTS_EMAIL = env("MARINA_REQUESTS_EMAIL")
 
 
 def _static(path):
@@ -312,7 +315,13 @@ UNFOLD = {
             },
             {
                 "title": "Directorios",
-                "items": [_admin_link("Marinas", "anchor", "admin:marinas_marina_changelist")],
+                "items": [
+                    _admin_link("Marinas", "anchor", "admin:marinas_marina_changelist"),
+                    {
+                        **_admin_link("Solicitudes de amarre", "move_to_inbox", "admin:marinas_berthrequest_changelist"),
+                        "badge": "apps.marinas.admin.pending_badge",
+                    },
+                ],
             },
             {
                 "title": "Comunidad",

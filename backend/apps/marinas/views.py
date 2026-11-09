@@ -1,14 +1,17 @@
 from decimal import Decimal, InvalidOperation
 
+from django.db import transaction
 from django.db.models import Count
-from rest_framework import generics, permissions, serializers
+from rest_framework import generics, permissions, serializers, status
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.core.text import normalize
 
-from .models import SERVICE_KEYS, Marina
-from .serializers import MarinaDetailSerializer, MarinaListSerializer
+from .models import SERVICE_KEYS, BerthRequest, Marina, RequestStatus
+from .requests import request_created
+from .serializers import BerthRequestCreateSerializer, BerthRequestSerializer, MarinaDetailSerializer, MarinaListSerializer
 
 
 def parse_meters(value, name):
@@ -89,3 +92,42 @@ class MarinaDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return published_marinas()
+
+
+class BerthRequestCreateView(APIView):
+    """Pedir amarre en una marina (requiere sesión). Queda pendiente hasta que el equipo responda."""
+
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "berth_request"
+
+    @transaction.atomic
+    def post(self, request, slug):
+        marina = generics.get_object_or_404(Marina, slug=slug, is_published=True)
+        serializer = BerthRequestCreateSerializer(data=request.data, context={"request": request, "marina": marina})
+        serializer.is_valid(raise_exception=True)
+        berth_request = serializer.save(marina=marina, user=request.user)
+        request_created(berth_request)
+        return Response(BerthRequestSerializer(berth_request).data, status=status.HTTP_201_CREATED)
+
+
+class MyBerthRequestsView(generics.ListAPIView):
+    """Mis solicitudes de amarre, de la más nueva a la más vieja."""
+
+    serializer_class = BerthRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return BerthRequest.objects.filter(user=self.request.user).select_related("marina__country")
+
+
+class CancelBerthRequestView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        berth_request = generics.get_object_or_404(BerthRequest.objects.select_related("marina__country"), pk=pk, user=request.user)
+        if not BerthRequestSerializer().get_can_cancel(berth_request):
+            return Response({"detail": "Esta solicitud ya no se puede cancelar."}, status=status.HTTP_400_BAD_REQUEST)
+        berth_request.status = RequestStatus.CANCELLED
+        berth_request.save(update_fields=["status", "updated_at"])
+        return Response(BerthRequestSerializer(berth_request).data)

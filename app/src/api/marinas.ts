@@ -87,3 +87,48 @@ export const getMarinaCountries = () =>
   api<{ countries: { value: string; label: string; count: number }[] }>('/marinas/filters/', { auth: false });
 
 export const getMarina = (slug: string) => api<MarinaDetail>(`/marinas/${encodeURIComponent(slug)}/`, { auth: false });
+
+// ---------- Solicitudes de amarre
+
+export type BoatType = 'sailboat' | 'catamaran' | 'motor';
+export type BerthRequestStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled';
+
+export type BerthRequestInput = {
+  /** Id de uno de mis barcos (completa nombre y medidas que falten). */
+  boat?: number | null;
+  boat_name?: string;
+  boat_type: BoatType;
+  length_m?: string | null;
+  beam_m?: string | null;
+  draft_m?: string | null;
+  /** AAAA-MM-DD */
+  arrival: string;
+  departure: string;
+  contact_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  message?: string;
+};
+
+export type BerthRequest = {
+  id: number;
+  marina: { slug: string; name: string; city: string; country_name: string };
+  boat_name: string;
+  length_m: number;
+  arrival: string;
+  departure: string;
+  nights: number;
+  status: BerthRequestStatus;
+  /** Respuesta del equipo / la marina. */
+  response: string;
+  responded_at: string | null;
+  created_at: string;
+  can_cancel: boolean;
+};
+
+export const createBerthRequest = (slug: string, data: BerthRequestInput) =>
+  api<BerthRequest>(`/marinas/${encodeURIComponent(slug)}/requests/`, { method: 'POST', body: data });
+
+export const getMyBerthRequests = () => api<Page<BerthRequest>>('/marinas/requests/');
+
+export const cancelBerthRequest = (id: number) => api<BerthRequest>(`/marinas/requests/${id}/cancel/`, { method: 'POST' });

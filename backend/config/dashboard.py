@@ -8,6 +8,7 @@ from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 from apps.boats.models import Boat
+from apps.marinas.models import BerthRequest, RequestStatus
 from apps.news.models import Article
 from apps.profiles.models import RaceResult, SailorProfile
 from apps.sailing.models import BoatClass, Club
@@ -56,6 +57,11 @@ def build_dashboard():
             {"label": "Embarcaciones", "value": Boat.objects.count(), "hint": f"{Boat.objects.filter(is_public=False).count()} privadas"},
             {"label": "Resultados cargados", "value": RaceResult.objects.count(), "hint": f"{RaceResult.objects.filter(boat__isnull=False).count()} con barco"},
             {"label": "Clubes", "value": Club.objects.count(), "hint": f"{Club.objects.filter(is_verified=True).count()} verificados"},
+            {
+                "label": "Solicitudes de amarre",
+                "value": BerthRequest.objects.filter(status=RequestStatus.PENDING).count(),
+                "hint": f"pendientes · {BerthRequest.objects.filter(created_at__gte=week_ago).count()} nuevas en 7 días",
+            },
             {
                 "label": "Noticias en 7 días",
                 "value": Article.visible().filter(published_at__gte=week_ago).count(),

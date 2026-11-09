@@ -160,3 +160,43 @@ msgstr "See the regatta: %(link)s"
 
 msgid "Te llega este email porque seguís esta regata en MSAIL LEAGUE. Podés desactivar los avisos por email desde tu perfil."
 msgstr "You're getting this email because you follow this regatta on MSAIL LEAGUE. You can turn off email alerts from your profile."
+
+# Solicitudes de amarre
+msgid "del %(arrival)s al %(departure)s"
+msgstr "from %(arrival)s to %(departure)s"
+
+msgid "Recibimos tu solicitud de amarre en %(marina)s para %(boat)s, %(dates)s."
+msgstr "We received your berth request at %(marina)s for %(boat)s, %(dates)s."
+
+msgid "El equipo de MSAIL la gestiona con la marina y te avisamos apenas haya respuesta."
+msgstr "The MSAIL team is handling it with the marina and we'll let you know as soon as there's an answer."
+
+msgid "Seguí el estado de tus solicitudes: %(link)s"
+msgstr "Track your requests: %(link)s"
+
+msgid "Solicitud de amarre en %(marina)s"
+msgstr "Berth request at %(marina)s"
+
+msgid "Aceptaron tu solicitud de amarre en %(marina)s"
+msgstr "Your berth request at %(marina)s was accepted"
+
+msgid "No hay lugar en %(marina)s para tu solicitud"
+msgstr "No berth available at %(marina)s for your request"
+
+msgid "Novedades de tu solicitud de amarre en %(marina)s"
+msgstr "Update on your berth request at %(marina)s"
+
+msgid "La llegada no puede ser en el pasado."
+msgstr "The arrival date can't be in the past."
+
+msgid "La salida tiene que ser después de la llegada."
+msgstr "Departure must be after arrival."
+
+msgid "La estadía no puede superar los %(max)s días."
+msgstr "The stay can't be longer than %(max)s days."
+
+msgid "La marina recibe barcos de hasta %(max)s m de eslora."
+msgstr "The marina takes boats up to %(max)s m LOA."
+
+msgid "La marina tiene %(max)s m de profundidad."
+msgstr "The marina has %(max)s m of depth."

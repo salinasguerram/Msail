@@ -22,6 +22,10 @@ export type BoatSummary = {
   country: string | null;
   is_public: boolean;
   cover: string | null;
+  /** Medidas en metros (texto decimal, ej. "11.20"), null si no se cargaron. */
+  length_m: string | null;
+  beam_m: string | null;
+  draft_m: string | null;
 };
 
 export type BoatHistoryEntry = {
