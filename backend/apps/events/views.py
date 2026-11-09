@@ -4,11 +4,12 @@ from django.db.models import Prefetch, Q
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import generics, permissions, serializers
+from rest_framework.pagination import PageNumberPagination
 
 from apps.core.text import normalize
 
-from .models import Event, EventResult, EventType
-from .serializers import EventDetailSerializer, EventListSerializer
+from .models import Event, EventMedia, EventResult, EventType
+from .serializers import EventDetailSerializer, EventListSerializer, EventMediaSerializer
 
 WHEN_CHOICES = ("upcoming", "live", "past")
 
@@ -99,6 +100,23 @@ class EventDetailView(generics.RetrieveAPIView):
                 "boat_classes",
                 "categories__boat_class",
                 "documents",
+                "media",
                 Prefetch("results", EventResult.objects.select_related("category__boat_class", "country", "boat")),
             )
         )
+
+
+class GalleryPagination(PageNumberPagination):
+    page_size = 24  # múltiplo de 3: la grilla queda completa
+
+
+class EventMediaView(generics.ListAPIView):
+    """Galería completa de una regata publicada (fotos y videos), paginada."""
+
+    serializer_class = EventMediaSerializer
+    pagination_class = GalleryPagination
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        event = generics.get_object_or_404(Event, slug=self.kwargs["slug"], is_published=True)
+        return EventMedia.objects.filter(event=event)

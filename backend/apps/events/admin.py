@@ -3,6 +3,7 @@ from datetime import date
 from django.conf import settings
 from django import forms
 from django.contrib import admin, messages
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
@@ -15,8 +16,10 @@ from django.utils.text import slugify
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import action, display
 
+from apps.core.images import thumbnail_html
+
 from . import results_import
-from .models import Event, EventCategory, EventDocument, EventResult, EventStatus
+from .models import Event, EventCategory, EventDocument, EventMedia, EventResult, EventStatus, MediaKind
 
 STATUS_LABELS = {
     EventStatus.UPCOMING: "Próxima",
@@ -58,6 +61,47 @@ class EventResultInline(TabularInline):
             event_id = request.resolver_match.kwargs.get("object_id")
             kwargs["queryset"] = EventCategory.objects.filter(event_id=event_id) if event_id else EventCategory.objects.none()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
+class EventMediaInline(TabularInline):
+    model = EventMedia
+    extra = 0
+    fields = ["preview", "order", "kind", "image", "video_url", "caption", "credit"]
+    readonly_fields = ["preview"]
+    classes = ["collapse"]
+    verbose_name_plural = "galería (para subir muchas fotos juntas usá el botón «Subir fotos» de arriba)"
+
+    @admin.display(description="Vista previa")
+    def preview(self, obj):
+        return thumbnail_html(obj.thumbnail or obj.image) if obj and obj.pk else "—"
+
+
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultiplePhotosField(forms.FileField):
+    def clean(self, data, initial=None):
+        files = data if isinstance(data, (list, tuple)) else [data]
+        files = [f for f in files if f]
+        if not files:
+            raise forms.ValidationError("Elegí al menos una foto.")
+        if len(files) > PHOTOS_PER_UPLOAD:
+            raise forms.ValidationError(f"Podés subir hasta {PHOTOS_PER_UPLOAD} fotos por vez.")
+        return files
+
+
+PHOTOS_PER_UPLOAD = 30
+
+
+class PhotosUploadForm(forms.Form):
+    photos = MultiplePhotosField(
+        label="Fotos",
+        widget=MultipleFileInput(attrs={"accept": "image/jpeg,image/png,image/webp", "multiple": True}),
+        help_text=f"JPG, PNG o WEBP. Hasta {PHOTOS_PER_UPLOAD} por vez. Se les quitan los datos de ubicación.",
+    )
+    credit = forms.CharField(label="Crédito", max_length=120, required=False, help_text="Fotógrafo o fuente, para todas las fotos.")
+    caption = forms.CharField(label="Descripción", max_length=200, required=False, help_text="Opcional, la misma para todas.")
 
 
 class ResultsImportForm(forms.Form):
@@ -125,10 +169,10 @@ class EventAdmin(ModelAdmin):
     filter_horizontal = ["boat_classes"]
     date_hierarchy = "start_date"
     ordering = ["-start_date"]
-    inlines = [EventCategoryInline, EventDocumentInline, EventResultInline]
+    inlines = [EventCategoryInline, EventDocumentInline, EventResultInline, EventMediaInline]
     readonly_fields = ["app_link"]
     actions = ["publish", "unpublish", "duplicate_next_year"]
-    actions_detail = ["import_results_action"]
+    actions_detail = ["upload_photos_action", "import_results_action"]
     fieldsets = (
         (None, {"fields": ("name", "slug", "event_type", "is_published", "app_link")}),
         ("Fechas", {"fields": ("start_date", "end_date")}),
@@ -254,3 +298,44 @@ class EventAdmin(ModelAdmin):
             "change_url": reverse("admin:events_event_change", args=[event.pk]),
         }
         return TemplateResponse(request, "admin/events/import_results.html", context)
+
+    # ---------- Subir varias fotos a la galería
+
+    @action(description="Subir fotos", url_path="upload-photos", icon="add_photo_alternate", permissions=["change"])
+    def upload_photos_action(self, request, object_id):
+        event = get_object_or_404(Event, pk=object_id)
+        form = PhotosUploadForm(request.POST or None, request.FILES or None)
+        rejected = []
+        if request.method == "POST" and form.is_valid():
+            last = event.media.order_by("-order").values_list("order", flat=True).first() or 0
+            saved = 0
+            for upload in form.cleaned_data["photos"]:
+                media = EventMedia(
+                    event=event,
+                    kind=MediaKind.PHOTO,
+                    image=upload,
+                    caption=form.cleaned_data["caption"],
+                    credit=form.cleaned_data["credit"],
+                    order=last + saved + 1,
+                )
+                try:
+                    media.full_clean()
+                    media.save()
+                    saved += 1
+                except ValidationError as exc:
+                    rejected.append(f"{upload.name}: {' '.join(exc.messages)}")
+            if saved:
+                self.message_user(request, f"Se subieron {saved} foto(s) a la galería de {event.name}.", messages.SUCCESS)
+            if not rejected:
+                return redirect(reverse("admin:events_event_change", args=[event.pk]))
+        context = {
+            **self.admin_site.each_context(request),
+            "title": f"Subir fotos · {event.name}",
+            "opts": self.model._meta,
+            "original": event,
+            "form": form,
+            "rejected": rejected,
+            "photo_count": event.media.filter(kind=MediaKind.PHOTO).count(),
+            "change_url": reverse("admin:events_event_change", args=[event.pk]),
+        }
+        return TemplateResponse(request, "admin/events/upload_photos.html", context)

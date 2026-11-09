@@ -1,0 +1,25 @@
+{# Estilos compartidos de las páginas propias del panel (importar resultados, subir fotos). #}
+<style>
+  .msail-import { display: grid; gap: 20px; max-width: 900px; }
+  .msail-import .box { border: 1px solid var(--color-base-700); border-radius: 14px; background: var(--color-base-900); padding: 20px; }
+  .msail-import h2 { margin: 0 0 6px; font-size: 18px; font-weight: 600; color: var(--color-base-100); }
+  .msail-import p, .msail-import li { color: var(--color-base-300); font-size: 14px; line-height: 1.5; }
+  .msail-import .muted { color: var(--color-base-400); font-size: 13px; }
+  .msail-import a { color: var(--color-primary-400); }
+  .msail-import .field { display: grid; gap: 6px; margin-bottom: 16px; }
+  .msail-import label { font-weight: 600; color: var(--color-base-200); font-size: 14px; }
+  .msail-import input[type=file], .msail-import input[type=text], .msail-import select {
+    border: 1px solid var(--color-base-700); border-radius: 8px; background: var(--color-base-950, #0b1120);
+    color: var(--color-base-100); padding: 8px 10px; font-size: 14px; max-width: 420px;
+  }
+  .msail-import .check { display: flex; align-items: center; gap: 8px; }
+  .msail-import .errorlist, .msail-import .row-errors { color: #f87171; font-size: 13px; margin: 0; padding-left: 18px; }
+  .msail-import .actions { display: flex; gap: 12px; align-items: center; }
+  .msail-import button {
+    background: var(--color-primary-600); color: #fff; border: 0; border-radius: 8px; padding: 9px 18px; font-weight: 600; cursor: pointer;
+  }
+  .msail-import table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .msail-import th, .msail-import td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--color-base-800); color: var(--color-base-300); }
+  .msail-import th { color: var(--color-base-400); font-weight: 600; }
+  .msail-import code { background: var(--color-base-800); border-radius: 4px; padding: 1px 5px; color: var(--color-base-100); }
+</style>

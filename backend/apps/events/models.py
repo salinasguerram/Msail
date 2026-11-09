@@ -1,3 +1,5 @@
+import re
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -263,3 +265,86 @@ class EventResult(models.Model):
             raise ValidationError({"category": _("La categoría es de otra regata.")})
         if self.status == ResultStatus.FINISHED and not self.position:
             raise ValidationError({"position": _("Indicá el puesto, o cambiá el estado (DNF, DNS...).")})
+
+
+class MediaKind(models.TextChoices):
+    PHOTO = "photo", _("Foto")
+    VIDEO = "video", _("Video")
+
+
+VIDEO_PATTERNS = [
+    # (proveedor, expresión que captura el id)
+    ("youtube", re.compile(r"(?:youtube\.com/(?:watch\?(?:.*&)?v=|shorts/|embed/|live/)|youtu\.be/)([\w-]{11})")),
+    ("vimeo", re.compile(r"vimeo\.com/(?:video/)?(\d+)")),
+]
+
+
+def parse_video_url(url):
+    """Devuelve (proveedor, id) de un link de YouTube o Vimeo, o (None, None)."""
+    for provider, pattern in VIDEO_PATTERNS:
+        match = pattern.search(url or "")
+        if match:
+            return provider, match.group(1)
+    return None, None
+
+
+class EventMedia(models.Model):
+    """Foto o video de la galería de una regata. Las fotos se suben al panel; los videos son links de YouTube o Vimeo."""
+
+    THUMB_SIDE = 480
+
+    event = models.ForeignKey(Event, verbose_name=_("regata"), on_delete=models.CASCADE, related_name="media")
+    kind = models.CharField(_("tipo"), max_length=10, choices=MediaKind.choices, default=MediaKind.PHOTO)
+    image = models.ImageField(
+        _("foto"), upload_to="event_media/", blank=True, help_text=_("En los videos es opcional: se usa como portada.")
+    )
+    thumbnail = models.ImageField(upload_to="event_media/thumbs/", blank=True, editable=False)
+    video_url = models.URLField(_("link del video"), blank=True, help_text=_("YouTube o Vimeo."))
+    caption = models.CharField(_("descripción"), max_length=200, blank=True)
+    credit = models.CharField(_("crédito"), max_length=120, blank=True, help_text=_("Fotógrafo o fuente. Ej: © Kurt Arrigo"))
+    order = models.PositiveSmallIntegerField(_("orden"), default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("foto o video")
+        verbose_name_plural = _("galería")
+        ordering = ["order", "-created_at"]
+
+    def __str__(self):
+        return self.caption or f"{self.get_kind_display()} {self.pk}"
+
+    @property
+    def video(self):
+        return parse_video_url(self.video_url)
+
+    def clean(self):
+        if self.kind == MediaKind.PHOTO:
+            if not self.image:
+                raise ValidationError({"image": _("Subí la foto.")})
+            if self.video_url:
+                raise ValidationError({"video_url": _("Las fotos no llevan link de video: elegí el tipo Video.")})
+        else:
+            if not self.video_url:
+                raise ValidationError({"video_url": _("Pegá el link del video.")})
+            if parse_video_url(self.video_url)[0] is None:
+                raise ValidationError({"video_url": _("Por ahora solo se aceptan videos de YouTube o Vimeo.")})
+        if self.image and not getattr(self.image, "_committed", True):
+            # Valida que sea una imagen real (el procesado de verdad se hace al guardar).
+            from apps.core.images import process_image
+
+            process_image(self.image)
+            self.image.seek(0)
+
+    def save(self, *args, **kwargs):
+        from apps.core.images import process_image
+
+        if self.image and not getattr(self.image, "_committed", True):
+            # Foto nueva: se recomprime (sin datos GPS) y se genera la miniatura para la grilla.
+            self.image.seek(0)
+            original = self.image.file
+            self.image = process_image(original)
+            original.seek(0)
+            self.thumbnail = process_image(original, max_side=self.THUMB_SIDE, square=True)
+        elif not self.image and self.thumbnail:
+            self.thumbnail = None
+        super().save(*args, **kwargs)

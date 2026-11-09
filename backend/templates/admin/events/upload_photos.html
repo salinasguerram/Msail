@@ -1,0 +1,52 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block extrastyle %}
+{{ block.super }}
+{% include "admin/events/_form_styles.html" %}
+{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+<div class="msail-import">
+  <div class="box">
+    <h2>Subir fotos a la galería</h2>
+    <p class="muted">{{ original.name }} · {{ photo_count }} foto(s) en la galería · <a href="{{ change_url }}">volver a la regata</a></p>
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      <div class="field">
+        <label for="{{ form.photos.id_for_label }}">{{ form.photos.label }}</label>
+        {{ form.photos }}
+        <span class="muted">{{ form.photos.help_text }}</span>
+        {{ form.photos.errors }}
+      </div>
+      <div class="field">
+        <label for="{{ form.credit.id_for_label }}">{{ form.credit.label }}</label>
+        {{ form.credit }}
+        <span class="muted">{{ form.credit.help_text }}</span>
+        {{ form.credit.errors }}
+      </div>
+      <div class="field">
+        <label for="{{ form.caption.id_for_label }}">{{ form.caption.label }}</label>
+        {{ form.caption }}
+        <span class="muted">{{ form.caption.help_text }}</span>
+        {{ form.caption.errors }}
+      </div>
+
+      {% if rejected %}
+      <div class="field">
+        <label>Estas fotos no se subieron:</label>
+        <ul class="row-errors">{% for error in rejected %}<li>{{ error }}</li>{% endfor %}</ul>
+      </div>
+      {% endif %}
+
+      <div class="actions">
+        <button type="submit">Subir</button>
+        <span class="muted">Los videos se agregan en la sección «Galería» de la regata, pegando el link de YouTube o Vimeo.</span>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

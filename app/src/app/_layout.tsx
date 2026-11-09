@@ -40,6 +40,7 @@ function RootStack() {
       <Stack.Screen name="boats/edit" options={{ title: t('boats.newTitle') }} />
       <Stack.Screen name="results/[id]" options={{ title: t('result.detailTitle') }} />
       <Stack.Screen name="events/[slug]" options={{ title: t('event.title') }} />
+      <Stack.Screen name="events/gallery/[slug]" options={{ title: t('gallery.title') }} />
     </Stack>
   );
 }

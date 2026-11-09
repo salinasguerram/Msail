@@ -107,6 +107,18 @@ export type EventSailor = {
   role: string;
 };
 
+export type EventMedia = {
+  id: number;
+  kind: 'photo' | 'video';
+  /** Foto en tamaño grande (en videos, la portada si se subió). */
+  image: string | null;
+  /** Miniatura cuadrada para la grilla (en videos de YouTube, la portada de YouTube). */
+  thumbnail: string | null;
+  video: { provider: 'youtube' | 'vimeo'; id: string; url: string } | null;
+  caption: string;
+  credit: string;
+};
+
 export type EventDetail = Omit<EventSummary, 'organizer_club'> & {
   organizer_club: { id: number; name: string; city: string; website: string } | null;
   categories: EventCategory[];
@@ -127,6 +139,12 @@ export type EventDetail = Omit<EventSummary, 'organizer_club'> & {
   /** Solo están cargados los ganadores o el podio. */
   results_partial: boolean;
   msail_sailors: EventSailor[];
+  /** Total de fotos y videos; media_preview trae los primeros. */
+  media_count: number;
+  media_preview: EventMedia[];
 };
 
 export const getEvent = (slug: string) => api<EventDetail>(`/events/${encodeURIComponent(slug)}/`, { auth: false });
+
+export const getEventMedia = (slug: string, page = 1) =>
+  api<Page<EventMedia>>(`/events/${encodeURIComponent(slug)}/media/?page=${page}`, { auth: false });

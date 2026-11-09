@@ -3,7 +3,7 @@ from rest_framework import serializers
 from apps.profiles.models import RaceResult
 from apps.profiles.serializers import avatar_url
 
-from .models import Event, EventCategory, EventDocument, EventResult
+from .models import Event, EventCategory, EventDocument, EventMedia, EventResult
 
 
 class EventListSerializer(serializers.ModelSerializer):
@@ -92,6 +92,43 @@ class EventResultSerializer(serializers.ModelSerializer):
         return boat.id if boat and boat.is_public else None
 
 
+def absolute(request, file):
+    if not file:
+        return None
+    url = file.url
+    return request.build_absolute_uri(url) if request and not url.startswith("http") else url
+
+
+class EventMediaSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+    thumbnail = serializers.SerializerMethodField()
+    video = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EventMedia
+        fields = ["id", "kind", "image", "thumbnail", "video", "caption", "credit"]
+
+    def get_image(self, media):
+        return absolute(self.context.get("request"), media.image)
+
+    def get_thumbnail(self, media):
+        request = self.context.get("request")
+        if media.thumbnail:
+            return absolute(request, media.thumbnail)
+        if media.image:
+            return absolute(request, media.image)
+        provider, video_id = media.video
+        if provider == "youtube":
+            return f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+        return None  # Vimeo sin portada: la app muestra un ícono de video
+
+    def get_video(self, media):
+        if not media.video_url:
+            return None
+        provider, video_id = media.video
+        return {"provider": provider, "id": video_id, "url": media.video_url}
+
+
 def grouped_results(event):
     """Clasificación agrupada por categoría, en el orden de las categorías. La general (sin categoría) va primero."""
     groups = {}
@@ -119,6 +156,8 @@ class EventDetailSerializer(EventListSerializer):
     duration_days = serializers.SerializerMethodField()
     results = serializers.SerializerMethodField()
     msail_sailors = serializers.SerializerMethodField()
+    media_count = serializers.SerializerMethodField()
+    media_preview = serializers.SerializerMethodField()
 
     class Meta(EventListSerializer.Meta):
         fields = EventListSerializer.Meta.fields + [
@@ -134,6 +173,8 @@ class EventDetailSerializer(EventListSerializer):
             "results_url",
             "results_partial",
             "msail_sailors",
+            "media_count",
+            "media_preview",
         ]
 
     def get_organizer_club(self, event):
@@ -146,6 +187,14 @@ class EventDetailSerializer(EventListSerializer):
         if not event.end_date:
             return None
         return (event.end_date - event.start_date).days + 1
+
+    MEDIA_PREVIEW = 9
+
+    def get_media_count(self, event):
+        return len(event.media.all())
+
+    def get_media_preview(self, event):
+        return EventMediaSerializer(event.media.all()[: self.MEDIA_PREVIEW], many=True, context=self.context).data
 
     def get_results(self, event):
         return grouped_results(event)

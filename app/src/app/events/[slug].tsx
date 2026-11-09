@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useState, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -10,6 +10,7 @@ import { className, useBoatClasses } from '@/api/useBoatClasses';
 import { errorMessage } from '@/auth/errors';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { EventGallery } from '@/components/EventGallery';
 import { EventResults, EventSailors } from '@/components/EventResults';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/theme';
@@ -223,6 +224,20 @@ export default function EventScreen() {
               <Ionicons name={document.source === 'link' ? 'open-outline' : 'download-outline'} size={18} color={colors.textMuted} />
             </Pressable>
           ))}
+        </Card>
+      ) : null}
+
+      {event.media_count > 0 ? (
+        <Card>
+          <Text style={typography.label}>{t('gallery.section', { count: event.media_count })}</Text>
+          <EventGallery media={event.media_preview} />
+          {event.media_count > event.media_preview.length ? (
+            <Button
+              title={t('gallery.seeAll', { count: event.media_count })}
+              variant="secondary"
+              onPress={() => router.push({ pathname: '/events/gallery/[slug]', params: { slug: event.slug } })}
+            />
+          ) : null}
         </Card>
       ) : null}
 
