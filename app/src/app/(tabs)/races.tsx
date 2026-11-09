@@ -7,6 +7,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { getCountries, searchClubs, type Club, type Country } from '@/api/catalogs';
 import { EVENT_TYPES, getEvents, type EventFilters, type EventSummary, type EventType, type EventWhen } from '@/api/events';
 import { className, useBoatClasses } from '@/api/useBoatClasses';
+import { useAuth } from '@/auth/AuthContext';
 import { errorMessage } from '@/auth/errors';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -15,7 +16,7 @@ import { Screen } from '@/components/Screen';
 import { SelectField } from '@/components/SelectField';
 import { colors, radius, spacing, typography } from '@/theme';
 
-const WHEN: EventWhen[] = ['upcoming', 'live', 'past'];
+const WHEN: EventWhen[] = ['upcoming', 'live', 'past', 'following'];
 const SEARCH_DEBOUNCE_MS = 350;
 
 // Sin filtros, el mensaje vacío depende de la pestaña (ej. "No hay regatas en curso en este momento").
@@ -23,6 +24,7 @@ const EMPTY_MESSAGE = {
   upcoming: 'calendar.emptyUpcoming',
   live: 'calendar.emptyLive',
   past: 'calendar.emptyPast',
+  following: 'calendar.emptyFollowing',
 } as const;
 
 /** 'AAAA-MM' de los próximos 12 meses (o de los últimos 12, para las pasadas). */
@@ -43,6 +45,7 @@ function parseDate(value: string) {
 
 export default function RacesScreen() {
   const { t, i18n } = useTranslation();
+  const { user } = useAuth();
   const classes = useBoatClasses();
   const [filters, setFilters] = useState<EventFilters>({ when: 'upcoming' });
   const [search, setSearch] = useState('');
@@ -72,7 +75,11 @@ export default function RacesScreen() {
     searchClubs({ country: filters.country ?? null }).then(setClubs).catch(() => setClubs([]));
   }, [filters.country]);
 
+  // "Siguiendo" necesita sesión: sin ella se muestra la invitación a entrar.
+  const needsLogin = filters.when === 'following' && !user;
+
   useEffect(() => {
+    if (needsLogin) return;
     let active = true;
     setLoading(true);
     setError(null);
@@ -88,7 +95,7 @@ export default function RacesScreen() {
     return () => {
       active = false;
     };
-  }, [filters]);
+  }, [filters, needsLogin]);
 
   async function loadMore() {
     if (!nextPage) return;
@@ -229,9 +236,20 @@ export default function RacesScreen() {
         ) : null}
       </View>
 
-      {loading ? <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} /> : null}
+      {needsLogin ? (
+        <Card style={{ alignItems: 'center' }}>
+          <Ionicons name="star-outline" size={28} color={colors.primary} />
+          <Text style={[typography.body, { textAlign: 'center' }]}>{t('calendar.followingLogin')}</Text>
+          <Button
+            title={t('calendar.signIn')}
+            onPress={() => router.push({ pathname: '/login', params: { next: '/races' } })}
+          />
+        </Card>
+      ) : null}
 
-      {!loading && error ? (
+      {!needsLogin && loading ? <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} /> : null}
+
+      {!needsLogin && !loading && error ? (
         <Card style={{ alignItems: 'center' }}>
           <Text style={typography.caption}>{t('calendar.loadError')}</Text>
           <Text style={[typography.caption, { color: colors.danger }]}>{errorMessage(error, t)}</Text>
@@ -239,13 +257,14 @@ export default function RacesScreen() {
         </Card>
       ) : null}
 
-      {!loading && !error && events.length === 0 ? (
+      {!needsLogin && !loading && !error && events.length === 0 ? (
         <Card style={{ alignItems: 'center' }}>
           <Text style={typography.caption}>{filters.q ? t('calendar.noSearchResults', { q: filters.q }) : hasFilters ? t('calendar.empty') : t(EMPTY_MESSAGE[filters.when])}</Text>
         </Card>
       ) : null}
 
-      {!loading &&
+      {!needsLogin &&
+        !loading &&
         groups.map((group) => (
           <View key={group.key} style={{ gap: spacing.sm }}>
             <Text style={typography.label}>{group.label}</Text>

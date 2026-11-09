@@ -42,6 +42,7 @@ function EditProfileScreen() {
 
   // Datos de la cuenta
   const [firstName, setFirstName] = useState(user?.first_name ?? '');
+  const [emailNotifications, setEmailNotifications] = useState(user?.email_notifications ?? true);
   const [lastName, setLastName] = useState(user?.last_name ?? '');
   // Dónde navega
   const [country, setCountry] = useState<string | null>(user?.country ?? null);
@@ -115,7 +116,7 @@ function EditProfileScreen() {
     setApiError(null);
     try {
       // Primero la cuenta (el país), así la región se valida contra el país nuevo.
-      await updateMe({ first_name: firstName.trim(), last_name: lastName.trim(), country });
+      await updateMe({ first_name: firstName.trim(), last_name: lastName.trim(), country, email_notifications: emailNotifications });
       await updateMyProfile({
         bio: bio.trim(),
         city: city.trim(),
@@ -281,6 +282,12 @@ function EditProfileScreen() {
           hint={t('editProfile.isPublicHint')}
           value={isPublic}
           onChange={setIsPublic}
+        />
+        <ToggleRow
+          label={t('editProfile.emailNotifications')}
+          hint={t('editProfile.emailNotificationsHint')}
+          value={emailNotifications}
+          onChange={setEmailNotifications}
         />
       </Card>
 

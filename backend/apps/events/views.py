@@ -5,10 +5,12 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import generics, permissions, serializers
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.core.text import normalize
 
-from .models import Event, EventMedia, EventResult, EventType
+from .models import Event, EventFollow, EventMedia, EventResult, EventType
 from .serializers import EventDetailSerializer, EventListSerializer, EventMediaSerializer
 
 WHEN_CHOICES = ("upcoming", "live", "past")
@@ -29,6 +31,7 @@ class EventListView(generics.ListAPIView):
       ?when=upcoming|live|past   próximas (incluye las en curso), en curso, o pasadas
       ?country=ES  ?region=<id>  ?club=<id>  ?class=<slug>  ?type=offshore
       ?from=AAAA-MM-DD  ?to=AAAA-MM-DD   regatas que ocurren (aunque sea en parte) dentro del rango
+      ?following=1   solo las regatas que sigo (requiere sesión)
       ?q=texto   busca en nombre, ciudad, sede, organizador, país, región y clases; sin importar tildes
                  ni mayúsculas, y cada palabra tiene que aparecer ("fastnet 2027").
     Las próximas se ordenan de la más cercana a la más lejana; las pasadas, de la más reciente hacia atrás.
@@ -69,6 +72,10 @@ class EventListView(generics.ListAPIView):
             if event_type not in EventType.values:
                 raise serializers.ValidationError({"type": [f"Valores posibles: {', '.join(EventType.values)}."]})
             queryset = queryset.filter(event_type=event_type)
+
+        if params.get("following") in ("1", "true"):
+            user = self.request.user
+            queryset = queryset.filter(follows__user=user) if user.is_authenticated else queryset.none()
 
         for word in normalize(params.get("q", "")).split()[:8]:
             queryset = queryset.filter(search_text__contains=word)
@@ -120,3 +127,25 @@ class EventMediaView(generics.ListAPIView):
     def get_queryset(self):
         event = generics.get_object_or_404(Event, slug=self.kwargs["slug"], is_published=True)
         return EventMedia.objects.filter(event=event)
+
+
+class EventFollowView(APIView):
+    """POST: seguir la regata (avisos de resultados, fechas y fotos). DELETE: dejar de seguirla."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_event(self, slug):
+        return generics.get_object_or_404(Event, slug=slug, is_published=True)
+
+    def response(self, event, following):
+        return Response({"following": following, "followers_count": event.follows.count()})
+
+    def post(self, request, slug):
+        event = self.get_event(slug)
+        EventFollow.objects.get_or_create(user=request.user, event=event)
+        return self.response(event, True)
+
+    def delete(self, request, slug):
+        event = self.get_event(slug)
+        EventFollow.objects.filter(user=request.user, event=event).delete()
+        return self.response(event, False)

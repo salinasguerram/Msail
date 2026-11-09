@@ -16,6 +16,8 @@ from django.db import transaction
 
 from apps.core.text import normalize
 from apps.geo.models import Country
+from apps.notifications.models import NotificationKind
+from apps.notifications.services import notify_followers
 
 from .models import EventCategory, EventResult, ResultStatus
 
@@ -178,4 +180,6 @@ def import_results(event, rows, default_category=None, replace=True):
         if None in touched:
             event.results.filter(category__isnull=True).delete()
     EventResult.objects.bulk_create(results)
+    if results:
+        notify_followers(event, NotificationKind.RESULTS, f"results:{event.pk}")
     return len(results), created_categories

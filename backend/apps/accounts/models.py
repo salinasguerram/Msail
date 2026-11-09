@@ -43,6 +43,11 @@ class User(AbstractUser):
     username = None
     email = models.EmailField(_("email"), unique=True)
     email_verified = models.BooleanField(_("email verificado"), default=False)
+    email_notifications = models.BooleanField(
+        _("avisos por email"),
+        default=True,
+        help_text=_("Recibe por email los avisos de las regatas que sigue (resultados, recordatorios, cambios de fecha)."),
+    )
     preferred_language = models.CharField(
         _("idioma preferido"),
         max_length=5,

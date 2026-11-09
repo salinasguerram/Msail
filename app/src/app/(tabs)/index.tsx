@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 
 import { Brand } from '@/components/Brand';
+import { NotificationBell } from '@/components/NotificationBell';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/theme';
 
@@ -78,8 +79,9 @@ function CompactExplore() {
   const { width, height } = useWindowDimensions();
   return (
     <Screen edges={['top', 'left', 'right']} contentStyle={styles.page}>
-      <View style={{ marginTop: spacing.sm }}>
+      <View style={[styles.brandRow, { marginTop: spacing.sm }]}>
         <Brand />
+        <NotificationBell />
       </View>
       <Hero />
       <GlobePlaceholder maxSize={360} estimate={Math.min(width - 64, height - 520)} />
@@ -107,7 +109,10 @@ function WideExplore() {
   return (
     <Screen edges={['top', 'left', 'right']} contentStyle={styles.widePage}>
       <View style={styles.sidebar}>
-        <Brand size={20} />
+        <View style={styles.brandRow}>
+          <Brand size={20} />
+          <NotificationBell />
+        </View>
         <Hero titleSize={36} />
         <View style={styles.menu}>
           {SHORTCUTS.map(({ key, icon, href }) => (
@@ -135,6 +140,7 @@ function WideExplore() {
 }
 
 const styles = StyleSheet.create({
+  brandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   // Ocupa todo el alto disponible: el globo se estira y los botones quedan pegados abajo.
   page: { flexGrow: 1 },
   widePage: {

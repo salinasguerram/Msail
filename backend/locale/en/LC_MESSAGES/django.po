@@ -120,3 +120,40 @@ msgstr "The PDF is larger than %(mb)s MB."
 
 msgid "El archivo no es un PDF."
 msgstr "The file is not a PDF."
+
+# Avisos de regatas seguidas
+msgid "Resultados de %(event)s"
+msgstr "Results of %(event)s"
+
+msgid "Ya está publicada la clasificación."
+msgstr "The standings are out."
+
+msgid "Fotos nuevas de %(event)s"
+msgstr "New photos of %(event)s"
+
+msgid "Se sumaron fotos y videos a la galería."
+msgstr "New photos and videos were added to the gallery."
+
+msgid "Cambió la fecha de %(event)s"
+msgstr "%(event)s has a new date"
+
+msgid "Ahora empieza el %(date)s."
+msgstr "It now starts on %(date)s."
+
+msgid "%(event)s empieza mañana"
+msgstr "%(event)s starts tomorrow"
+
+msgid "Largada el %(date)s en %(place)s."
+msgstr "Start on %(date)s in %(place)s."
+
+msgid "Cierran las inscripciones de %(event)s"
+msgstr "Entries for %(event)s are closing"
+
+msgid "Podés inscribirte hasta el %(date)s."
+msgstr "You can enter until %(date)s."
+
+msgid "Ver la regata: %(link)s"
+msgstr "See the regatta: %(link)s"
+
+msgid "Te llega este email porque seguís esta regata en MSAIL LEAGUE. Podés desactivar los avisos por email desde tu perfil."
+msgstr "You're getting this email because you follow this regatta on MSAIL LEAGUE. You can turn off email alerts from your profile."

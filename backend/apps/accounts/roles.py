@@ -20,6 +20,7 @@ ADMIN_MODELS = {
     "profiles": ["sailorprofile", "raceresult"],
     "boats": ["boat", "crewmember"],
     "events": ["event", "eventcategory", "eventdocument", "eventresult", "eventmedia"],
+    "notifications": ["notification"],
 }
 
 MODERATOR_PERMISSIONS = {

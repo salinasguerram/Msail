@@ -4,12 +4,14 @@ import { useCallback, useEffect, useLayoutEffect, useState, type ComponentProps 
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { getEvent, type EventDetail } from '@/api/events';
+import { getEvent, setFollowing, type EventDetail } from '@/api/events';
 import { ApiError } from '@/api/client';
 import { className, useBoatClasses } from '@/api/useBoatClasses';
+import { useAuth } from '@/auth/AuthContext';
 import { errorMessage } from '@/auth/errors';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { useDialogs } from '@/components/Dialogs';
 import { EventGallery } from '@/components/EventGallery';
 import { EventResults, EventSailors } from '@/components/EventResults';
 import { Screen } from '@/components/Screen';
@@ -29,7 +31,11 @@ export default function EventScreen() {
   const navigation = useNavigation();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const classes = useBoatClasses();
+  const { user } = useAuth();
+  const { notify } = useDialogs();
   const [event, setEvent] = useState<EventDetail | null>(null);
+  const [following, setFollowingState] = useState<boolean | null>(null);
+  const [followBusy, setFollowBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
   const load = useCallback(() => {
@@ -38,6 +44,26 @@ export default function EventScreen() {
   }, [slug]);
 
   useEffect(load, [load]);
+
+  async function toggleFollow() {
+    if (!event) return;
+    if (!user) {
+      router.push({ pathname: '/login', params: { next: `/events/${event.slug}` } });
+      return;
+    }
+    const next = !(following ?? event.is_following);
+    setFollowBusy(true);
+    try {
+      const result = await setFollowing(event.slug, next);
+      setFollowingState(result.following);
+      setEvent({ ...event, is_following: result.following, followers_count: result.followers_count });
+      notify(t(result.following ? 'event.followed' : 'event.unfollowed'));
+    } catch (e) {
+      notify(errorMessage(e, t));
+    } finally {
+      setFollowBusy(false);
+    }
+  }
 
   // El encabezado (y la pestaña del navegador, en la web) muestra el nombre de la regata.
   useLayoutEffect(() => {
@@ -75,6 +101,7 @@ export default function EventScreen() {
         : remaining === 0
           ? t('event.today')
           : t('event.inDays', { count: remaining });
+  const isFollowing = following ?? event.is_following;
   const hasCoords = event.latitude !== null && event.longitude !== null;
   const mapUrl = hasCoords ? `https://www.google.com/maps/search/?api=1&query=${event.latitude},${event.longitude}` : null;
   // Sede, ciudad, región y país, sin repetir (ej. ciudad y región "Sídney").
@@ -95,6 +122,23 @@ export default function EventScreen() {
         <Text style={[typography.body, { color: colors.textMuted }]}>
           {[event.city, event.country_name].filter(Boolean).join(' · ')}
         </Text>
+        <View style={styles.followRow}>
+          <Pressable
+            accessibilityRole="button"
+            aria-pressed={isFollowing}
+            disabled={followBusy}
+            onPress={toggleFollow}
+            style={({ pressed }) => [styles.follow, isFollowing && styles.following, (pressed || followBusy) && { opacity: 0.7 }]}
+          >
+            <Ionicons name={isFollowing ? 'star' : 'star-outline'} size={18} color={isFollowing ? '#fff' : colors.primary} />
+            <Text style={[styles.followText, isFollowing && { color: '#fff' }]}>
+              {isFollowing ? t('event.following') : t('event.follow')}
+            </Text>
+          </Pressable>
+          <Text style={[typography.caption, { flex: 1 }]}>
+            {isFollowing ? t('event.followingHint') : t('event.followHint')}
+          </Text>
+        </View>
       </Card>
 
       {event.status === 'finished' ? (
@@ -274,6 +318,19 @@ function LinkRow({ label, url }: { label: string; url: string }) {
 
 const styles = StyleSheet.create({
   hero: { gap: spacing.sm, paddingVertical: spacing.xl },
+  followRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.sm, flexWrap: 'wrap' },
+  follow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+  },
+  following: { backgroundColor: colors.primary },
+  followText: { color: colors.primary, fontWeight: '700' },
   badges: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
   typeTag: {
     color: colors.primary,

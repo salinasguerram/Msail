@@ -11,6 +11,8 @@ export type User = {
   last_name: string;
   country: string | null;
   preferred_language: 'es' | 'en';
+  /** Recibe por email los avisos de las regatas que sigue. */
+  email_notifications: boolean;
   email_verified: boolean;
   date_joined: string;
 };
@@ -32,7 +34,7 @@ type AuthContextValue = {
   confirmPasswordReset: (email: string, code: string, newPassword: string) => Promise<void>;
   updateLanguage: (language: 'es' | 'en') => Promise<void>;
   /** Nombre, apellido y país de la cuenta. */
-  updateMe: (data: Partial<Pick<User, 'first_name' | 'last_name' | 'country'>>) => Promise<User>;
+  updateMe: (data: Partial<Pick<User, 'first_name' | 'last_name' | 'country' | 'email_notifications'>>) => Promise<User>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);

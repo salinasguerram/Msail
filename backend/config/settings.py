@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "apps.profiles",
     "apps.boats",
     "apps.events",
+    "apps.notifications",
 ]
 
 MIDDLEWARE = [

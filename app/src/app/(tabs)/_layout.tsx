@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, type ColorValue } from 'react-native';
 
 import { Brand } from '@/components/Brand';
+import { NotificationBell } from '@/components/NotificationBell';
 import { colors, spacing } from '@/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -32,7 +33,7 @@ function BackToHome() {
   );
 }
 
-const section = { headerLeft: () => <BackToHome /> };
+const section = { headerLeft: () => <BackToHome />, headerRight: () => <NotificationBell /> };
 // Secciones que se abren desde Explorar: comparten encabezado y barra inferior, pero no tienen pestaña propia.
 // (Ocultar con `href: null` en esta versión también bloquea la navegación: se oculta solo el botón.)
 const hidden = { ...section, tabBarButton: () => null, tabBarItemStyle: { display: 'none' as const } };

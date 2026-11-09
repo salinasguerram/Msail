@@ -348,3 +348,19 @@ class EventMedia(models.Model):
         elif not self.image and self.thumbnail:
             self.thumbnail = None
         super().save(*args, **kwargs)
+
+
+class EventFollow(models.Model):
+    """Regata que un usuario sigue (favorita): recibe avisos de resultados, fechas y fotos."""
+
+    user = models.ForeignKey("accounts.User", verbose_name=_("usuario"), on_delete=models.CASCADE, related_name="followed_events")
+    event = models.ForeignKey(Event, verbose_name=_("regata"), on_delete=models.CASCADE, related_name="follows")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("seguidor")
+        verbose_name_plural = _("seguidores")
+        constraints = [models.UniqueConstraint(fields=["user", "event"], name="unique_event_follow")]
+
+    def __str__(self):
+        return f"{self.user} → {self.event}"

@@ -35,6 +35,7 @@ class UserSerializer(serializers.ModelSerializer):
             "last_name",
             "country",
             "preferred_language",
+            "email_notifications",
             "email_verified",
             "date_joined",
         ]

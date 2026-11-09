@@ -3,7 +3,8 @@ import { api } from '@/api/client';
 export const EVENT_TYPES = ['offshore', 'inshore', 'one_design', 'olympic', 'multihull', 'youth'] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 export type EventStatus = 'upcoming' | 'live' | 'finished';
-export type EventWhen = 'upcoming' | 'live' | 'past';
+/** Pestañas del calendario. 'following' son las regatas que sigo (pasadas y futuras). */
+export type EventWhen = 'upcoming' | 'live' | 'past' | 'following';
 
 export type EventSummary = {
   id: number;
@@ -45,7 +46,10 @@ function monthRange(month: string) {
 }
 
 export function getEvents(filters: EventFilters, page = 1) {
-  const query = new URLSearchParams({ when: filters.when, page: String(page) });
+  const following = filters.when === 'following';
+  const query = new URLSearchParams({ page: String(page) });
+  if (following) query.set('following', '1');
+  else query.set('when', filters.when);
   if (filters.q?.trim()) query.set('q', filters.q.trim());
   if (filters.type) query.set('type', filters.type);
   if (filters.country) query.set('country', filters.country);
@@ -56,7 +60,8 @@ export function getEvents(filters: EventFilters, page = 1) {
     query.set('from', from);
     query.set('to', to);
   }
-  return api<Page<EventSummary>>(`/events/?${query}`, { auth: false });
+  // Con sesión se manda el token: lo necesita "Siguiendo" (y no cambia nada en las demás pestañas).
+  return api<Page<EventSummary>>(`/events/?${query}`, { auth: following });
 }
 
 export type EventCategory = { name: string; boat_class: string | null; notes: string };
@@ -142,9 +147,18 @@ export type EventDetail = Omit<EventSummary, 'organizer_club'> & {
   /** Total de fotos y videos; media_preview trae los primeros. */
   media_count: number;
   media_preview: EventMedia[];
+  /** La sigo (recibo avisos). Siempre false sin sesión. */
+  is_following: boolean;
+  followers_count: number;
 };
 
-export const getEvent = (slug: string) => api<EventDetail>(`/events/${encodeURIComponent(slug)}/`, { auth: false });
+// Con token si hay sesión, para saber si la sigo.
+export const getEvent = (slug: string) => api<EventDetail>(`/events/${encodeURIComponent(slug)}/`);
+
+export const setFollowing = (slug: string, follow: boolean) =>
+  api<{ following: boolean; followers_count: number }>(`/events/${encodeURIComponent(slug)}/follow/`, {
+    method: follow ? 'POST' : 'DELETE',
+  });
 
 export const getEventMedia = (slug: string, page = 1) =>
   api<Page<EventMedia>>(`/events/${encodeURIComponent(slug)}/media/?page=${page}`, { auth: false });

@@ -158,6 +158,8 @@ class EventDetailSerializer(EventListSerializer):
     msail_sailors = serializers.SerializerMethodField()
     media_count = serializers.SerializerMethodField()
     media_preview = serializers.SerializerMethodField()
+    is_following = serializers.SerializerMethodField()
+    followers_count = serializers.SerializerMethodField()
 
     class Meta(EventListSerializer.Meta):
         fields = EventListSerializer.Meta.fields + [
@@ -175,6 +177,8 @@ class EventDetailSerializer(EventListSerializer):
             "msail_sailors",
             "media_count",
             "media_preview",
+            "is_following",
+            "followers_count",
         ]
 
     def get_organizer_club(self, event):
@@ -189,6 +193,14 @@ class EventDetailSerializer(EventListSerializer):
         return (event.end_date - event.start_date).days + 1
 
     MEDIA_PREVIEW = 9
+
+    def get_is_following(self, event):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        return bool(user and user.is_authenticated and event.follows.filter(user=user).exists())
+
+    def get_followers_count(self, event):
+        return event.follows.count()
 
     def get_media_count(self, event):
         return len(event.media.all())
