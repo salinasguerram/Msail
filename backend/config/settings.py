@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "apps.boats",
     "apps.events",
     "apps.notifications",
+    "apps.news",
 ]
 
 MIDDLEWARE = [
@@ -305,12 +306,17 @@ UNFOLD = {
                 "items": [_admin_link("Regatas", "sailing", "admin:events_event_changelist")],
             },
             {
+                "title": "Contenido",
+                "items": [_admin_link("Noticias", "newspaper", "admin:news_article_changelist")],
+            },
+            {
                 "title": "Comunidad",
                 "items": [
                     _admin_link("Usuarios", "person", "admin:accounts_user_changelist"),
                     _admin_link("Perfiles de navegante", "badge", "admin:profiles_sailorprofile_changelist"),
                     _admin_link("Resultados", "emoji_events", "admin:profiles_raceresult_changelist"),
                     _admin_link("Embarcaciones", "directions_boat", "admin:boats_boat_changelist"),
+                    _admin_link("Avisos enviados", "notifications", "admin:notifications_notification_changelist"),
                 ],
             },
             {
