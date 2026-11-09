@@ -85,6 +85,11 @@ export default function WeatherScreen() {
         }}
         placeholder={t('weather.pickPlace')}
       />
+      <Button
+        title={t('planet.wind.openMap')}
+        variant="secondary"
+        onPress={() => router.navigate({ pathname: '/', params: { wind: '1' } })}
+      />
       {placesError ? <Text style={{ color: colors.danger }}>{errorMessage(placesError, t)}</Text> : null}
       {place ? <ForecastView key={place} place={place} /> : !places && !placesError ? <ActivityIndicator color={colors.primary} /> : null}
     </Screen>

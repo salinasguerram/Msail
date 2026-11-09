@@ -113,3 +113,40 @@ class WeatherApiTests(APITestCase):
         # Desde la página de una regata lejana también se puede consultar (aunque no figure en la lista).
         with mock.patch("apps.weather.services.requests.get", side_effect=fake_get()):
             self.assertEqual(self.client.get("/api/weather/forecast/", {"place": "event:copa-lejana"}).status_code, 200)
+
+
+@override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "wind-tests"}})
+class WindGridTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+
+    def fake_grid(self, count=None):
+        from apps.weather.services import wind_grid_coords
+
+        now = timezone.now().replace(minute=0, second=0, microsecond=0)
+        times = [(now + timedelta(hours=h)).strftime("%Y-%m-%dT%H:00") for h in range(-2, 60)]
+        speeds = [float(i) for i in range(len(times))]  # el valor dice qué hora es (índice)
+        cells = [{"hourly": {"time": times, "wind_speed_10m": speeds, "wind_direction_10m": [90] * len(times)}}]
+        return cells * (count if count is not None else len(wind_grid_coords()))
+
+    def test_grid_picks_now_and_later_hours(self):
+        response = mock.Mock(raise_for_status=mock.Mock(), json=mock.Mock(return_value=self.fake_grid()))
+        with mock.patch("apps.weather.services.requests.get", return_value=response) as get:
+            data = self.client.get("/api/weather/wind/").data
+            self.client.get("/api/weather/wind/")  # segunda vez: de la caché
+        self.assertEqual(get.call_count, 1)
+        self.assertEqual(len(data["points"]), 240)
+        self.assertEqual(data["offsets"], [0, 12, 24, 48])
+        # La lista empieza 2 h antes de ahora: ahora=2, +12=14, +24=26, +48=50.
+        self.assertEqual(data["points"][0]["speed"], [2.0, 14.0, 26.0, 50.0])
+        self.assertEqual(data["points"][0]["direction"], [90, 90, 90, 90])
+        params = get.call_args.kwargs["params"]
+        self.assertEqual(len(params["latitude"].split(",")), 240)
+        self.assertEqual(params["wind_speed_unit"], "kn")
+
+    def test_failure_is_503(self):
+        with mock.patch("apps.weather.services.requests.get", side_effect=requests.Timeout("caído")):
+            self.assertEqual(self.client.get("/api/weather/wind/").status_code, 503)
+        bad = mock.Mock(raise_for_status=mock.Mock(), json=mock.Mock(return_value=self.fake_grid(count=3)))
+        with mock.patch("apps.weather.services.requests.get", return_value=bad):
+            self.assertEqual(self.client.get("/api/weather/wind/").status_code, 503)

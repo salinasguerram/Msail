@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from apps.events.models import Event
 from apps.geo.models import Region
 
-from .services import ForecastUnavailable, get_forecast
+from .services import ForecastUnavailable, get_forecast, get_wind_grid
 
 UPCOMING_DAYS = 60  # regatas que se muestran como sede: en curso o que empiezan en los próximos 60 días
 
@@ -103,3 +103,18 @@ class ForecastView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         return Response({"place": place, **forecast})
+
+
+class WindGridView(APIView):
+    """Viento en todo el planeta (grilla cada 15°) para ahora y +12/+24/+48 h. Lo usa la capa de viento del planeta 3D."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        try:
+            return Response(get_wind_grid())
+        except ForecastUnavailable:
+            return Response(
+                {"detail": "El servicio de pronóstico no responde. Probá de nuevo en unos minutos."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )

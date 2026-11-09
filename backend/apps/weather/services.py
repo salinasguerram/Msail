@@ -7,6 +7,7 @@ Cada lugar se guarda en caché una hora para no consultar de más.
 """
 
 import logging
+from datetime import timedelta
 
 import requests
 from django.core.cache import cache
@@ -95,6 +96,72 @@ def get_forecast(latitude, longitude):
         "days": days,
         "has_waves": any(day["wave_m"] is not None for day in days),
         "updated_at": timezone.now().isoformat(),
+        "source": SOURCE,
+    }
+    cache.set(key, result, CACHE_SECONDS)
+    return result
+
+
+# ---------- Viento en todo el planeta
+
+WIND_GRID_STEP = 15  # grados entre puntos de la grilla (240 puntos)
+WIND_OFFSETS = (0, 12, 24, 48)  # horas desde ahora que se pueden elegir en el mapa
+
+
+def wind_grid_coords():
+    return [(lat, lng) for lat in range(-60, 76, WIND_GRID_STEP) for lng in range(-180, 180, WIND_GRID_STEP)]
+
+
+def get_wind_grid():
+    """
+    Viento a 10 m (nudos y dirección de donde viene) en una grilla de todo el planeta, para ahora y +12/+24/+48 h.
+    Un solo pedido a Open-Meteo con todas las coordenadas; se guarda una hora.
+    """
+    now = timezone.now().replace(minute=0, second=0, microsecond=0)
+    key = f"wind-grid:{now:%Y%m%d%H}"
+    cached = cache.get(key)
+    if cached:
+        return cached
+
+    coords = wind_grid_coords()
+    params = {
+        "latitude": ",".join(str(lat) for lat, _ in coords),
+        "longitude": ",".join(str(lng) for _, lng in coords),
+        "hourly": "wind_speed_10m,wind_direction_10m",
+        "wind_speed_unit": "kn",
+        "timezone": "GMT",
+        "forecast_days": 3,
+    }
+    try:
+        response = requests.get(FORECAST_URL, params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+    except (requests.RequestException, ValueError) as exc:
+        logger.warning("Open-Meteo (grilla de viento) falló: %s", exc)
+        raise ForecastUnavailable from exc
+    if not isinstance(data, list) or len(data) != len(coords):
+        raise ForecastUnavailable
+
+    times = data[0]["hourly"]["time"]
+    wanted = [(now + timedelta(hours=h)).strftime("%Y-%m-%dT%H:00") for h in WIND_OFFSETS]
+    indexes = [times.index(t) if t in times else None for t in wanted]
+
+    points = []
+    for (lat, lng), item in zip(coords, data):
+        speeds = item["hourly"]["wind_speed_10m"]
+        directions = item["hourly"]["wind_direction_10m"]
+        points.append(
+            {
+                "lat": lat,
+                "lng": lng,
+                "speed": [speeds[i] if i is not None else None for i in indexes],
+                "direction": [directions[i] if i is not None else None for i in indexes],
+            }
+        )
+    result = {
+        "times": [f"{t}Z" for t in wanted],
+        "offsets": list(WIND_OFFSETS),
+        "points": points,
         "source": SOURCE,
     }
     cache.set(key, result, CACHE_SECONDS)

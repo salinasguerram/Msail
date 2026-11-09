@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     "apps.marinas",
     "apps.professionals",
     "apps.weather",
+    "apps.map",
 ]
 
 MIDDLEWARE = [

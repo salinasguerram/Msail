@@ -16,6 +16,7 @@ urlpatterns = [
     path("api/marinas/", include("apps.marinas.urls")),
     path("api/professionals/", include("apps.professionals.urls")),
     path("api/weather/", include("apps.weather.urls")),
+    path("api/map/", include("apps.map.urls")),
     path("api/boat-classes/", BoatClassListView.as_view(), name="boat-classes"),
     path("api/countries/", CountryListView.as_view(), name="countries"),
     path("api/regions/", RegionListView.as_view(), name="regions"),

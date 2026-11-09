@@ -46,3 +46,14 @@ export const getWeatherPlaces = () => api<{ events: WeatherPlace[]; zones: Weath
 
 export const getForecast = (place: string) =>
   api<Forecast>(`/weather/forecast/?place=${encodeURIComponent(place)}`, { auth: false });
+
+/** Viento en todo el planeta (grilla cada 15°): velocidad en nudos y dirección de donde viene, para cada hora de `offsets`. */
+export type WindGrid = {
+  /** Hora UTC de cada columna (ahora, +12, +24, +48 h). */
+  times: string[];
+  offsets: number[];
+  points: { lat: number; lng: number; speed: (number | null)[]; direction: (number | null)[] }[];
+  source: { name: string; url: string; license: string };
+};
+
+export const getWindGrid = () => api<WindGrid>('/weather/wind/', { auth: false });
