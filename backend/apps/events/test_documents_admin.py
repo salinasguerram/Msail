@@ -191,6 +191,11 @@ class EventAdminTests(TestCase):
             "documents-0-title": "Aviso de regata",
             "documents-0-kind": DocumentKind.NOTICE_OF_RACE,
             "documents-0-file": pdf_upload(),
+            # Secciones de clasificación y galería, vacías.
+            "results-TOTAL_FORMS": "0",
+            "results-INITIAL_FORMS": "0",
+            "media-TOTAL_FORMS": "0",
+            "media-INITIAL_FORMS": "0",
         }
         data.update(overrides)
         return data

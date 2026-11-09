@@ -97,11 +97,21 @@ export default function ArticleScreen() {
       </View>
 
       <View style={{ gap: spacing.md }}>
-        {article.paragraphs.map((paragraph, index) => (
-          <Text key={index} style={styles.paragraph}>
-            {paragraph}
-          </Text>
-        ))}
+        {article.blocks.map((block, index) =>
+          block.type === 'heading' ? (
+            <Text key={index} style={styles.subheading} role="heading">
+              {block.text}
+            </Text>
+          ) : block.type === 'quote' ? (
+            <Text key={index} style={styles.quote}>
+              {block.text}
+            </Text>
+          ) : (
+            <Text key={index} style={styles.paragraph}>
+              {block.text}
+            </Text>
+          ),
+        )}
       </View>
 
       {article.source_url ? (
@@ -143,6 +153,16 @@ const styles = StyleSheet.create({
   title: { ...typography.title, fontSize: 26, lineHeight: 32 },
   summary: { color: colors.text, fontSize: 17, lineHeight: 25, fontWeight: '500' },
   paragraph: { color: colors.text, fontSize: 16, lineHeight: 25 },
+  subheading: { color: colors.text, fontSize: 19, fontWeight: '800', marginTop: spacing.xs },
+  quote: {
+    color: colors.text,
+    fontSize: 17,
+    lineHeight: 26,
+    fontStyle: 'italic',
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+    paddingLeft: spacing.md,
+  },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   tag: {
     color: colors.text,

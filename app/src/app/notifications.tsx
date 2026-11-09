@@ -18,6 +18,7 @@ const ICONS: Record<NotificationKind, ComponentProps<typeof Ionicons>['name']> =
   dates: 'calendar-outline',
   starts: 'flag-outline',
   entries: 'create-outline',
+  news: 'newspaper-outline',
 };
 
 export default withAuth(NotificationsScreen);
@@ -60,7 +61,8 @@ function NotificationsScreen() {
       setItems((list) => list.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
       markRead(item.id).catch(() => {});
     }
-    if (item.event) router.push({ pathname: '/events/[slug]', params: { slug: item.event } });
+    if (item.article) router.push({ pathname: '/news/[slug]', params: { slug: item.article } });
+    else if (item.event) router.push({ pathname: '/events/[slug]', params: { slug: item.event } });
   }
 
   async function readAll() {

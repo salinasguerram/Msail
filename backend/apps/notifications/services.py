@@ -21,7 +21,7 @@ def _language(user):
     return "en" if (user.preferred_language or "").startswith("en") else "es"
 
 
-def _texts(kind, event, date):
+def _texts(kind, event, date, article=None):
     """Título y texto del aviso en el idioma activo."""
     when = formats.date_format(date, "DATE_FORMAT") if date else ""
     name = event.name
@@ -42,10 +42,12 @@ def _texts(kind, event, date):
             _("Cierran las inscripciones de %(event)s") % {"event": name},
             _("Podés inscribirte hasta el %(date)s.") % {"date": when},
         )
+    if kind == NotificationKind.NEWS:
+        return article.title, _("Nueva noticia sobre %(event)s.") % {"event": name}
     raise ValueError(kind)
 
 
-def notify_followers(event, kind, key, date=None):
+def notify_followers(event, kind, key, date=None, article=None):
     """Crea el aviso para cada seguidor que todavía no lo tenga. Devuelve cuántos se crearon."""
     if not event.is_published:
         return 0
@@ -58,8 +60,10 @@ def notify_followers(event, kind, key, date=None):
         if user.id in already:
             continue
         with translation.override(_language(user)):
-            title, body = _texts(kind, event, date)
-        created.append(Notification(user=user, kind=kind, title=title, body=body, event=event, key=key))
+            title, body = _texts(kind, event, date, article)
+        created.append(
+            Notification(user=user, kind=kind, title=title[:200], body=body[:300], event=event, article=article, key=key)
+        )
     Notification.objects.bulk_create(created, ignore_conflicts=True)
     if kind in EMAIL_KINDS and created:
         user_ids = [n.user_id for n in created]

@@ -18,8 +18,11 @@ export type ArticleCard = {
   reading_minutes: number;
 };
 
+/** Bloque del texto: párrafo, subtítulo o cita. */
+export type ArticleBlock = { type: 'paragraph' | 'heading' | 'quote'; text: string };
+
 export type ArticleDetail = ArticleCard & {
-  paragraphs: string[];
+  blocks: ArticleBlock[];
   cover_credit: string;
   source_name: string;
   source_url: string;

@@ -1,0 +1,47 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrastyle %}
+{{ block.super }}
+{% include "admin/events/_form_styles.html" %}
+<style>
+  /* Imita la página de la noticia en la app (colores de MSAIL). */
+  .msail-preview { max-width: 680px; display: grid; gap: 16px; }
+  .msail-preview .status { border-radius: 10px; padding: 10px 14px; background: var(--color-base-800); color: var(--color-base-100); font-size: 14px; }
+  .msail-phone { background: #050b18; border: 1px solid #1c2c4d; border-radius: 24px; padding: 20px; display: grid; gap: 14px; color: #e6edf7; }
+  .msail-phone .cover { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 16px; background: #11213f; display: flex; align-items: center; justify-content: center; color: #2f8cff; font-size: 13px; }
+  .msail-phone .credit { text-align: right; color: #7f8fab; font-size: 12px; margin-top: -8px; }
+  .msail-phone h1 { margin: 0; font-size: 26px; line-height: 32px; font-weight: 800; }
+  .msail-phone .summary { font-size: 17px; line-height: 25px; font-weight: 500; margin: 0; }
+  .msail-phone .meta { color: #7f8fab; font-size: 13px; }
+  .msail-phone p { font-size: 16px; line-height: 25px; margin: 0; }
+  .msail-phone h2 { font-size: 19px; font-weight: 800; margin: 6px 0 0; }
+  .msail-phone blockquote { margin: 0; border-left: 3px solid #2f8cff; padding-left: 12px; font-style: italic; font-size: 17px; line-height: 26px; }
+  .msail-phone .source { color: #2f8cff; font-weight: 600; font-size: 14px; }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+<div class="msail-import msail-preview">
+  <div class="status">{{ status }} · <a href="{{ change_url }}">volver a editar</a></div>
+  <div class="msail-phone">
+    {% if article.cover %}
+      <img class="cover" src="{{ article.cover.url }}" alt="">
+      {% if article.cover_credit %}<div class="credit">{{ article.cover_credit }}</div>{% endif %}
+    {% else %}
+      <div class="cover">Sin foto de portada</div>
+    {% endif %}
+    <h1>{{ article.title }}</h1>
+    <p class="summary">{{ article.summary }}</p>
+    <div class="meta">{{ article.author }} · {{ article.published_at|date:"l j \d\e F \d\e Y" }} · {{ article.reading_minutes }} min de lectura</div>
+    {% for block in article.blocks %}
+      {% if block.type == "heading" %}<h2>{{ block.text }}</h2>
+      {% elif block.type == "quote" %}<blockquote>{{ block.text }}</blockquote>
+      {% else %}<p>{{ block.text }}</p>{% endif %}
+    {% endfor %}
+    {% if article.source_url %}<a class="source" href="{{ article.source_url }}" target="_blank" rel="noopener">Fuente: {{ article.source_name }}</a>{% endif %}
+    {% if article.event %}<div class="meta">Regata: {{ article.event.name }}</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

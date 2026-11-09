@@ -1,6 +1,6 @@
 import { api } from '@/api/client';
 
-export type NotificationKind = 'results' | 'gallery' | 'dates' | 'starts' | 'entries';
+export type NotificationKind = 'results' | 'gallery' | 'dates' | 'starts' | 'entries' | 'news';
 
 export type AppNotification = {
   id: number;
@@ -9,6 +9,8 @@ export type AppNotification = {
   body: string;
   /** Slug de la regata, para abrirla al tocar el aviso. */
   event: string | null;
+  /** Slug de la noticia (en los avisos de noticias nuevas). */
+  article: string | null;
   created_at: string;
   read: boolean;
 };

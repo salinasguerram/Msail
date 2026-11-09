@@ -52,11 +52,11 @@ class ArticleCardSerializer(serializers.ModelSerializer):
 
 
 class ArticleDetailSerializer(ArticleCardSerializer):
-    paragraphs = serializers.ListField(child=serializers.CharField(), read_only=True)
+    blocks = serializers.ListField(child=serializers.DictField(), read_only=True)
     related = serializers.SerializerMethodField()
 
     class Meta(ArticleCardSerializer.Meta):
-        fields = ArticleCardSerializer.Meta.fields + ["paragraphs", "cover_credit", "source_name", "source_url", "related"]
+        fields = ArticleCardSerializer.Meta.fields + ["blocks", "cover_credit", "source_name", "source_url", "related"]
 
     def get_related(self, article):
         """Hasta 3 noticias de la misma regata o, si no hay, del mismo país."""

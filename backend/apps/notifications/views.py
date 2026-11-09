@@ -14,7 +14,7 @@ class NotificationListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user).select_related("event")
+        return Notification.objects.filter(user=self.request.user).select_related("event", "article")
 
 
 class UnreadCountView(APIView):

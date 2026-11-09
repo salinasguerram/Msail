@@ -8,6 +8,7 @@ from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 from apps.boats.models import Boat
+from apps.news.models import Article
 from apps.profiles.models import RaceResult, SailorProfile
 from apps.sailing.models import BoatClass, Club
 
@@ -55,6 +56,12 @@ def build_dashboard():
             {"label": "Embarcaciones", "value": Boat.objects.count(), "hint": f"{Boat.objects.filter(is_public=False).count()} privadas"},
             {"label": "Resultados cargados", "value": RaceResult.objects.count(), "hint": f"{RaceResult.objects.filter(boat__isnull=False).count()} con barco"},
             {"label": "Clubes", "value": Club.objects.count(), "hint": f"{Club.objects.filter(is_verified=True).count()} verificados"},
+            {
+                "label": "Noticias en 7 días",
+                "value": Article.visible().filter(published_at__gte=week_ago).count(),
+                "hint": f"{Article.objects.filter(is_published=True, published_at__gt=timezone.now()).count()} programadas · "
+                f"{Article.objects.filter(is_published=False).count()} borradores",
+            },
         ],
         "signups": signups_by_day(User.objects.all()),
         "top_classes": BoatClass.objects.annotate(total=Count("sailors", distinct=True))

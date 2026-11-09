@@ -7,6 +7,7 @@ Se puede correr varias veces: cada recordatorio se manda una sola vez.
 
 - "Empieza mañana": regatas que largan al día siguiente.
 - "Cierran las inscripciones": regatas con la inscripción abierta que cierra dentro de los próximos 3 días.
+- Noticias programadas que ya se publicaron: aviso a quienes siguen su regata.
 """
 
 from datetime import timedelta
@@ -16,6 +17,8 @@ from django.db.models import Q
 from django.utils import timezone
 
 from apps.events.models import Event
+from apps.news.models import Article
+from apps.news.signals import notify_event_followers
 from apps.notifications.models import NotificationKind
 from apps.notifications.services import notify_followers
 
@@ -42,4 +45,10 @@ class Command(BaseCommand):
             deadline = event.entry_deadline or event.start_date
             entries += notify_followers(event, NotificationKind.ENTRIES, f"entries:{event.pk}:{deadline}", date=deadline)
 
-        self.stdout.write(self.style.SUCCESS(f"Recordatorios: {starts} de largada, {entries} de inscripción."))
+        news = 0
+        for article in Article.visible().filter(followers_notified=False, event__isnull=False).select_related("event"):
+            news += notify_event_followers(article)
+
+        self.stdout.write(
+            self.style.SUCCESS(f"Recordatorios: {starts} de largada, {entries} de inscripción, {news} de noticias.")
+        )

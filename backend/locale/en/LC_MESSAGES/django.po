@@ -122,6 +122,9 @@ msgid "El archivo no es un PDF."
 msgstr "The file is not a PDF."
 
 # Avisos de regatas seguidas
+msgid "Nueva noticia sobre %(event)s."
+msgstr "New article about %(event)s."
+
 msgid "Resultados de %(event)s"
 msgstr "Results of %(event)s"
 

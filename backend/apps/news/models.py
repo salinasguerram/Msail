@@ -21,7 +21,13 @@ class Article(models.Model):
     title = models.CharField(_("título"), max_length=200)
     slug = models.SlugField(_("slug"), max_length=200, unique=True)
     summary = models.CharField(_("bajada"), max_length=300, help_text=_("Una o dos líneas que resumen la noticia."))
-    body = models.TextField(_("texto"), help_text=_("Separá los párrafos con una línea en blanco."))
+    body = models.TextField(
+        _("texto"),
+        help_text=_(
+            "Separá los párrafos con una línea en blanco. Para un subtítulo empezá la línea con «## »; "
+            "para una cita, con «> »."
+        ),
+    )
     cover = models.ImageField(_("foto de portada"), upload_to="news/", blank=True)
     cover_thumb = models.ImageField(upload_to="news/thumbs/", blank=True, editable=False)
     cover_credit = models.CharField(_("crédito de la foto"), max_length=120, blank=True)
@@ -45,6 +51,8 @@ class Article(models.Model):
     )
 
     is_published = models.BooleanField(_("publicada"), default=True)
+    # Ya se avisó a quienes siguen la regata de la noticia (se avisa una vez, al quedar visible).
+    followers_notified = models.BooleanField(default=False, editable=False)
     published_at = models.DateTimeField(
         _("fecha de publicación"), default=timezone.now, help_text=_("Si es futura, la noticia aparece recién en ese momento.")
     )
@@ -69,8 +77,25 @@ class Article(models.Model):
         return cls.objects.filter(is_published=True, published_at__lte=timezone.now())
 
     @property
-    def paragraphs(self):
-        return [p.strip() for p in self.body.replace("\r\n", "\n").split("\n\n") if p.strip()]
+    def blocks(self):
+        """El texto en bloques para la app: [{"type": "paragraph" | "heading" | "quote", "text": ...}]."""
+        result = []
+        for chunk in self.body.replace("\r\n", "\n").split("\n\n"):
+            chunk = chunk.strip()
+            if not chunk:
+                continue
+            if chunk.startswith("## "):
+                result.append({"type": "heading", "text": chunk[3:].strip()})
+            elif chunk.startswith(">"):
+                lines = [line.lstrip(">").strip() for line in chunk.split("\n")]
+                result.append({"type": "quote", "text": " ".join(line for line in lines if line)})
+            else:
+                result.append({"type": "paragraph", "text": " ".join(line.strip() for line in chunk.split("\n"))})
+        return result
+
+    @property
+    def is_visible(self):
+        return self.is_published and self.published_at <= timezone.now()
 
     @property
     def reading_minutes(self):

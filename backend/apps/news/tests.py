@@ -69,7 +69,10 @@ class ArticleDetailTests(APITestCase):
     def test_detail_counts_views_and_splits_paragraphs(self):
         item = article("nota")
         data = self.client.get("/api/news/nota/").data
-        self.assertEqual(data["paragraphs"], ["Primer párrafo.", "Segundo párrafo."])
+        self.assertEqual(
+            data["blocks"],
+            [{"type": "paragraph", "text": "Primer párrafo."}, {"type": "paragraph", "text": "Segundo párrafo."}],
+        )
         self.client.get("/api/news/nota/")
         item.refresh_from_db()
         self.assertEqual(item.views, 2)
@@ -188,3 +191,73 @@ class FilterTests(APITestCase):
         data = self.client.get("/api/events/copa-del-rey/").data
         self.assertEqual(data["news_count"], 1)
         self.assertEqual(data["news"][0]["slug"], "nola-gana")
+
+
+class PanelLoadingTests(TestCase):
+    """Ítem 6: carga desde el panel (formato, vista previa, programadas y avisos a seguidores)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_base", stdout=StringIO())
+        from apps.events.models import Event, EventFollow, EventType
+        from apps.geo.models import Country
+
+        User = get_user_model()
+        cls.admin = User.objects.create_superuser(email="admin@msail.com", password="x-segura-123")
+        cls.fan = User.objects.create_user(email="fan@example.com", password="vela-segura-123", email_verified=True)
+        cls.event = Event.objects.create(
+            name="Copa", slug="copa", event_type=EventType.INSHORE, start_date=timezone.localdate(),
+            country=Country.objects.get(iso_code="ES"),
+        )
+        EventFollow.objects.create(user=cls.fan, event=cls.event)
+
+    def news_alerts(self):
+        return list(self.fan.notifications.filter(kind="news").values_list("title", flat=True))
+
+    def test_blocks_with_headings_and_quotes(self):
+        item = article("formato", body="Intro.\n\n## El podio\n\n> Fue una regata durísima\n> hasta el final.\n\nCierre\ncon salto.")
+        self.assertEqual(
+            item.blocks,
+            [
+                {"type": "paragraph", "text": "Intro."},
+                {"type": "heading", "text": "El podio"},
+                {"type": "quote", "text": "Fue una regata durísima hasta el final."},
+                {"type": "paragraph", "text": "Cierre con salto."},
+            ],
+        )
+
+    def test_preview_shows_drafts_and_scheduled(self):
+        self.client.force_login(self.admin)
+        draft = article("borrador", is_published=False, body="## Subtítulo\n\nTexto.")
+        response = self.client.get(reverse("admin:news_article_preview_action", args=[draft.pk]))
+        self.assertContains(response, "Borrador: no se ve en la app.")
+        self.assertContains(response, "<h2>Subtítulo</h2>", html=True)
+        scheduled = article("programada", hours_ago=-48)
+        self.assertContains(self.client.get(reverse("admin:news_article_preview_action", args=[scheduled.pk])), "Programada")
+        self.assertContains(self.client.get(reverse("admin:news_article_change", args=[draft.pk])), "Vista previa")
+
+    def test_published_news_alerts_event_followers_once(self):
+        item = article("nota-copa", event=self.event)
+        item.title = "Nota corregida"
+        item.save()
+        self.assertEqual(self.news_alerts(), ["Nota-Copa".replace("-", " ").title()])
+
+    def test_scheduled_news_alerts_when_the_daily_command_runs(self):
+        item = article("programada", hours_ago=-2, event=self.event)
+        self.assertEqual(self.news_alerts(), [])
+        Article.objects.filter(pk=item.pk).update(published_at=timezone.now() - timedelta(minutes=1))
+        call_command("send_event_reminders", stdout=StringIO())
+        self.assertEqual(len(self.news_alerts()), 1)
+
+    def test_bulk_publish_alerts_followers(self):
+        self.client.force_login(self.admin)
+        draft = article("borrador-copa", is_published=False, event=self.event)
+        self.client.post(reverse("admin:news_article_changelist"), {"action": "publish", "_selected_action": [str(draft.pk)]})
+        self.assertEqual(len(self.news_alerts()), 1)
+
+    def test_dashboard_card(self):
+        self.client.force_login(self.admin)
+        article("hoy")
+        article("futura", hours_ago=-10)
+        article("borrador", is_published=False)
+        self.assertContains(self.client.get(reverse("admin:index")), "1 programadas · 1 borradores")

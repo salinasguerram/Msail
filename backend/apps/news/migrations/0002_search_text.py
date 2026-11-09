@@ -7,7 +7,9 @@ def fill_search_text(apps, schema_editor):
     # El modelo histórico no tiene build_search_text: se usa el modelo actual.
     from apps.news.models import Article
 
-    for article in Article.objects.all():
+    # Solo los campos que existen en este punto (migraciones posteriores agregan otros).
+    fields = ["id", "title", "summary", "body", "author", "country", "event"]
+    for article in Article.objects.only(*fields).select_related("country", "event").defer("event__search_text"):
         Article.objects.filter(pk=article.pk).update(search_text=article.build_search_text())
 
 

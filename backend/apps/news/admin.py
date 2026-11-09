@@ -1,9 +1,12 @@
 from django.conf import settings
 from django.contrib import admin, messages
+from django.shortcuts import get_object_or_404
+from django.template.response import TemplateResponse
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
-from unfold.decorators import display
+from unfold.decorators import action, display
 
 from apps.core.images import thumbnail_html
 
@@ -24,6 +27,7 @@ class ArticleAdmin(ModelAdmin):
     date_hierarchy = "published_at"
     readonly_fields = ["preview_large", "views", "app_link"]
     actions = ["make_day", "make_week", "clear_highlight", "publish", "unpublish"]
+    actions_detail = ["preview_action"]
     fieldsets = (
         (None, {"fields": ("title", "slug", "summary", "body")}),
         ("Foto", {"fields": ("cover", "preview_large", "cover_credit")}),
@@ -76,10 +80,37 @@ class ArticleAdmin(ModelAdmin):
 
     @admin.action(description="Publicar", permissions=["change"])
     def publish(self, request, queryset):
-        updated = queryset.update(is_published=True)
+        from .signals import notify_event_followers
+
+        ids = list(queryset.filter(is_published=False).values_list("pk", flat=True))
+        updated = Article.objects.filter(pk__in=ids).update(is_published=True)
+        # update() no dispara las señales: se avisa a los seguidores de la regata acá.
+        for article in Article.objects.filter(pk__in=ids).select_related("event"):
+            notify_event_followers(article)
         self.message_user(request, f"{updated} noticia(s) publicadas.", messages.SUCCESS)
 
     @admin.action(description="Pasar a borrador", permissions=["change"])
     def unpublish(self, request, queryset):
         updated = queryset.update(is_published=False)
         self.message_user(request, f"{updated} noticia(s) en borrador.", messages.SUCCESS)
+
+    @action(description="Vista previa", url_path="preview", icon="visibility", permissions=["view"])
+    def preview_action(self, request, object_id):
+        """Cómo se va a ver la noticia en la app, aunque sea un borrador o esté programada."""
+        article = get_object_or_404(Article, pk=object_id)
+        if not article.is_published:
+            status = "Borrador: no se ve en la app."
+        elif article.published_at > timezone.now():
+            status = f"Programada: se publica el {timezone.localtime(article.published_at):%d/%m/%Y a las %H:%M}."
+        else:
+            status = "Publicada."
+        context = {
+            **self.admin_site.each_context(request),
+            "title": f"Vista previa · {article.title}",
+            "opts": self.model._meta,
+            "original": article,
+            "article": article,
+            "status": status,
+            "change_url": reverse("admin:news_article_change", args=[article.pk]),
+        }
+        return TemplateResponse(request, "admin/news/preview.html", context)

@@ -8,6 +8,7 @@ class NotificationKind(models.TextChoices):
     DATES = "dates", _("Cambio de fecha")
     STARTS = "starts", _("Empieza mañana")
     ENTRIES = "entries", _("Cierre de inscripciones")
+    NEWS = "news", _("Noticia nueva")
 
 
 class Notification(models.Model):
@@ -19,6 +20,9 @@ class Notification(models.Model):
     body = models.CharField(_("texto"), max_length=300, blank=True)
     event = models.ForeignKey(
         "events.Event", verbose_name=_("regata"), on_delete=models.CASCADE, null=True, blank=True, related_name="notifications"
+    )
+    article = models.ForeignKey(
+        "news.Article", verbose_name=_("noticia"), on_delete=models.CASCADE, null=True, blank=True, related_name="+"
     )
     # Evita avisar dos veces lo mismo (ej. "results:12" o "starts:12:2027-03-07").
     key = models.CharField(max_length=120)
