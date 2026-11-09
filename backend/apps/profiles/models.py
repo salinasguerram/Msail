@@ -95,8 +95,8 @@ class SailorProfile(models.Model):
 class RaceResult(models.Model):
     """
     Resultado en una regata cargado por el navegante.
-    Mientras no exista el calendario (semana 3) la regata se escribe como texto;
-    después se podrá vincular al evento del calendario.
+    Se puede vincular a una regata del calendario (y entonces aparece en su página);
+    si la regata no está en MSAIL, se escribe como texto.
     """
 
     profile = models.ForeignKey(
@@ -104,6 +104,14 @@ class RaceResult(models.Model):
         verbose_name=_("perfil"),
         on_delete=models.CASCADE,
         related_name="results",
+    )
+    event = models.ForeignKey(
+        "events.Event",
+        verbose_name=_("regata del calendario"),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sailor_results",
     )
     event_name = models.CharField(_("regata"), max_length=200)
     date = models.DateField(_("fecha"))

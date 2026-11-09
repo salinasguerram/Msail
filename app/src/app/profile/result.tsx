@@ -1,10 +1,11 @@
 import { useLocalSearchParams, useNavigation } from 'expo-router';
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { getMyBoats, type BoatSummary } from '@/api/boats';
 import { api } from '@/api/client';
+import { getEvents, type EventSummary } from '@/api/events';
 import {
   createResult,
   deleteResult,
@@ -21,11 +22,22 @@ import { Chip, ChipGroup } from '@/components/Chip';
 import { useDialogs } from '@/components/Dialogs';
 import { FormSection } from '@/components/FormSection';
 import { Screen } from '@/components/Screen';
+import { SelectField, type SelectOption } from '@/components/SelectField';
 import { TextField } from '@/components/TextField';
 import { colors, spacing } from '@/theme';
 import { goBack } from '@/utils/navigation';
 
 const isDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value));
+const todayIso = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
+const eventOption = (e: EventSummary): SelectOption => ({
+  value: e.slug,
+  label: e.name,
+  hint: [e.start_date.slice(0, 4), e.city, e.country_name].filter(Boolean).join(' · '),
+});
 
 export default withAuth(ResultScreen);
 
@@ -38,6 +50,11 @@ function ResultScreen() {
 
   const [loaded, setLoaded] = useState(!id);
   const [event, setEvent] = useState('');
+  // Regata del calendario (slug). Si se elige, nombre, fecha y lugar salen de ella.
+  const [calendarEvent, setCalendarEvent] = useState<string | null>(null);
+  const [eventOptions, setEventOptions] = useState<SelectOption[]>([]);
+  const [pickedOption, setPickedOption] = useState<SelectOption | null>(null);
+  const eventsById = useRef(new Map<string, EventSummary>());
   const [date, setDate] = useState('');
   const [location, setLocation] = useState('');
   const [boatClass, setBoatClass] = useState<string | null>(null);
@@ -59,11 +76,39 @@ function ResultScreen() {
     getMyBoats().then(setMyBoats).catch(() => {});
   }, []);
 
+  // Regatas ya disputadas o en curso para vincular el resultado.
+  const searchEvents = useCallback((q: string) => {
+    Promise.all([getEvents({ when: 'live', q }), getEvents({ when: 'past', q })])
+      .then(([live, past]) => {
+        const list = [...live.results, ...past.results];
+        list.forEach((e) => eventsById.current.set(e.slug, e));
+        setEventOptions(list.map(eventOption));
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => searchEvents(''), [searchEvents]);
+
+  function pickEvent(slug: string | null) {
+    setCalendarEvent(slug);
+    const picked = slug ? eventsById.current.get(slug) : undefined;
+    setPickedOption(picked ? eventOption(picked) : null);
+    if (!picked) return;
+    // Se completan nombre, fecha (último día, sin pasar de hoy) y lugar; se pueden corregir.
+    const lastDay = picked.end_date ?? picked.start_date;
+    setEvent(picked.name);
+    setDate(lastDay < todayIso() ? lastDay : todayIso());
+    setLocation([picked.city, picked.country_name].filter(Boolean).join(', '));
+    if (!boatClass && picked.boat_classes.length === 1) setBoatClass(picked.boat_classes[0]);
+  }
+
   useEffect(() => {
     if (!id) return;
     api<RaceResult>(`/profiles/me/results/${id}/`)
       .then((r) => {
         setEvent(r.event_name);
+        setCalendarEvent(r.event);
+        if (r.event) setPickedOption({ value: r.event, label: r.event_name });
         setDate(r.date);
         setLocation(r.location);
         setBoatClass(r.boat_class);
@@ -81,6 +126,7 @@ function ResultScreen() {
   const fleetNumber = fleet ? Number(fleet) : null;
   const errors = {
     event: submitted && !event.trim() ? t('auth.required') : fieldError(apiError, 'event_name'),
+    calendarEvent: fieldError(apiError, 'event'),
     date: submitted && !isDate(date) ? t('result.invalidDate') : fieldError(apiError, 'date'),
     position: submitted && !(positionNumber >= 1) ? t('result.invalidNumber') : fieldError(apiError, 'position'),
     fleet: fieldError(apiError, 'fleet_size'),
@@ -91,6 +137,7 @@ function ResultScreen() {
     setApiError(null);
     if (!event.trim() || !isDate(date) || !(positionNumber >= 1)) return;
     const data = {
+      event: calendarEvent,
       event_name: event.trim(),
       date,
       location: location.trim(),
@@ -143,13 +190,28 @@ function ResultScreen() {
 
   return (
     <Screen>
-      <TextField
-        label={t('result.event')}
-        value={event}
-        onChangeText={setEvent}
-        placeholder={t('result.eventPlaceholder')}
-        error={errors.event}
+      <SelectField
+        label={t('result.calendarEvent')}
+        value={calendarEvent}
+        options={
+          pickedOption && !eventOptions.some((o) => o.value === pickedOption.value) ? [pickedOption, ...eventOptions] : eventOptions
+        }
+        onChange={pickEvent}
+        onSearch={searchEvents}
+        placeholder={t('result.calendarEventPlaceholder')}
+        emptyText={t('result.calendarEventEmpty')}
+        error={errors.calendarEvent}
       />
+      <Text style={styles.hint}>{t('result.calendarEventHint')}</Text>
+      {calendarEvent ? null : (
+        <TextField
+          label={t('result.eventOther')}
+          value={event}
+          onChangeText={setEvent}
+          placeholder={t('result.eventPlaceholder')}
+          error={errors.event}
+        />
+      )}
       <View style={styles.row}>
         <View style={styles.half}>
           <TextField
@@ -242,4 +304,5 @@ function ResultScreen() {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: spacing.md },
   half: { flex: 1 },
+  hint: { color: colors.textMuted, fontSize: 12, marginTop: -spacing.sm },
 });

@@ -65,11 +65,12 @@ class BoatHistorySerializer(serializers.ModelSerializer):
     """Resultado visto desde la embarcación: quién lo cargó y en qué puesto quedó el barco."""
 
     boat_class = serializers.SlugRelatedField(slug_field="slug", read_only=True)
+    event = serializers.SlugRelatedField(slug_field="slug", read_only=True)
     sailor = serializers.SerializerMethodField()
 
     class Meta:
         model = RaceResult
-        fields = ["id", "event_name", "date", "location", "boat_class", "position", "fleet_size", "sailor"]
+        fields = ["id", "event", "event_name", "date", "location", "boat_class", "position", "fleet_size", "sailor"]
 
     def get_sailor(self, result):
         user = result.profile.user

@@ -1,9 +1,11 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Count, Min, Q
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from apps.events.models import Event
 from apps.geo.models import Region
 from apps.sailing.models import BoatClass, Club
 
@@ -80,11 +82,17 @@ class RaceResultSerializer(serializers.ModelSerializer):
         slug_field="slug", queryset=BoatClass.objects.all(), required=False, allow_null=True
     )
     boat = SailorBoatField(required=False, allow_null=True)
+    event = serializers.SlugRelatedField(
+        slug_field="slug", queryset=Event.objects.filter(is_published=True), required=False, allow_null=True
+    )
+    event_name = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    date = serializers.DateField(required=False)
 
     class Meta:
         model = RaceResult
         fields = [
             "id",
+            "event",
             "event_name",
             "date",
             "location",
@@ -97,6 +105,23 @@ class RaceResultSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, attrs):
+        event = attrs.get("event")
+        if event:
+            if event.start_date > timezone.localdate():
+                raise serializers.ValidationError({"event": [_("Esa regata todavía no empezó.")]})
+            # Nombre, fecha y lugar salen de la regata del calendario.
+            attrs["event_name"] = event.name
+            attrs.setdefault("date", min(event.last_day, timezone.localdate()))
+            if not attrs.get("location"):
+                attrs["location"] = ", ".join(p for p in [event.city, event.country.name] if p)[:160]
+        creating = self.instance is None
+        if creating or "event_name" in attrs:
+            name = attrs.get("event_name", "").strip()
+            if not name:
+                raise serializers.ValidationError({"event_name": [_("Elegí una regata del calendario o escribí su nombre.")]})
+            attrs["event_name"] = name
+        if creating and not attrs.get("date"):
+            raise serializers.ValidationError({"date": [_("Este campo es requerido.")]})
         boat = attrs.get("boat")
         if boat:
             # Completa nombre y clase desde el barco si no se indicaron.

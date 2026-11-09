@@ -61,6 +61,14 @@ class Event(Located):
     entry_deadline = models.DateField(
         _("inscripción hasta"), null=True, blank=True, help_text=_("Último día para inscribirse. Vacío: hasta el inicio.")
     )
+    results_url = models.URLField(
+        _("resultados oficiales"), blank=True, help_text=_("Link a la clasificación completa en el sitio del organizador.")
+    )
+    results_partial = models.BooleanField(
+        _("resultados parciales"),
+        default=False,
+        help_text=_("Marcalo si solo están cargados los ganadores o el podio, no la clasificación completa."),
+    )
     is_published = models.BooleanField(_("publicada"), default=True)
     # Texto normalizado (sin tildes, en minúsculas) para el buscador. Se arma solo al guardar.
     search_text = models.TextField(editable=False, blank=True, default="")
@@ -193,3 +201,65 @@ class EventDocument(models.Model):
             self.file.seek(0)
             if head != b"%PDF-":
                 raise ValidationError({"file": _("El archivo no es un PDF.")})
+
+
+class ResultStatus(models.TextChoices):
+    FINISHED = "finished", _("Terminó")
+    DNF = "dnf", _("DNF · no terminó")
+    DNS = "dns", _("DNS · no largó")
+    RET = "ret", _("RET · se retiró")
+    DSQ = "dsq", _("DSQ · descalificado")
+    OCS = "ocs", _("OCS · largada anticipada")
+
+
+class EventResult(models.Model):
+    """Fila de la clasificación final de una regata (por categoría si la regata tiene varias)."""
+
+    event = models.ForeignKey(Event, verbose_name=_("regata"), on_delete=models.CASCADE, related_name="results")
+    category = models.ForeignKey(
+        EventCategory,
+        verbose_name=_("categoría"),
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="results",
+        help_text=_("Vacío: clasificación general."),
+    )
+    position = models.PositiveSmallIntegerField(
+        _("puesto"), null=True, blank=True, help_text=_("Vacío si no terminó (DNF, DNS, RET...).")
+    )
+    status = models.CharField(_("estado"), max_length=10, choices=ResultStatus.choices, default=ResultStatus.FINISHED)
+    boat_name = models.CharField(_("barco"), max_length=120)
+    sail_number = models.CharField(_("número de vela"), max_length=30, blank=True)
+    skipper = models.CharField(_("timonel / armador"), max_length=160, blank=True)
+    club = models.CharField(_("club"), max_length=160, blank=True)
+    country = models.ForeignKey(
+        "geo.Country", verbose_name=_("país"), on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    points = models.DecimalField(_("puntos"), max_digits=7, decimal_places=1, null=True, blank=True)
+    time = models.CharField(_("tiempo"), max_length=40, blank=True, help_text=_("Ej: 2d 03:51:20 (tiempo real o corregido)."))
+    boat = models.ForeignKey(
+        "boats.Boat",
+        verbose_name=_("embarcación en MSAIL"),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="event_results",
+        help_text=_("Si el barco está en MSAIL, se enlaza a su ficha."),
+    )
+    notes = models.CharField(_("nota"), max_length=200, blank=True, help_text=_("Ej: Primero en llegar (line honours)."))
+
+    class Meta:
+        verbose_name = _("resultado de la regata")
+        verbose_name_plural = _("resultados de la regata")
+        # Primero los que terminaron, por puesto; los DNF/DNS al final.
+        ordering = ["category__order", "category__name", models.F("position").asc(nulls_last=True), "boat_name"]
+
+    def __str__(self):
+        return f"{self.position or self.get_status_display()} · {self.boat_name}"
+
+    def clean(self):
+        if self.category_id and self.event_id and self.category.event_id != self.event_id:
+            raise ValidationError({"category": _("La categoría es de otra regata.")})
+        if self.status == ResultStatus.FINISHED and not self.position:
+            raise ValidationError({"position": _("Indicá el puesto, o cambiá el estado (DNF, DNS...).")})

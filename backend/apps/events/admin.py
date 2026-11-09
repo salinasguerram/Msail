@@ -1,16 +1,22 @@
 from datetime import date
 
 from django.conf import settings
+from django import forms
 from django.contrib import admin, messages
 from django.db import transaction
 from django.db.models.functions import Coalesce
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect
+from django.template.response import TemplateResponse
+from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.text import slugify
 from unfold.admin import ModelAdmin, TabularInline
-from unfold.decorators import display
+from unfold.decorators import action, display
 
-from .models import Event, EventCategory, EventDocument, EventStatus
+from . import results_import
+from .models import Event, EventCategory, EventDocument, EventResult, EventStatus
 
 STATUS_LABELS = {
     EventStatus.UPCOMING: "Próxima",
@@ -36,6 +42,49 @@ class EventDocumentInline(TabularInline):
     def open_link(self, obj):
         target = obj.file.url if obj and obj.file else (obj.url if obj else "")
         return format_html('<a href="{}" target="_blank" rel="noopener">Abrir</a>', target) if target else "—"
+
+
+class EventResultInline(TabularInline):
+    model = EventResult
+    extra = 0
+    fields = ["category", "position", "status", "boat_name", "sail_number", "skipper", "club", "country", "points", "time", "boat", "notes"]
+    autocomplete_fields = ["country", "boat"]
+    classes = ["collapse"]
+    verbose_name_plural = "clasificación (también se puede importar desde un CSV con el botón de arriba)"
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        # En el selector de categoría, solo las de esta regata.
+        if db_field.name == "category":
+            event_id = request.resolver_match.kwargs.get("object_id")
+            kwargs["queryset"] = EventCategory.objects.filter(event_id=event_id) if event_id else EventCategory.objects.none()
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
+class ResultsImportForm(forms.Form):
+    file = forms.FileField(label="Archivo CSV", help_text="Exportado desde Excel, Sailwave, Manage2Sail... Máximo 2 MB.")
+    category = forms.ModelChoiceField(
+        label="Categoría",
+        queryset=EventCategory.objects.none(),
+        required=False,
+        empty_label="General / la que diga cada fila",
+        help_text="Para las filas que no traen la columna categoría.",
+    )
+    replace = forms.BooleanField(
+        label="Reemplazar la clasificación de esas categorías",
+        initial=True,
+        required=False,
+        help_text="Si lo desmarcás, las filas se suman a las que ya hay.",
+    )
+
+    def __init__(self, *args, event, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["category"].queryset = event.categories.all()
+
+    def clean_file(self):
+        upload = self.cleaned_data["file"]
+        if upload.size > 2 * 1024 * 1024:
+            raise forms.ValidationError("El archivo supera los 2 MB.")
+        return upload
 
 
 class StatusFilter(admin.SimpleListFilter):
@@ -76,9 +125,10 @@ class EventAdmin(ModelAdmin):
     filter_horizontal = ["boat_classes"]
     date_hierarchy = "start_date"
     ordering = ["-start_date"]
-    inlines = [EventCategoryInline, EventDocumentInline]
+    inlines = [EventCategoryInline, EventDocumentInline, EventResultInline]
     readonly_fields = ["app_link"]
     actions = ["publish", "unpublish", "duplicate_next_year"]
+    actions_detail = ["import_results_action"]
     fieldsets = (
         (None, {"fields": ("name", "slug", "event_type", "is_published", "app_link")}),
         ("Fechas", {"fields": ("start_date", "end_date")}),
@@ -86,6 +136,7 @@ class EventAdmin(ModelAdmin):
         ("Organización", {"fields": ("organizer_club", "organizer_name", "boat_classes")}),
         ("Inscripción", {"fields": ("entry_url", "entry_deadline")}),
         ("Información", {"fields": ("description", "website")}),
+        ("Resultados", {"fields": ("results_url", "results_partial")}),
     )
 
     @display(description="Estado", label={"Próxima": "info", "En curso": "success", "Finalizada": "warning"})
@@ -153,3 +204,53 @@ class EventAdmin(ModelAdmin):
             self.message_user(request, f"{created} regata(s) duplicadas sin publicar: revisá las fechas y publicalas.", messages.SUCCESS)
         if skipped:
             self.message_user(request, f"Ya existían: {', '.join(skipped)}.", messages.WARNING)
+
+    # ---------- Importar la clasificación desde un CSV
+
+    def get_urls(self):
+        custom = [
+            path(
+                "results-template.csv",
+                self.admin_site.admin_view(self.results_template_view),
+                name="events_event_results_template",
+            ),
+        ]
+        return custom + super().get_urls()
+
+    def results_template_view(self, request):
+        response = HttpResponse("﻿" + results_import.TEMPLATE, content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = 'attachment; filename="plantilla-resultados.csv"'
+        return response
+
+    @action(description="Importar resultados (CSV)", url_path="import-results", icon="upload_file", permissions=["change"])
+    def import_results_action(self, request, object_id):
+        event = get_object_or_404(Event, pk=object_id)
+        form = ResultsImportForm(request.POST or None, request.FILES or None, event=event)
+        errors = []
+        if request.method == "POST" and form.is_valid():
+            try:
+                rows, errors = results_import.parse_csv(form.cleaned_data["file"].read())
+            except results_import.ResultsImportError as exc:
+                form.add_error("file", str(exc))
+            else:
+                if not errors:
+                    count, new_categories = results_import.import_results(
+                        event, rows, default_category=form.cleaned_data["category"], replace=form.cleaned_data["replace"]
+                    )
+                    message = f"Se importaron {count} resultados en {event.name}."
+                    if new_categories:
+                        message += f" Categorías nuevas: {', '.join(new_categories)}."
+                    self.message_user(request, message, messages.SUCCESS)
+                    return redirect(reverse("admin:events_event_change", args=[event.pk]))
+        context = {
+            **self.admin_site.each_context(request),
+            "title": f"Importar resultados · {event.name}",
+            "opts": self.model._meta,
+            "original": event,
+            "form": form,
+            "row_errors": errors,
+            "columns": [(EventResult._meta.get_field(f).verbose_name, a) for f, a in results_import.HEADERS.items()],
+            "template_url": reverse("admin:events_event_results_template"),
+            "change_url": reverse("admin:events_event_change", args=[event.pk]),
+        }
+        return TemplateResponse(request, "admin/events/import_results.html", context)

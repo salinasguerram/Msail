@@ -1,13 +1,13 @@
 from datetime import date
 
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import generics, permissions, serializers
 
 from apps.core.text import normalize
 
-from .models import Event, EventType
+from .models import Event, EventResult, EventType
 from .serializers import EventDetailSerializer, EventListSerializer
 
 WHEN_CHOICES = ("upcoming", "live", "past")
@@ -95,5 +95,10 @@ class EventDetailView(generics.RetrieveAPIView):
         return (
             Event.objects.filter(is_published=True)
             .select_related("country", "region", "organizer_club")
-            .prefetch_related("boat_classes", "categories__boat_class", "documents")
+            .prefetch_related(
+                "boat_classes",
+                "categories__boat_class",
+                "documents",
+                Prefetch("results", EventResult.objects.select_related("category__boat_class", "country", "boat")),
+            )
         )

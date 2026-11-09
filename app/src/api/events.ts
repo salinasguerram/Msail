@@ -74,6 +74,39 @@ export type EventDocument = {
   size_kb: number | null;
 };
 
+export type ResultStatus = 'finished' | 'dnf' | 'dns' | 'ret' | 'dsq' | 'ocs';
+
+export type EventResult = {
+  /** null si no terminó (ver status). */
+  position: number | null;
+  status: ResultStatus;
+  boat_name: string;
+  sail_number: string;
+  skipper: string;
+  club: string;
+  country: string | null;
+  points: number | null;
+  time: string;
+  notes: string;
+  /** Id de la embarcación en MSAIL (solo si es pública). */
+  boat: number | null;
+};
+
+/** Clasificación de una categoría; category null = general. */
+export type ResultGroup = { category: string | null; boat_class: string | null; results: EventResult[] };
+
+/** Navegante de MSAIL que cargó su resultado en la regata. */
+export type EventSailor = {
+  result_id: number;
+  user_id: number;
+  name: string;
+  avatar: string | null;
+  position: number;
+  fleet_size: number | null;
+  boat_name: string;
+  role: string;
+};
+
 export type EventDetail = Omit<EventSummary, 'organizer_club'> & {
   organizer_club: { id: number; name: string; city: string; website: string } | null;
   categories: EventCategory[];
@@ -88,6 +121,12 @@ export type EventDetail = Omit<EventSummary, 'organizer_club'> & {
   duration_days: number | null;
   latitude: string | null;
   longitude: string | null;
+  results: ResultGroup[];
+  /** Link a la clasificación completa en el sitio del organizador. */
+  results_url: string;
+  /** Solo están cargados los ganadores o el podio. */
+  results_partial: boolean;
+  msail_sailors: EventSailor[];
 };
 
 export const getEvent = (slug: string) => api<EventDetail>(`/events/${encodeURIComponent(slug)}/`, { auth: false });

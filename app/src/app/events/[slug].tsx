@@ -10,6 +10,7 @@ import { className, useBoatClasses } from '@/api/useBoatClasses';
 import { errorMessage } from '@/auth/errors';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { EventResults, EventSailors } from '@/components/EventResults';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/theme';
 import { goBack } from '@/utils/navigation';
@@ -95,6 +96,13 @@ export default function EventScreen() {
         </Text>
       </Card>
 
+      {event.status === 'finished' ? (
+        <>
+          <EventResults event={event} />
+          <EventSailors sailors={event.msail_sailors} />
+        </>
+      ) : null}
+
       <Card>
         <Text style={typography.label}>{t('event.dates')}</Text>
         {event.end_date ? (
@@ -177,6 +185,13 @@ export default function EventScreen() {
               </View>
             )}
         </Card>
+      ) : null}
+
+      {event.status !== 'finished' ? (
+        <>
+          <EventResults event={event} />
+          <EventSailors sailors={event.msail_sailors} />
+        </>
       ) : null}
 
       {event.documents.length > 0 ? (

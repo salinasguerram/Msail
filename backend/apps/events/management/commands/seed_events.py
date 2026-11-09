@@ -7,6 +7,8 @@ Se puede correr varias veces; actualiza en lugar de duplicar.
 - Fechas de fuentes oficiales o de prensa especializada. Si solo se conoce la largada
   (regatas oceánicas), end_date queda vacío.
 - Las coordenadas son aproximadas (zona de la sede).
+- Resultados: solo los ganadores confirmados por la prensa (quedan marcados como parciales).
+  Si la regata tiene resultados en el seed, al volver a correrlo se reemplazan.
 """
 
 from datetime import date
@@ -15,7 +17,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils.text import slugify
 
-from apps.events.models import DocumentKind, Event, EventCategory, EventDocument, EventType
+from apps.events.models import DocumentKind, Event, EventCategory, EventDocument, EventResult, EventType
 from apps.geo.models import Country, Region
 from apps.sailing.models import BoatClass, Club
 
@@ -98,14 +100,29 @@ EVENTS = [
         "country": "ES", "region": "balearic-islands-palma", "city": "Palma", "venue": "Bahía de Palma",
         "lat": 39.5550, "lng": 2.6250, "club": "real-club-nautico-de-palma",
         "classes": ["orc"],
-        "description": "Más de 100 barcos inscriptos.",
+        "categories": [("ABANCA ORC 0", "orc"), ("ORC A", "orc"), ("Uber ORC B", "orc"), ("Azulmarino ORC C", "orc"), ("ClubSwan 42", None)],
+        "results": [
+            # (categoría, puesto, barco, timonel / armador, país, nota)
+            ("ABANCA ORC 0", 1, "Vudu", "", "", ""),
+            ("ORC A", 1, "Nola", "Taavet Hinrikus (armador), Margus Uudam (timón)", "", "Campeón general ORC en tiempo corregido"),
+            ("Uber ORC B", 1, "Teatro del Soho San Miguel", "", "ES", ""),
+            ("Azulmarino ORC C", 1, "Niramo", "", "", ""),
+            ("ClubSwan 42", 1, "Nadir", "", "", ""),
+        ],
+        "description": "Más de 100 barcos inscriptos. El rey Felipe VI entregó los trofeos en La Almudaina.",
     },
     {
         "name": "51ª Regata Off Valparaíso",
         "type": EventType.OFFSHORE, "start": date(2026, 10, 16), "end": date(2026, 10, 18),
         "country": "CL", "region": "valparaiso-papudo", "city": "Valparaíso y Viña del Mar", "venue": "Yacht Club de Chile, Recreo",
         "lat": -33.0280, "lng": -71.5770, "organizer": "Escuela Naval Arturo Prat",
-        "classes": [],
+        "classes": ["irc"],
+        "categories": [("IRC Regata", "irc"), ("IRC Crucero 1", "irc"), ("IRC Crucero 2", "irc"), ("IRC Clásicos", "irc")],
+        "results": [
+            ("IRC Regata", 1, "Tensacon", "Ricardo Ramírez", "CL", ""),
+            ("IRC Crucero 1", 1, "Rigel", "Claudio Stuardo", "CL", ""),
+            ("IRC Crucero 2", 1, "Raiatea", "Antonio Manterola", "CL", ""),
+        ],
         "description": "Parte del Campeonato Nacional Oceánico 2026-2027. Compitieron 51 embarcaciones.",
     },
     {
@@ -114,7 +131,13 @@ EVENTS = [
         "country": "MT", "region": "valletta", "city": "La Valeta", "venue": "Grand Harbour",
         "lat": 35.8930, "lng": 14.5180, "organizer": "Royal Malta Yacht Club y RORC",
         "classes": ["irc", "orc", "class40"], "website": "https://www.rolexmiddlesearace.com",
-        "categories": [("IRC", "irc"), ("ORC", "orc"), ("Class40", "class40"), ("Doble mano", None)],
+        "categories": [
+            ("IRC", "irc"), ("Primero en llegar (line honours)", None), ("ORC", "orc"), ("Class40", "class40"), ("Doble mano", None),
+        ],
+        "results": [
+            ("IRC", 1, "Django 7x", "", "", "Ganador absoluto: Rolex Middle Sea Race Trophy"),
+            ("Primero en llegar (line honours)", 1, "Black Jack 100", "Remon Vos (armador), Tristan Le Brun (skipper)", "", "Primer monocasco en llegar a Malta"),
+        ],
         "documents": [
             ("Notice of Race (Class40)", DocumentKind.NOTICE_OF_RACE,
              "https://www.class40.com/media/pages/courses/saison-2026/middle-sea-race-2026/b7430c81d8-1782980888/notice-of-race.pdf"),
@@ -165,11 +188,23 @@ class Command(BaseCommand):
             # Documentos de ejemplo: solo links a PDFs publicados por los organizadores (no se borran los subidos al panel).
             for i, (title, kind, url) in enumerate(data.get("documents", [])):
                 EventDocument.objects.update_or_create(event=event, url=url, defaults={"title": title, "kind": kind, "order": i})
-            event.categories.all().delete()
-            EventCategory.objects.bulk_create(
-                EventCategory(event=event, name=name, boat_class=classes.get(slug) if slug else None, order=i)
-                for i, (name, slug) in enumerate(data.get("categories", []))
-            )
+            # Las categorías se actualizan por nombre: no se pierden los resultados cargados desde el panel.
+            categories = {}
+            for i, (name, slug) in enumerate(data.get("categories", [])):
+                categories[name], _ = EventCategory.objects.update_or_create(
+                    event=event, name=name, defaults={"boat_class": classes.get(slug) if slug else None, "order": i}
+                )
+            if "results" in data:
+                event.results.all().delete()
+                EventResult.objects.bulk_create(
+                    EventResult(
+                        event=event, category=categories[cat], position=pos, boat_name=boat,
+                        skipper=skipper, country=countries.get(iso), notes=note,
+                    )
+                    for cat, pos, boat, skipper, iso, note in data["results"]
+                )
+                event.results_partial = True
+                event.save(update_fields=["results_partial"])
             created += was_created
 
         self.stdout.write(self.style.SUCCESS(f"{len(EVENTS)} regatas cargadas ({created} nuevas)."))

@@ -13,10 +13,7 @@ import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/theme';
 
-/**
- * Detalle de un resultado. Cuando exista el calendario (semana 3), desde acá
- * se va a poder abrir la página del evento.
- */
+/** Detalle de un resultado. Si está vinculado a una regata del calendario, abre su página. */
 export default function ResultDetailScreen() {
   const { t, i18n } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -70,7 +67,17 @@ export default function ResultDetailScreen() {
         </View>
         <View style={{ flex: 1, gap: 4 }}>
           <Text style={typography.heading}>{result.event_name}</Text>
-          <Text style={typography.caption}>{t('result.eventSoon')}</Text>
+          {result.event ? (
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => router.push({ pathname: '/events/[slug]', params: { slug: result.event! } })}
+              style={styles.eventLink}
+              hitSlop={6}
+            >
+              <Ionicons name="trophy-outline" size={16} color={colors.primary} />
+              <Text style={styles.eventLinkText}>{t('result.openEvent')}</Text>
+            </Pressable>
+          ) : null}
         </View>
       </Card>
 
@@ -126,6 +133,8 @@ export default function ResultDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  eventLink: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
+  eventLinkText: { color: colors.primary, fontWeight: '600' },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   position: {
     minWidth: 72,

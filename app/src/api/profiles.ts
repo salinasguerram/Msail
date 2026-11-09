@@ -27,6 +27,8 @@ export type BoatClass = {
 
 export type RaceResult = {
   id: number;
+  /** Slug de la regata del calendario, si el resultado está vinculado. */
+  event: string | null;
   event_name: string;
   date: string;
   location: string;
