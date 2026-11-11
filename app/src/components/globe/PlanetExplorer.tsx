@@ -5,11 +5,14 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { TFunction } from 'i18next';
 
+import { getCountries } from '@/api/catalogs';
 import { getMapPoints, type MapKind, type MapPoint } from '@/api/map';
 import { getWindGrid, type WindGrid } from '@/api/weather';
+import { useAuth } from '@/auth/AuthContext';
 import { errorMessage } from '@/auth/errors';
 import { colors, radius, spacing, typography } from '@/theme';
 import { distanceKm } from '@/utils/geo';
+import { approximateLocation } from '@/utils/homeLocation';
 
 import { POINT_COLORS, WIND_SCALE } from './globeHtml';
 import type { GlobePoint, GlobeTap, WindCell } from './types';
@@ -58,6 +61,19 @@ export function usePlanet({ initialWind = false }: { initialWind?: boolean } = {
   const [layers, setLayers] = useState<Record<MapKind, boolean>>({ event: true, marina: true, professional: true });
   const [zone, setZone] = useState<Zone | null>(null);
   const [country, setCountry] = useState<string | null>(null);
+
+  // Dónde arranca centrado: el país de la cuenta o, si no hay, la zona horaria del dispositivo.
+  const { user } = useAuth();
+  const [home, setHome] = useState(() => approximateLocation());
+  useEffect(() => {
+    if (!user?.country) return;
+    getCountries()
+      .then((list) => {
+        const mine = list.find((c) => c.iso_code === user.country);
+        if (mine) setHome(approximateLocation(mine));
+      })
+      .catch(() => {});
+  }, [user?.country]);
 
   // Viento: se pide la grilla recién cuando se prende la capa.
   const [windOn, setWindOn] = useState(initialWind);
@@ -133,6 +149,7 @@ export function usePlanet({ initialWind = false }: { initialWind?: boolean } = {
   };
 
   return {
+    home,
     points,
     counts,
     layers,
@@ -343,45 +360,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 4,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
   layerOff: { backgroundColor: 'transparent' },
-  layerText: { color: colors.text, fontSize: 13, fontWeight: '600' },
+  layerText: { color: colors.text, fontSize: 12, fontWeight: '600' },
   dot: { width: 10, height: 10, borderRadius: 5 },
   windButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 5,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: 'rgba(11,23,48,0.9)',
   },
   windButtonOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  windButtonText: { color: colors.text, fontWeight: '700', fontSize: 13 },
+  windButtonText: { color: colors.text, fontWeight: '700', fontSize: 12 },
   windBox: {
-    gap: spacing.sm,
-    padding: spacing.sm,
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: 'rgba(11,23,48,0.92)',
   },
-  hours: { flexDirection: 'row', gap: 6 },
-  hour: { paddingHorizontal: spacing.md, paddingVertical: 5, borderRadius: radius.pill, backgroundColor: colors.surfaceRaised },
+  hours: { flexDirection: 'row', gap: 4 },
+  hour: { paddingHorizontal: spacing.sm + 2, paddingVertical: 3, borderRadius: radius.pill, backgroundColor: colors.surfaceRaised },
   hourActive: { backgroundColor: colors.primary },
-  hourText: { color: colors.text, fontSize: 12, fontWeight: '700' },
+  hourText: { color: colors.text, fontSize: 11, fontWeight: '700' },
   legend: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendItem: { alignItems: 'center', gap: 2 },
-  legendBar: { width: 34, height: 6, borderRadius: 3 },
-  legendText: { color: colors.textMuted, fontSize: 10, fontWeight: '600' },
+  legendBar: { width: 24, height: 4, borderRadius: 2 },
+  legendText: { color: colors.textMuted, fontSize: 9, fontWeight: '600' },
   link: { color: colors.primary, fontWeight: '700', fontSize: 13 },
   panel: {
     gap: spacing.md,

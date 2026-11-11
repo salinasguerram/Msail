@@ -4,13 +4,18 @@ import { useCallback, useEffect, useMemo, useState, type ComponentProps } from '
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { getCountries } from '@/api/catalogs';
+import { getMyProfile } from '@/api/profiles';
 import { getForecast, getWeatherPlaces, type Forecast, type ForecastDay, type WeatherPlace } from '@/api/weather';
+import { useAuth } from '@/auth/AuthContext';
 import { errorMessage } from '@/auth/errors';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { SelectField, type SelectOption } from '@/components/SelectField';
 import { colors, radius, spacing, typography } from '@/theme';
+import { distanceKm } from '@/utils/geo';
+import { approximateLocation } from '@/utils/homeLocation';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -39,9 +44,34 @@ function windColor(knots: number | null) {
 
 const round = (value: number | null) => (value === null ? '–' : String(Math.round(value)));
 
+/**
+ * Lugar con el que abre la pestaña, según la ubicación del perfil:
+ * 1. la región náutica del perfil de navegante (si es una de las zonas con pronóstico);
+ * 2. la zona más cercana al país de la cuenta o, sin sesión, a la ubicación aproximada (zona horaria).
+ */
+async function defaultPlace(zones: WeatherPlace[], userCountry: string | null | undefined, signedIn: boolean) {
+  if (!zones.length) return null;
+  if (signedIn) {
+    const profile = await getMyProfile().catch(() => null);
+    const regionZone = profile?.region ? zones.find((z) => z.id === `zone:${profile.region!.id}`) : undefined;
+    if (regionZone) return regionZone.id;
+  }
+  let country = null;
+  if (userCountry) {
+    const list = await getCountries().catch(() => []);
+    country = list.find((c) => c.iso_code === userCountry) ?? null;
+  }
+  const here = approximateLocation(country);
+  const nearest = zones.reduce((best, zone) =>
+    distanceKm(here, { lat: zone.latitude, lng: zone.longitude }) < distanceKm(here, { lat: best.latitude, lng: best.longitude }) ? zone : best,
+  );
+  return nearest.id;
+}
+
 /** Pronóstico semanal por sede de regata o zona de navegación. Acepta ?place=event:<slug> desde la página de una regata. */
 export default function WeatherScreen() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const params = useLocalSearchParams<{ place?: string }>();
   const [places, setPlaces] = useState<{ events: WeatherPlace[]; zones: WeatherPlace[] } | null>(null);
   const [place, setPlace] = useState<string | null>(params.place ?? null);
@@ -55,14 +85,20 @@ export default function WeatherScreen() {
   }
 
   useEffect(() => {
+    let active = true;
     getWeatherPlaces()
-      .then((data) => {
+      .then(async (data) => {
+        if (!active) return;
         setPlaces(data);
-        // Sin lugar elegido: la próxima regata o, si no hay, la primera zona.
-        setPlace((current) => current ?? data.events[0]?.id ?? data.zones[0]?.id ?? null);
+        // Sin lugar elegido (no se vino desde una regata): la zona del perfil o la más cercana.
+        const fallback = (await defaultPlace(data.zones, user?.country, !!user)) ?? data.events[0]?.id ?? null;
+        if (active) setPlace((current) => current ?? fallback);
       })
-      .catch(setPlacesError);
-  }, []);
+      .catch((e) => active && setPlacesError(e));
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   const options = useMemo<SelectOption[]>(() => {
     if (!places) return [];

@@ -1,0 +1,63 @@
+/**
+ * Nombres de océanos y mares para el planeta, con el punto donde va la etiqueta (aproximado, sobre el agua).
+ * tier 1: océanos (siempre); 2: mares principales (con algo de zoom); 3: mares chicos (con zoom cercano).
+ */
+export type Sea = { es: string; en: string; lat: number; lng: number; tier: 1 | 2 | 3 };
+
+export const SEAS: Sea[] = [
+  // Océanos
+  { es: 'Océano Atlántico', en: 'Atlantic Ocean', lat: 32, lng: -42, tier: 1 },
+  { es: 'Océano Atlántico', en: 'Atlantic Ocean', lat: -25, lng: -15, tier: 1 },
+  { es: 'Océano Pacífico', en: 'Pacific Ocean', lat: 25, lng: -150, tier: 1 },
+  { es: 'Océano Pacífico', en: 'Pacific Ocean', lat: -22, lng: -125, tier: 1 },
+  { es: 'Océano Pacífico', en: 'Pacific Ocean', lat: 15, lng: 165, tier: 1 },
+  { es: 'Océano Índico', en: 'Indian Ocean', lat: -20, lng: 78, tier: 1 },
+  { es: 'Océano Ártico', en: 'Arctic Ocean', lat: 83, lng: 10, tier: 1 },
+  { es: 'Océano Austral', en: 'Southern Ocean', lat: -60, lng: 20, tier: 1 },
+  { es: 'Océano Austral', en: 'Southern Ocean', lat: -60, lng: -120, tier: 1 },
+  // Mares principales
+  { es: 'Mar Mediterráneo', en: 'Mediterranean Sea', lat: 34.5, lng: 18, tier: 2 },
+  { es: 'Mar Caribe', en: 'Caribbean Sea', lat: 15, lng: -75, tier: 2 },
+  { es: 'Golfo de México', en: 'Gulf of Mexico', lat: 25, lng: -90, tier: 2 },
+  { es: 'Mar del Norte', en: 'North Sea', lat: 56, lng: 3, tier: 2 },
+  { es: 'Mar Báltico', en: 'Baltic Sea', lat: 58, lng: 19.5, tier: 2 },
+  { es: 'Mar de Noruega', en: 'Norwegian Sea', lat: 68, lng: 4, tier: 2 },
+  { es: 'Mar de Barents', en: 'Barents Sea', lat: 74, lng: 40, tier: 2 },
+  { es: 'Mar Negro', en: 'Black Sea', lat: 43.2, lng: 34, tier: 2 },
+  { es: 'Mar Rojo', en: 'Red Sea', lat: 20, lng: 38.5, tier: 2 },
+  { es: 'Mar Arábigo', en: 'Arabian Sea', lat: 15, lng: 64, tier: 2 },
+  { es: 'Golfo de Bengala', en: 'Bay of Bengal', lat: 15, lng: 88, tier: 2 },
+  { es: 'Mar de China Meridional', en: 'South China Sea', lat: 13, lng: 114, tier: 2 },
+  { es: 'Mar de Japón', en: 'Sea of Japan', lat: 40, lng: 135, tier: 2 },
+  { es: 'Mar de Filipinas', en: 'Philippine Sea', lat: 20, lng: 132, tier: 2 },
+  { es: 'Mar de Coral', en: 'Coral Sea', lat: -16, lng: 155, tier: 2 },
+  { es: 'Mar de Tasmania', en: 'Tasman Sea', lat: -38, lng: 160, tier: 2 },
+  { es: 'Mar Argentino', en: 'Argentine Sea', lat: -46, lng: -61, tier: 2 },
+  { es: 'Golfo de Guinea', en: 'Gulf of Guinea', lat: 1.5, lng: 3, tier: 2 },
+  { es: 'Bahía de Hudson', en: 'Hudson Bay', lat: 60, lng: -85, tier: 2 },
+  { es: 'Mar de Bering', en: 'Bering Sea', lat: 58, lng: -178, tier: 2 },
+  { es: 'Golfo de Alaska', en: 'Gulf of Alaska', lat: 56.5, lng: -145, tier: 2 },
+  { es: 'Mar de Weddell', en: 'Weddell Sea', lat: -72, lng: -45, tier: 2 },
+  { es: 'Mar de Ross', en: 'Ross Sea', lat: -74, lng: -175, tier: 2 },
+  { es: 'Mar de Labrador', en: 'Labrador Sea', lat: 58, lng: -54, tier: 2 },
+  // Mares chicos y golfos (zoom cercano)
+  { es: 'Mar Balear', en: 'Balearic Sea', lat: 40.4, lng: 2.2, tier: 3 },
+  { es: 'Mar Tirreno', en: 'Tyrrhenian Sea', lat: 40, lng: 12.2, tier: 3 },
+  { es: 'Mar Adriático', en: 'Adriatic Sea', lat: 43, lng: 15.2, tier: 3 },
+  { es: 'Mar Jónico', en: 'Ionian Sea', lat: 37.5, lng: 18.5, tier: 3 },
+  { es: 'Mar Egeo', en: 'Aegean Sea', lat: 38.6, lng: 25, tier: 3 },
+  { es: 'Mar de Alborán', en: 'Alboran Sea', lat: 36, lng: -3.5, tier: 3 },
+  { es: 'Golfo de Vizcaya', en: 'Bay of Biscay', lat: 45, lng: -5, tier: 3 },
+  { es: 'Canal de la Mancha', en: 'English Channel', lat: 50, lng: -2.5, tier: 3 },
+  { es: 'Mar de Irlanda', en: 'Irish Sea', lat: 53.7, lng: -5, tier: 3 },
+  { es: 'Mar Céltico', en: 'Celtic Sea', lat: 50.5, lng: -8, tier: 3 },
+  { es: 'Golfo de Maine', en: 'Gulf of Maine', lat: 43, lng: -68.5, tier: 3 },
+  { es: 'Bahía de Chesapeake', en: 'Chesapeake Bay', lat: 37.8, lng: -76.1, tier: 3 },
+  { es: 'Río de la Plata', en: 'Río de la Plata', lat: -35.2, lng: -56.8, tier: 3 },
+  { es: 'Golfo de California', en: 'Gulf of California', lat: 27.5, lng: -111.5, tier: 3 },
+  { es: 'Golfo Pérsico', en: 'Persian Gulf', lat: 27, lng: 51, tier: 3 },
+  { es: 'Mar Amarillo', en: 'Yellow Sea', lat: 35.5, lng: 123.5, tier: 3 },
+  { es: 'Mar de Java', en: 'Java Sea', lat: -5, lng: 111, tier: 3 },
+  { es: 'Gran Bahía Australiana', en: 'Great Australian Bight', lat: -35, lng: 130, tier: 3 },
+  { es: 'Golfo Hauraki', en: 'Hauraki Gulf', lat: -36.5, lng: 175.1, tier: 3 },
+];

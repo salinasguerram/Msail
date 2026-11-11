@@ -1,7 +1,7 @@
 import { api } from '@/api/client';
 import { currentLanguage } from '@/i18n';
 
-export type Country = { iso_code: string; name: string; continent: string };
+export type Country = { iso_code: string; name: string; continent: string; latitude: string | null; longitude: string | null };
 export type Region = { id: number; name: string; slug: string; country: string };
 export type Club = { id: number; name: string; slug: string; city: string; country: string; is_verified: boolean };
 

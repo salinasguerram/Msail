@@ -10,6 +10,10 @@ import { AuthProvider, useAuth } from '@/auth/AuthContext';
 import { DialogsProvider } from '@/components/Dialogs';
 import { restoreLanguage } from '@/i18n';
 import { colors, navigationTheme } from '@/theme';
+import { applyWebStyles } from '@/utils/webStyles';
+
+// Web: barras de desplazamiento con los colores de la app.
+applyWebStyles();
 
 function RootStack() {
   const { t } = useTranslation();

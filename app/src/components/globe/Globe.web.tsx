@@ -8,9 +8,9 @@ import { globeHtml } from './globeHtml';
 import type { FromGlobe, GlobeProps, ToGlobe } from './types';
 
 /** Planeta 3D en la web: la misma página de globe.gl, dentro de un iframe aislado (sin acceso a la app). */
-export function Globe({ points, layers, selected, wind, onTap, onCountry, style, accessibilityLabel }: GlobeProps) {
+export function Globe({ points, layers, selected, wind, home, frame, onTap, onCountry, style, accessibilityLabel }: GlobeProps) {
   const { i18n } = useTranslation();
-  const frame = useRef<HTMLIFrameElement | null>(null);
+  const iframe = useRef<HTMLIFrameElement | null>(null);
   // Sube cada vez que la página avisa que está lista (también después de recargarse): ahí se le manda todo.
   const [ready, setReady] = useState(0);
   const html = useMemo(() => globeHtml({ background: colors.background, language: i18n.language }), [i18n.language]);
@@ -20,13 +20,13 @@ export function Globe({ points, layers, selected, wind, onTap, onCountry, style,
   }, [onTap, onCountry]);
 
   function send(msg: ToGlobe) {
-    frame.current?.contentWindow?.postMessage({ target: 'msail-globe', msg }, '*');
+    iframe.current?.contentWindow?.postMessage({ target: 'msail-globe', msg }, '*');
   }
 
   // Solo se aceptan mensajes del iframe del planeta.
   useEffect(() => {
     function listen(event: MessageEvent) {
-      if (event.source !== frame.current?.contentWindow || event.data?.source !== 'msail-globe') return;
+      if (event.source !== iframe.current?.contentWindow || event.data?.source !== 'msail-globe') return;
       const msg = event.data.msg as FromGlobe;
       if (msg.type === 'ready') setReady((n) => n + 1);
       else if (msg.type === 'tap') callbacks.current.onTap({ lat: msg.lat, lng: msg.lng, pointId: msg.pointId });
@@ -49,11 +49,22 @@ export function Globe({ points, layers, selected, wind, onTap, onCountry, style,
     if (ready) send({ type: 'wind', cells: wind });
   }, [ready, wind]);
 
+  // El espacio libre va antes que la ubicación: así el centrado inicial ya usa el zoom correcto.
+  const frameW = frame?.w ?? 0;
+  const frameH = frame?.h ?? 0;
+  useEffect(() => {
+    if (ready && frameW > 0 && frameH > 0) send({ type: 'frame', w: frameW, h: frameH });
+  }, [ready, frameW, frameH]);
+
+  useEffect(() => {
+    if (ready && home) send({ type: 'home', lat: home.lat, lng: home.lng });
+  }, [ready, home]);
+
   return (
     <View style={style} accessibilityLabel={accessibilityLabel}>
       {createElement('iframe', {
         key: i18n.language,
-        ref: frame,
+        ref: iframe,
         srcDoc: html,
         title: accessibilityLabel,
         // allow-scripts sin allow-same-origin: el planeta no puede leer nada de la app.

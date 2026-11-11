@@ -24,6 +24,10 @@ export type GlobeProps = {
   selected: { lat: number; lng: number; pointId: string | null; iso?: string | null } | null;
   /** Capa de viento (null: apagada). */
   wind: WindCell[] | null;
+  /** Ubicación aproximada de la persona: el planeta arranca centrado ahí. */
+  home?: { lat: number; lng: number } | null;
+  /** Tamaño del espacio libre (px) cuando el planeta es el fondo de una pantalla con contenido encima. */
+  frame?: { w: number; h: number } | null;
   onTap: (tap: GlobeTap) => void;
   /** País de la zona elegida, en el idioma de la app (null si se tocó el mar). */
   onCountry?: (country: { name: string | null; iso: string | null }) => void;
@@ -37,7 +41,9 @@ export type ToGlobe =
   | { type: 'points'; points: GlobePoint[]; layers: Record<MapKind, boolean> }
   | { type: 'select'; lat: number; lng: number; pointId: string | null; iso?: string | null }
   | { type: 'clear' }
-  | { type: 'wind'; cells: WindCell[] | null };
+  | { type: 'wind'; cells: WindCell[] | null }
+  | { type: 'home'; lat: number; lng: number }
+  | { type: 'frame'; w: number; h: number };
 
 /** Mensajes del planeta a la app. */
 export type FromGlobe =
