@@ -40,6 +40,8 @@ const es = {
     register: 'Crear cuenta',
     language: 'Idioma',
     logout: 'Cerrar sesión',
+    admin: 'Panel de administración',
+    adminText: 'Gestioná regatas, resultados, marinas, usuarios y solicitudes.',
     verifyBanner: 'Todavía no verificaste tu email.',
     verifyAction: 'Verificar ahora',
     verified: 'Email verificado',

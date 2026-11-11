@@ -42,6 +42,8 @@ const en: Translations = {
     register: 'Create account',
     language: 'Language',
     logout: 'Log out',
+    admin: 'Admin panel',
+    adminText: 'Manage regattas, results, marinas, users and requests.',
     verifyBanner: "You haven't verified your email yet.",
     verifyAction: 'Verify now',
     verified: 'Email verified',

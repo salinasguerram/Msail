@@ -2,6 +2,8 @@ import { clearTokens, loadTokens, saveTokens, type Tokens } from '@/auth/tokenSt
 import { currentLanguage } from '@/i18n';
 
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000/api').replace(/\/$/, '');
+/** Panel de administración (Django): mismo servidor que la API, en /admin/. */
+export const ADMIN_URL = `${API_URL.replace(/\/api$/, '')}/admin/`;
 
 export class ApiError extends Error {
   constructor(

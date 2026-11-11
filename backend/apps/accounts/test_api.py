@@ -80,6 +80,16 @@ class RegisterLoginTests(AuthAPITestCase):
         self.assertEqual(response.data["first_name"], "Anita")
         self.assertEqual(response.data["email"], "regatista@example.com")  # el email no se cambia acá
 
+    def test_me_tells_staff_and_cannot_grant_it(self):
+        self.assertIs(self.register(is_staff=True).data["user"]["is_staff"], False)
+        access = self.client.post(
+            "/api/auth/login/", {"email": "regatista@example.com", "password": "vela-segura-123"}, format="json"
+        ).data["access"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+        self.assertIs(self.client.patch("/api/auth/me/", {"is_staff": True}, format="json").data["is_staff"], False)
+        User.objects.filter(email="regatista@example.com").update(is_staff=True)
+        self.assertIs(self.client.get("/api/auth/me/").data["is_staff"], True)
+
     def test_refresh_and_logout(self):
         refresh = self.register().data["refresh"]
         rotated = self.client.post("/api/auth/refresh/", {"refresh": refresh}, format="json")

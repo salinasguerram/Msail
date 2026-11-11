@@ -15,6 +15,8 @@ export type User = {
   email_notifications: boolean;
   email_verified: boolean;
   date_joined: string;
+  /** Equipo de MSAIL: puede entrar al panel de administración. */
+  is_staff?: boolean;
 };
 
 type AuthResponse = Tokens & { user: User };

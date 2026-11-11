@@ -38,8 +38,10 @@ class UserSerializer(serializers.ModelSerializer):
             "email_notifications",
             "email_verified",
             "date_joined",
+            "is_staff",
         ]
-        read_only_fields = ["id", "email", "email_verified", "date_joined"]
+        # is_staff: la app muestra el acceso al panel de administración (solo lectura, se da desde el panel).
+        read_only_fields = ["id", "email", "email_verified", "date_joined", "is_staff"]
 
 
 class RegisterSerializer(UserSerializer):
@@ -47,7 +49,7 @@ class RegisterSerializer(UserSerializer):
 
     class Meta(UserSerializer.Meta):
         fields = UserSerializer.Meta.fields + ["password"]
-        read_only_fields = ["id", "email_verified", "date_joined"]
+        read_only_fields = ["id", "email_verified", "date_joined", "is_staff"]
         extra_kwargs = {"first_name": {"required": True}, "last_name": {"required": True}}
 
     def validate_email(self, value):

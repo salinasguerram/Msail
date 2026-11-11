@@ -86,8 +86,11 @@ export function globeHtml({ background, language }: { background: string; langua
   .sea { transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap; font-style: italic;
     color: rgba(170,205,255,.78); text-shadow: 0 1px 4px rgba(0,0,0,.85); letter-spacing: 1.5px; transition: opacity .25s; }
   .sea.t1 { font-size: 15px; letter-spacing: 4px; text-transform: uppercase; color: rgba(170,205,255,.6); }
-  .sea.t2 { font-size: 12px; }
-  .sea.t3 { font-size: 11px; }
+  .sea.t2 { font-size: 12px; display: none; }
+  .sea.t3 { font-size: 11px; display: none; }
+  body.z2 .sea.t2, body.z3 .sea.t2, body.z3 .sea.t3 { display: block; }
+  /* Se mueven en la placa de video en lugar de redibujarse en cada cuadro. */
+  .pin, .sea, .cluster, .country-label { will-change: transform, opacity; }
   .cluster { transform: translate(-50%, -50%); width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
     display: flex; align-items: center; justify-content: center; color: #050b18; font-weight: 800; font-size: 14px;
     border: 2px solid #fff; box-shadow: 0 0 0 5px rgba(255,255,255,.14), 0 4px 12px rgba(0,0,0,.5); transition: opacity .25s; }
@@ -219,6 +222,10 @@ export function globeHtml({ background, language }: { background: string; langua
     .arcDashAnimateTime(1800)
     .arcsTransitionDuration(0);
 
+  // Rendimiento: en pantallas de alta densidad (2x, 3x) se dibuja a 1,5x como máximo. Se ve igual y,
+  // como el lienzo cubre toda la pantalla, son hasta 4 veces menos píxeles por cuadro.
+  try { globe.renderer().setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5)); } catch (e) {}
+
   // Los pines del otro lado del planeta se ocultan.
   if (typeof globe.htmlElementVisibilityModifier === 'function') {
     globe.htmlElementVisibilityModifier(function (node, visible) {
@@ -287,9 +294,22 @@ export function globeHtml({ background, language }: { background: string; langua
   var interacted = false; // la persona ya lo movió: no se le cambia la vista sola
   var homeSet = false;
   controls.addEventListener('start', function () { interacted = true; controls.autoRotate = false; });
+  // Zoom y giro con inercia: se deslizan en lugar de moverse a saltos.
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.1;
+  controls.zoomSpeed = 0.8;
+
+  // Durante el zoom solo se cambian clases (barato). Lo pesado (agrupar pines, grosor del viento)
+  // se hace una vez, cuando la cámara se queda quieta.
+  var zoomClasses = '';
   globe.onZoom(function (pov) {
-    document.body.classList.toggle('near', pov.altitude < NEAR);
-    updateArcStroke(pov.altitude);
+    var next = (pov.altitude < NEAR ? 'near ' : '') + (pov.altitude <= SEA_MAX_ALTITUDE[3] ? 'z3' : pov.altitude <= SEA_MAX_ALTITUDE[2] ? 'z2' : '');
+    if (next !== zoomClasses) {
+      zoomClasses = next;
+      document.body.classList.toggle('near', pov.altitude < NEAR);
+      document.body.classList.toggle('z2', next.indexOf('z2') >= 0);
+      document.body.classList.toggle('z3', next.indexOf('z3') >= 0);
+    }
     scheduleLayout();
   });
 
@@ -325,8 +345,13 @@ export function globeHtml({ background, language }: { background: string; langua
   var layoutKey = '';
   var layoutTimer = null;
   function scheduleLayout() {
-    if (layoutTimer) return;
-    layoutTimer = setTimeout(function () { layoutTimer = null; layoutPins(); }, 120);
+    // Se espera a que la cámara deje de moverse (cada movimiento nuevo vuelve a esperar).
+    clearTimeout(layoutTimer);
+    layoutTimer = setTimeout(function () {
+      layoutTimer = null;
+      updateArcStroke(globe.pointOfView().altitude);
+      layoutPins();
+    }, 180);
   }
 
   function facingCamera(p, pov) {
@@ -357,7 +382,7 @@ export function globeHtml({ background, language }: { background: string; langua
 
     var items = [];
     SEAS.forEach(function (s, i) {
-      if (pov.altitude <= SEA_MAX_ALTITUDE[s.tier]) items.push({ type: 'sea', id: 'sea:' + i, lat: s.lat, lng: s.lng, name: s.name, tier: s.tier });
+      items.push({ type: 'sea', id: 'sea:' + i, lat: s.lat, lng: s.lng, name: s.name, tier: s.tier });
     });
     if (selectedCountry && selectedCenter) {
       items.push({ type: 'country', id: 'country:' + (isoOf(selectedCountry) || selectedCountry.properties.NAME), lat: selectedCenter[0], lng: selectedCenter[1], name: countryName(selectedCountry), below: labelBelow });

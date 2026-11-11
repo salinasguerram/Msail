@@ -2,9 +2,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { getMyBoats, type BoatSummary } from '@/api/boats';
+import { ADMIN_URL } from '@/api/client';
 import { deleteAvatar, deleteProfilePhoto, pickImage, uploadAvatar, uploadProfilePhoto } from '@/api/photos';
 import { getMyProfile, type RaceResult, type SailorProfile } from '@/api/profiles';
 import { className, useBoatClasses } from '@/api/useBoatClasses';
@@ -166,6 +167,17 @@ function SignedInProfile({ user }: { user: User }) {
           )}
         </View>
       </Card>
+
+      {user.is_staff ? (
+        <Pressable style={styles.admin} onPress={() => Linking.openURL(ADMIN_URL)} accessibilityRole="link">
+          <Ionicons name="shield-checkmark-outline" size={22} color={colors.primary} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={[typography.body, { fontWeight: '700' }]}>{t('profile.admin')}</Text>
+            <Text style={typography.caption}>{t('profile.adminText')}</Text>
+          </View>
+          <Ionicons name="open-outline" size={18} color={colors.textMuted} />
+        </Pressable>
+      ) : null}
 
       {!profile && !failed && <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.xl }} />}
 
@@ -379,6 +391,16 @@ function ResultRow({ result, classLabel }: { result: RaceResult; classLabel: str
 }
 
 const styles = StyleSheet.create({
+  admin: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+  },
   guest: { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.md },
   center: { textAlign: 'center' },
   actions: { alignSelf: 'stretch', gap: spacing.sm, marginTop: spacing.sm },
