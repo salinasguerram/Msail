@@ -9,6 +9,8 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import sys
+
 import dj_database_url
 from dotenv import load_dotenv
 
@@ -50,6 +52,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     # Propias
+    "apps.core",  # utilidades compartidas y RLS en Supabase
     "apps.accounts",
     "apps.geo",
     "apps.sailing",
@@ -212,7 +215,9 @@ STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
 }
-if SUPABASE_STORAGE_BUCKET:
+# Los tests guardan siempre en una carpeta temporal: nunca suben archivos al bucket real.
+TESTING = sys.argv[1:2] == ["test"]
+if SUPABASE_STORAGE_BUCKET and not TESTING:
     SUPABASE_PROJECT_URL = env("SUPABASE_PROJECT_URL", "").rstrip("/")  # https://<proyecto>.supabase.co
     STORAGES["default"] = {
         "BACKEND": "storages.backends.s3.S3Storage",
@@ -258,13 +263,15 @@ def _admin_link(title, icon, url_name):
 
 
 UNFOLD = {
-    "SITE_TITLE": "MSAIL LEAGUE",
-    "SITE_HEADER": "MSAIL LEAGUE",
+    "SITE_TITLE": "MSAIL",
+    "SITE_HEADER": "MSAIL",
     "SITE_SUBHEADER": "Panel de administración",
     "SITE_URL": FRONTEND_URL,
-    "SITE_SYMBOL": "sailing",
+    # Logo de velas (el mismo de la app y el ícono).
+    "SITE_ICON": lambda request: _static("msail/sails.svg"),
+    # Nombre nuevo del ícono: así el navegador no sigue mostrando el viejo que tenía guardado.
     "SITE_FAVICONS": [
-        {"rel": "icon", "type": "image/png", "sizes": "192x192", "href": lambda request: _static("msail/favicon.png")},
+        {"rel": "icon", "type": "image/png", "sizes": "192x192", "href": lambda request: _static("msail/favicon-velas.png")},
     ],
     "THEME": "dark",
     "BORDER_RADIUS": "10px",

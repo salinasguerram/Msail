@@ -49,6 +49,7 @@ export type ToGlobe =
   | { type: 'home'; lat: number; lng: number }
   | { type: 'fly'; lat: number; lng: number; altitude: number }
   | { type: 'reset'; lat: number; lng: number }
+  | { type: 'zoom'; factor: number }
   | { type: 'frame'; w: number; h: number; dx: number; dy: number };
 
 /** Mensajes del planeta a la app. */

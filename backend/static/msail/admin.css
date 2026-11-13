@@ -1,3 +1,6 @@
+/* Letra de la marca (Montserrat), la misma de la app. Tiene que ir antes de cualquier regla. */
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&display=swap");
+
 /*
  * Desde 768 px la barra lateral del panel ocupa su lugar al lado del contenido
  * (Unfold la pone encima del contenido hasta 1280 px). En celulares sigue encima, como menú.
@@ -6,4 +9,44 @@
   div[x-show="sidebarOpen"] {
     position: relative !important;
   }
+}
+
+/*
+ * Identidad de MSAIL, igual que en la app: logo de velas, letra Montserrat en el nombre y los títulos.
+ */
+
+:root {
+  --msail-display: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Nombre del sitio junto al logo (barra lateral y login). */
+#site-name,
+.text-important.tracking-tight {
+  font-family: var(--msail-display);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+/* Títulos de página, de secciones y de la portada. */
+h1,
+h2,
+#content h1,
+.msail-card .value {
+  font-family: var(--msail-display);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* Fondo como el de la app: azul noche con un brillo azul arriba. */
+html.dark body {
+  background-image: radial-gradient(1200px 600px at 70% -10%, rgba(47, 140, 255, 0.10), transparent 60%);
+  background-attachment: fixed;
+}
+
+/* Login del panel: nombre grande, como el logo de la app. */
+.msail-login-title {
+  font-family: var(--msail-display);
+  font-weight: 800;
+  font-size: 2rem;
+  letter-spacing: 0.08em;
 }

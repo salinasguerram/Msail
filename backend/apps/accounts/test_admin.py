@@ -40,7 +40,10 @@ class DashboardTests(AdminPanelTestCase):
         self.assertEqual(cards["Usuarios activos"], 2)
         self.assertEqual(len(response.context["dashboard"]["signups"]), 14)
         self.assertContains(response, "Altas de los últimos 14 días")
-        self.assertContains(response, "MSAIL LEAGUE")
+        self.assertContains(response, "MSAIL")
+        self.assertContains(response, "msail/sails.svg")  # logo de velas, igual que en la app
+        self.assertRegex(response.content.decode(), r"<title>\s*MSAIL \| Perfil de administrador\s*</title>")
+        self.assertContains(response, "msail/favicon-velas.png")
         self.assertContains(response, "http://localhost:8081")  # "Ver el sitio" lleva a la app
 
     def test_regular_user_cannot_enter(self):

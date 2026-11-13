@@ -1,0 +1,3 @@
+{% extends "admin/base_site.html" %}
+{# Pestañas del panel con la marca primero, como la app: "MSAIL | Regatas". #}
+{% block title %}{{ site_title|default:"MSAIL" }} | {% if subtitle %}{{ subtitle }} | {% endif %}{{ title }}{% endblock %}

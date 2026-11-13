@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
@@ -5,21 +6,23 @@ import { colors, fonts, spacing } from '@/theme';
 
 /** Las dos velas del logo de MSAIL (azul eléctrico con degradé). `size` es el alto. */
 export function SailsMark({ size = 24 }: { size?: number }) {
+  // Ids propios por logo: en la web, si dos logos comparten id, el degradé puede salir de uno oculto y no verse.
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   return (
     <Svg width={(size * 80) / 64} height={size} viewBox="0 0 80 64">
       <Defs>
-        <LinearGradient id="sailBack" x1="0.8" y1="0" x2="0.1" y2="1">
+        <LinearGradient id={`back${id}`} x1="0.8" y1="0" x2="0.1" y2="1">
           <Stop offset="0" stopColor="#3ab4ff" />
           <Stop offset="1" stopColor="#0b5fe6" />
         </LinearGradient>
-        <LinearGradient id="sailFront" x1="0.85" y1="0" x2="0.2" y2="1">
+        <LinearGradient id={`front${id}`} x1="0.85" y1="0" x2="0.2" y2="1">
           <Stop offset="0" stopColor="#4cc0ff" />
           <Stop offset="1" stopColor="#1069f0" />
         </LinearGradient>
       </Defs>
       {/* Vela de atrás (más chica) y vela de adelante; el borde izquierdo de cada una es una curva tipo barrido. */}
-      <Path d="M0 62 C 18 54, 30 34, 33 3 C 37 22, 40 38, 45 52 C 30 54, 15 57, 0 62 Z" fill="url(#sailBack)" />
-      <Path d="M30 64 C 50 54, 63 32, 67 1 C 72 22, 76 42, 78 60 C 62 61, 46 62, 30 64 Z" fill="url(#sailFront)" />
+      <Path d="M0 62 C 18 54, 30 34, 33 3 C 37 22, 40 38, 45 52 C 30 54, 15 57, 0 62 Z" fill={`url(#back${id})`} />
+      <Path d="M30 64 C 50 54, 63 32, 67 1 C 72 22, 76 42, 78 60 C 62 61, 46 62, 30 64 Z" fill={`url(#front${id})`} />
     </Svg>
   );
 }

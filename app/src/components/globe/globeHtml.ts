@@ -82,7 +82,6 @@ export function globeHtml({ background, language }: { background: string; langua
     font-size: 15px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; padding: 4px 12px; border-radius: 999px;
     background: rgba(5,11,24,.55); border: 1px solid rgba(156,200,255,.55); box-shadow: 0 4px 16px rgba(0,0,0,.45);
     text-shadow: 0 1px 6px rgba(0,0,0,.9); transition: opacity .25s; }
-  .country-label.below { transform: translate(-50%, 14px); font-size: 13px; }
   .sea { transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap; font-style: italic;
     color: rgba(170,205,255,.78); text-shadow: 0 1px 4px rgba(0,0,0,.85); letter-spacing: 1.5px; transition: opacity .25s; }
   .sea.t1 { font-size: 15px; letter-spacing: 4px; text-transform: uppercase; color: rgba(170,205,255,.6); }
@@ -139,7 +138,11 @@ export function globeHtml({ background, language }: { background: string; langua
   var countries = [];
   var selectedCountry = null;
   var selectedCenter = null;
-  var labelBelow = false;
+  // Lugares posibles para el nombre del país (dentro del país, del centro hacia afuera): se usa el primero
+  // que se ve en pantalla sin tapar pines.
+  var labelSpots = [];
+  // Cuándo se apretó un pin: ese toque es del pin, no del planeta que está detrás.
+  var pinDownAt = 0;
 
   // Mar u océano de un punto en el agua: el nombre más cercano, pesando más los mares (más precisos que los océanos).
   function seaAt(lat, lng) {
@@ -176,9 +179,9 @@ export function globeHtml({ background, language }: { background: string; langua
     return f.properties.NAME;
   }
 
-  function tap(lat, lng, pointId) {
+  function tap(lat, lng, pointId, fromPin) {
     var now = Date.now();
-    if (now - lastTap < 250) return; // un solo toque aunque lo reciban dos capas
+    if (!fromPin && now - lastTap < 250) return; // un solo toque aunque lo reciban dos capas
     lastTap = now;
     send({ type: 'tap', lat: lat, lng: lng, pointId: pointId || null });
   }
@@ -196,8 +199,9 @@ export function globeHtml({ background, language }: { background: string; langua
     .polygonStrokeColor(function (f) { return f === selectedCountry ? '#9cc8ff' : 'rgba(255,255,255,0.14)'; })
     .polygonAltitude(function (f) { return f === selectedCountry ? 0.012 : 0.004; })
     .polygonsTransitionDuration(350)
-    .onPolygonClick(function (f, ev, c) { if (c) tap(c.lat, c.lng, null); })
-    .onGlobeClick(function (c) { tap(c.lat, c.lng, null); })
+    // Si el toque empezó en un pin, el planeta lo ignora (si no, a veces ganaba el mar de atrás del pin).
+    .onPolygonClick(function (f, ev, c) { if (c && Date.now() - pinDownAt > 600) tap(c.lat, c.lng, null); })
+    .onGlobeClick(function (c) { if (Date.now() - pinDownAt > 600) tap(c.lat, c.lng, null); })
     // Pines
     .htmlLat('lat')
     .htmlLng('lng')
@@ -250,8 +254,14 @@ export function globeHtml({ background, language }: { background: string; langua
       '<div class="label">' + esc(p.name) + '</div>' +
       '<div class="card"><em style="color:' + color + '">' + esc(p.typeLabel || '') + '</em><b>' + esc(p.name) + '</b>' +
       '<span>' + esc(p.summary || p.subtitle || '') + '</span></div>';
-    node.addEventListener('click', function (ev) { ev.stopPropagation(); tap(p.lat, p.lng, p.id); });
+    pressable(node, function () { tap(p.lat, p.lng, p.id, true); });
     return node;
+  }
+
+  // Pines y grupos: se marcan al apretarlos para que el planeta de atrás no tome el toque.
+  function pressable(node, onTap) {
+    node.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); pinDownAt = Date.now(); });
+    node.addEventListener('click', function (ev) { ev.stopPropagation(); onTap(); });
   }
 
   function seaElement(d) {
@@ -264,7 +274,7 @@ export function globeHtml({ background, language }: { background: string; langua
   // Nombre del país elegido, en el idioma de la app, sobre el centro del país.
   function countryElement(d) {
     var node = document.createElement('div');
-    node.className = 'country-label' + (d.below ? ' below' : '');
+    node.className = 'country-label';
     node.textContent = d.name;
     return node;
   }
@@ -281,7 +291,7 @@ export function globeHtml({ background, language }: { background: string; langua
     node.title = d.members.map(function (p) { return p.name; }).join(' · ');
     node.innerHTML = '<span style="background:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center">' + d.members.length + '</span>';
     // Al tocarlo, se acerca a la zona (ahí los pines se apilan) y la app lista lo que hay.
-    node.addEventListener('click', function (ev) { ev.stopPropagation(); tap(d.lat, d.lng, d.members[0].id); });
+    pressable(node, function () { tap(d.lat, d.lng, d.members[0].id, true); });
     return node;
   }
 
@@ -413,8 +423,9 @@ export function globeHtml({ background, language }: { background: string; langua
     SEAS.forEach(function (s, i) {
       items.push({ type: 'sea', id: 'sea:' + i, lat: s.lat, lng: s.lng, name: s.name, tier: s.tier });
     });
-    if (selectedCountry && selectedCenter) {
-      items.push({ type: 'country', id: 'country:' + (isoOf(selectedCountry) || selectedCountry.properties.NAME), lat: selectedCenter[0], lng: selectedCenter[1], name: countryName(selectedCountry), below: labelBelow });
+    var label = selectedCountry ? labelSpot(countryName(selectedCountry), groups, pov) : null;
+    if (label) {
+      items.push({ type: 'country', id: 'country:' + (isoOf(selectedCountry) || selectedCountry.properties.NAME) + ':' + label.index, lat: label.lat, lng: label.lng, name: countryName(selectedCountry) });
     }
     groups.forEach(function (g) {
       var first = g.members[0];
@@ -432,6 +443,67 @@ export function globeHtml({ background, language }: { background: string; langua
     if (key === layoutKey) return;
     layoutKey = key;
     globe.htmlElementsData(items);
+  }
+
+  // Lugar del nombre del país: el punto más central del país que se ve en el hueco libre y no pisa ningún pin.
+  function labelSpot(name, groups, pov) {
+    if (!labelSpots.length) return null;
+    var w = Math.max(80, name.length * 13 + 36), h = 34; // tamaño aproximado de la etiqueta en pantalla
+    var cx = window.innerWidth / 2 + offset.x, cy = window.innerHeight / 2 + offset.y;
+    var fw = free ? free.w : window.innerWidth, fh = free ? free.h : window.innerHeight;
+    var area = { l: cx - fw / 2 + 10, r: cx + fw / 2 - 10, t: cy - fh / 2 + 10, b: cy + fh / 2 - 10 };
+    // Cajas de los pines en pantalla (el pin sale hacia arriba; con nombre, también a la derecha).
+    var names = document.body.classList.contains('near');
+    var boxes = [];
+    groups.forEach(function (g) {
+      if (!g.screen) return;
+      var stacked = g.members.length > 1 && pov.altitude <= CLUSTER;
+      var height = 46 + (stacked ? (g.members.length - 1) * STACK : 0);
+      boxes.push({ l: g.screen.x - 20, r: g.screen.x + (names || stacked ? 175 : 20), t: g.screen.y - height, b: g.screen.y + 4 });
+    });
+    var fallback = null;
+    for (var i = 0; i < labelSpots.length; i++) {
+      var p = labelSpots[i];
+      if (!facingCamera({ lat: p[0], lng: p[1] }, pov)) continue;
+      var s = globe.getScreenCoords(p[0], p[1], 0.01);
+      var box = { l: s.x - w / 2, r: s.x + w / 2, t: s.y - h / 2, b: s.y + h / 2 };
+      if (box.l < area.l || box.r > area.r || box.t < area.t || box.b > area.b) continue;
+      if (fallback === null) fallback = i;
+      var clear = boxes.every(function (o) { return box.r < o.l || box.l > o.r || box.b < o.t || box.t > o.b; });
+      if (clear) return { index: i, lat: p[0], lng: p[1] };
+    }
+    return fallback === null ? null : { index: fallback, lat: labelSpots[fallback][0], lng: labelSpots[fallback][1] };
+  }
+
+  // Puntos dentro del país (su parte más grande), ordenados desde el centro hacia afuera.
+  function spotsOf(f) {
+    var g = f.geometry, polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates, best = null, bestArea = -1;
+    polys.forEach(function (rings) {
+      var minX = 180, maxX = -180, minY = 90, maxY = -90;
+      rings[0].forEach(function (c) { minX = Math.min(minX, c[0]); maxX = Math.max(maxX, c[0]); minY = Math.min(minY, c[1]); maxY = Math.max(maxY, c[1]); });
+      var area = (maxX - minX) * (maxY - minY);
+      if (area > bestArea) { bestArea = area; best = { rings: rings, minX: minX, maxX: maxX, minY: minY, maxY: maxY }; }
+    });
+    if (!best) return [];
+    // Centro de masa del contorno (más representativo que el centro del rectángulo, ej. países en forma de L).
+    var ring = best.rings[0], a = 0, x = 0, y = 0;
+    for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      var cross = ring[j][0] * ring[i][1] - ring[i][0] * ring[j][1];
+      a += cross; x += (ring[j][0] + ring[i][0]) * cross; y += (ring[j][1] + ring[i][1]) * cross;
+    }
+    var center = a ? [y / (3 * a), x / (3 * a)] : [(best.minY + best.maxY) / 2, (best.minX + best.maxX) / 2];
+    var step = Math.max(0.25, Math.max(best.maxX - best.minX, best.maxY - best.minY) / 16);
+    var spots = [];
+    if (inPolygon(center[1], center[0], best.rings)) spots.push(center);
+    for (var lat = best.minY + step / 2; lat < best.maxY; lat += step) {
+      for (var lng = best.minX + step / 2; lng < best.maxX; lng += step) {
+        if (inPolygon(lng, lat, best.rings)) spots.push([lat, lng]);
+      }
+    }
+    var k = Math.cos(center[0] * Math.PI / 180);
+    function d(p) { var dx = (p[1] - center[1]) * k, dy = p[0] - center[0]; return dx * dx + dy * dy; }
+    spots.sort(function (p, q) { return d(p) - d(q); });
+    return spots.slice(0, 120);
   }
 
   function drawPins() {
@@ -474,17 +546,6 @@ export function globeHtml({ background, language }: { background: string; langua
     }
     return null;
   }
-  function centerOf(f) {
-    var g = f.geometry, polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates, best = null, bestArea = -1;
-    polys.forEach(function (rings) {
-      var minX = 180, maxX = -180, minY = 90, maxY = -90;
-      rings[0].forEach(function (c) { minX = Math.min(minX, c[0]); maxX = Math.max(maxX, c[0]); minY = Math.min(minY, c[1]); maxY = Math.max(maxY, c[1]); });
-      var area = (maxX - minX) * (maxY - minY);
-      if (area > bestArea) { bestArea = area; best = [(minY + maxY) / 2, (minX + maxX) / 2]; }
-    });
-    return best;
-  }
-
   // Tamaño del país (el polígono más grande) para decidir cuánto acercar la cámara.
   function spanOf(f) {
     var g = f.geometry, polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates, best = 0;
@@ -536,19 +597,15 @@ export function globeHtml({ background, language }: { background: string; langua
     openPinId = msg.pointId || null;
     selectedCountry = countryAt(msg.lat, msg.lng) ||
       (msg.iso ? countries.filter(function (f) { return isoOf(f) === msg.iso; })[0] || null : null);
-    selectedCenter = selectedCountry ? centerOf(selectedCountry) : null;
-    // Si el centro del país queda lejos de donde se tocó (países grandes con zoom cercano), el nombre va
-    // justo debajo del lugar tocado, así se ve en pantalla sin tapar los pines (que apuntan hacia arriba).
-    labelBelow = false;
-    if (selectedCenter && angleBetween(selectedCenter[0], selectedCenter[1], msg.lat, msg.lng) > 12) {
-      selectedCenter = [msg.lat, msg.lng];
-      labelBelow = true;
-    }
+    labelSpots = selectedCountry ? spotsOf(selectedCountry) : [];
+    selectedCenter = labelSpots[0] || null;
     refreshCountries();
     drawPins();
     globe.ringsData([{ lat: msg.lat, lng: msg.lng }]);
+    // Pin: se acerca mucho y abre su resumen. País: la cámara va al centro del país, con todo el país a la vista.
     var altitude = msg.pointId ? 0.4 : selectedCountry ? Math.max(0.35, Math.min(1.4, spanOf(selectedCountry) / 40)) : 0.9;
-    globe.pointOfView({ lat: msg.lat, lng: msg.lng, altitude: altitude }, 1000);
+    var target = !msg.pointId && selectedCenter ? { lat: selectedCenter[0], lng: selectedCenter[1] } : { lat: msg.lat, lng: msg.lng };
+    globe.pointOfView({ lat: target.lat, lng: target.lng, altitude: altitude }, 1000);
     var place = selectedCountry ? countryName(selectedCountry) : seaAt(msg.lat, msg.lng);
     send({ type: 'country', name: place, iso: selectedCountry ? isoOf(selectedCountry) : null });
   }
@@ -565,6 +622,7 @@ export function globeHtml({ background, language }: { background: string; langua
       openPinId = null;
       selectedCountry = null;
       selectedCenter = null;
+      labelSpots = [];
       globe.ringsData([]);
       refreshCountries();
       drawPins();
@@ -581,6 +639,11 @@ export function globeHtml({ background, language }: { background: string; langua
       // La primera vez sin animación (el planeta aparece ya centrado); si después cambia (ej. llega el país de la cuenta), con animación.
       if (!interacted) globe.pointOfView({ lat: msg.lat, lng: msg.lng, altitude: fillAltitude() }, homeSet ? 1200 : 0);
       homeSet = true;
+    } else if (msg.type === 'zoom') {
+      interacted = true;
+      controls.autoRotate = false;
+      var pov = globe.pointOfView();
+      globe.pointOfView({ lat: pov.lat, lng: pov.lng, altitude: Math.max(0.12, Math.min(5, pov.altitude * msg.factor)) }, 0);
     } else if (msg.type === 'reset') {
       // Logo de MSAIL: vuelve a la vista inicial (como al abrir la home) y se vuelve a ajustar solo al tamaño.
       interacted = false;

@@ -1,5 +1,8 @@
 {% extends "admin/index.html" %}
 
+{# Pestaña del navegador: MSAIL | Perfil de administrador #}
+{% block title %}{{ site_title }} | {{ title }}{% endblock %}
+
 {% block extrastyle %}
 {{ block.super }}
 <style>

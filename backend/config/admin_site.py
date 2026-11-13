@@ -22,9 +22,10 @@ class MsailLoginForm(AuthenticationForm):
 
 
 class MsailAdminSite(UnfoldAdminSite):
-    site_header = "MSAIL LEAGUE"
-    site_title = "MSAIL LEAGUE"
-    index_title = "Panel de administración"
+    # Mismo nombre que el logo de la app.
+    site_header = "MSAIL"
+    site_title = "MSAIL"
+    index_title = "Perfil de administrador"
     login_form = MsailLoginForm
 
     def has_permission(self, request):

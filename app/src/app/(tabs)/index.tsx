@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Brand } from '@/components/Brand';
 import { Globe } from '@/components/globe/Globe';
+import { usePageZoomToGlobe } from '@/components/globe/usePageZoomToGlobe';
 import { LayerChips, usePlanet, WindButton, WindControls, ZonePanel, type Planet } from '@/components/globe/PlanetExplorer';
 import { HomeCard, RegattaArt, WindArt } from '@/components/HomeCards';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -44,6 +45,8 @@ export default function ExploreScreen() {
   // Solo en la web y en pantallas anchas: tres columnas. En iOS/Android (y en la web angosta), en columna.
   const wide = useWideWeb();
   const planet = useExplorePlanet();
+  // Web: los gestos de zoom siempre van al planeta, nunca agrandan la página.
+  usePageZoomToGlobe();
   const [focus, setFocus] = useState<{
     lat: number;
     lng: number;

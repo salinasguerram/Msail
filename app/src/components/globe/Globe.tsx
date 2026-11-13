@@ -7,6 +7,7 @@ import { colors } from '@/theme';
 
 import { globeHtml } from './globeHtml';
 import type { FromGlobe, GlobeProps, ToGlobe } from './types';
+import { onGlobeZoom } from './zoom';
 
 // Los tipos de WebView (componente de clase) no encajan con los de esta versión de React: se tipa a mano.
 const WebViewView = WebView as unknown as ComponentType<WebViewProps & { ref?: Ref<WebView> }>;
@@ -52,6 +53,9 @@ export function Globe({ points, layers, selected, wind, home, focus, reset, fram
   useEffect(() => {
     if (ready && focus) send({ type: 'fly', lat: focus.lat, lng: focus.lng, altitude: focus.altitude });
   }, [ready, focus]);
+
+  // Zoom pedido desde afuera (gestos sobre lo que está encima del planeta).
+  useEffect(() => (ready ? onGlobeZoom((factor) => send({ type: 'zoom', factor })) : undefined), [ready]);
 
   useEffect(() => {
     if (ready && reset) send({ type: 'reset', lat: reset.lat, lng: reset.lng });

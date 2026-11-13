@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -4 84 72" width="84" height="72">
+  <!-- Las dos velas del logo de MSAIL (mismos trazos que la app: app/src/components/Brand.tsx). -->
+  <defs>
+    <linearGradient id="sailBack" x1="0.8" y1="0" x2="0.1" y2="1">
+      <stop offset="0" stop-color="#3ab4ff"/>
+      <stop offset="1" stop-color="#0b5fe6"/>
+    </linearGradient>
+    <linearGradient id="sailFront" x1="0.85" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#4cc0ff"/>
+      <stop offset="1" stop-color="#1069f0"/>
+    </linearGradient>
+  </defs>
+  <path d="M0 62 C 18 54, 30 34, 33 3 C 37 22, 40 38, 45 52 C 30 54, 15 57, 0 62 Z" fill="url(#sailBack)"/>
+  <path d="M30 64 C 50 54, 63 32, 67 1 C 72 22, 76 42, 78 60 C 62 61, 46 62, 30 64 Z" fill="url(#sailFront)"/>
+</svg>
