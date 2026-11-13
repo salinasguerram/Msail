@@ -114,6 +114,8 @@ export function globeHtml({ background, language }: { background: string; langua
   // Hasta qué altura de la cámara se muestra cada nivel (1: océanos, 2: mares, 3: mares chicos).
   var SEA_MAX_ALTITUDE = { 1: 99, 2: 1.6, 3: 0.55 };
   var NEAR = ${NEAR_ALTITUDE};
+  // Duración de los cambios de vista (Explorar y volver al inicio): larga y con aceleración suave.
+  var TRANSITION_MS = 1400;
   var CLUSTER = ${CLUSTER_ALTITUDE};
   var STACK = 40; // separación vertical entre pines apilados (px)
   var OVERLAP = 34; // dos pines a menos de esto (px en pantalla) se pisan
@@ -329,14 +331,41 @@ export function globeHtml({ background, language }: { background: string; langua
     return Math.max(0.6, 1 / Math.sin(Math.atan(target)) - 1);
   }
 
-  function fit() {
+  // Centro del planeta corrido dentro del lienzo (el lienzo queda fijo y del tamaño de la pantalla).
+  // Se usa el corrimiento de la cámara: mover el planeta así es suave y no obliga a redimensionar nada.
+  var offset = { x: 0, y: 0 };
+  var offsetAnim = null;
+  function applyOffset() {
+    var w = window.innerWidth, h = window.innerHeight, cam = globe.camera();
+    if (offset.x || offset.y) cam.setViewOffset(w, h, -offset.x, -offset.y, w, h);
+    else cam.clearViewOffset();
+    cam.updateProjectionMatrix();
+  }
+  function ease(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  function moveCenter(to, ms) {
+    if (offsetAnim) cancelAnimationFrame(offsetAnim);
+    offsetAnim = null;
+    if (!ms) { offset = { x: to.x, y: to.y }; applyOffset(); return; }
+    var from = { x: offset.x, y: offset.y }, start = performance.now();
+    function step(now) {
+      var t = Math.min(1, (now - start) / ms), e = ease(t);
+      offset = { x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e };
+      applyOffset();
+      if (t < 1) offsetAnim = requestAnimationFrame(step);
+      else { offsetAnim = null; scheduleLayout(); }
+    }
+    offsetAnim = requestAnimationFrame(step);
+  }
+
+  function fit(ms) {
     globe.width(window.innerWidth).height(window.innerHeight);
+    applyOffset();
     if (!interacted) {
       var pov = globe.pointOfView();
-      globe.pointOfView({ lat: pov.lat, lng: pov.lng, altitude: fillAltitude() });
+      globe.pointOfView({ lat: pov.lat, lng: pov.lng, altitude: fillAltitude() }, ms || 0);
     }
   }
-  window.addEventListener('resize', fit);
+  window.addEventListener('resize', function () { fit(0); });
   globe.pointOfView({ lat: 20, lng: -30, altitude: 2.3 });
   fit();
 
@@ -542,13 +571,25 @@ export function globeHtml({ background, language }: { background: string; langua
     } else if (msg.type === 'wind') {
       drawWind(msg.cells);
     } else if (msg.type === 'frame') {
+      // La primera vez sin animación; después (se ocultan o vuelven las tarjetas) el planeta se desliza.
+      var first = !free;
       free = { w: msg.w, h: msg.h };
-      fit();
+      moveCenter({ x: msg.dx || 0, y: msg.dy || 0 }, first ? 0 : TRANSITION_MS);
+      fit(first ? 0 : TRANSITION_MS);
     } else if (msg.type === 'home') {
       // Centrar en la ubicación aproximada de la persona, si todavía no movió el planeta.
       // La primera vez sin animación (el planeta aparece ya centrado); si después cambia (ej. llega el país de la cuenta), con animación.
       if (!interacted) globe.pointOfView({ lat: msg.lat, lng: msg.lng, altitude: fillAltitude() }, homeSet ? 1200 : 0);
       homeSet = true;
+    } else if (msg.type === 'reset') {
+      // Logo de MSAIL: vuelve a la vista inicial (como al abrir la home) y se vuelve a ajustar solo al tamaño.
+      interacted = false;
+      globe.pointOfView({ lat: msg.lat, lng: msg.lng, altitude: fillAltitude() }, TRANSITION_MS);
+    } else if (msg.type === 'fly') {
+      // Botón Explorar: vuela hacia la zona de la persona, más cerca, para ver lo que hay alrededor.
+      interacted = true;
+      controls.autoRotate = false;
+      globe.pointOfView({ lat: msg.lat, lng: msg.lng, altitude: msg.altitude }, TRANSITION_MS);
     }
   }
 

@@ -133,12 +133,13 @@ export function usePlanet({ initialWind = false }: { initialWind?: boolean } = {
   );
 
   const goTo = (point: GlobePoint) => setZone({ lat: point.lat, lng: point.lng, pointId: point.id, iso: point.country });
-  const clearZone = () => {
+  const clearZone = useCallback(() => {
     setZone(null);
     setCountry(null);
-  };
+  }, []);
   const toggleLayer = (kind: MapKind) => setLayers((current) => ({ ...current, [kind]: !current[kind] }));
   const showWind = useCallback(() => setWindOn(true), []);
+  const hideWind = useCallback(() => setWindOn(false), []);
   const toggleWind = () => {
     setWindError(null);
     setWindOn((on) => !on);
@@ -164,7 +165,7 @@ export function usePlanet({ initialWind = false }: { initialWind?: boolean } = {
     nearby,
     closest,
     onTap,
-    wind: { on: windOn, toggle: toggleWind, show: showWind, hour: windHour, setHour: setWindHour, grid: windGrid, cells: wind, error: windError, retry: retryWind },
+    wind: { on: windOn, toggle: toggleWind, show: showWind, hide: hideWind, hour: windHour, setHour: setWindHour, grid: windGrid, cells: wind, error: windError, retry: retryWind },
   };
 }
 

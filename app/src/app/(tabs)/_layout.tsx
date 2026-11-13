@@ -7,6 +7,7 @@ import { Platform, Pressable, type ColorValue } from 'react-native';
 
 import { Brand } from '@/components/Brand';
 import { NotificationBell } from '@/components/NotificationBell';
+import { TopBar, useWideWeb } from '@/components/TopBar';
 import { colors, spacing } from '@/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -40,9 +41,13 @@ const hidden = { ...section, tabBarButton: () => null, tabBarItemStyle: { displa
 
 export default function TabsLayout() {
   const { t } = useTranslation();
+  // Web ancha: barra de navegación arriba (logo y secciones) en lugar de pestañas abajo y encabezado por sección.
+  const wide = useWideWeb();
   return (
     <Tabs
+      tabBar={wide ? (props) => <TopBar {...props} /> : undefined}
       screenOptions={{
+        ...(wide && { tabBarPosition: 'top' as const, headerShown: false }),
         headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.text,
         headerShadowVisible: false,

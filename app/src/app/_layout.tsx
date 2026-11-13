@@ -1,5 +1,7 @@
 import '@/i18n';
 
+import { Montserrat_600SemiBold, Montserrat_700Bold, Montserrat_800ExtraBold } from '@expo-google-fonts/montserrat';
+import { useFonts } from 'expo-font';
 import { Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -59,12 +61,14 @@ function RootStack() {
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
+  // Tipografía de la marca. Si falla la descarga se sigue con la del sistema.
+  const [fontsLoaded, fontError] = useFonts({ Montserrat_600SemiBold, Montserrat_700Bold, Montserrat_800ExtraBold });
 
   useEffect(() => {
     restoreLanguage().finally(() => setReady(true));
   }, []);
 
-  if (!ready) return <View style={{ flex: 1, backgroundColor: colors.background }} />;
+  if (!ready || (!fontsLoaded && !fontError)) return <View style={{ flex: 1, backgroundColor: colors.background }} />;
 
   return (
     <ThemeProvider value={navigationTheme}>

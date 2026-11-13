@@ -26,8 +26,12 @@ export type GlobeProps = {
   wind: WindCell[] | null;
   /** Ubicación aproximada de la persona: el planeta arranca centrado ahí. */
   home?: { lat: number; lng: number } | null;
+  /** Vuelo de la cámara hacia un lugar (botón Explorar). Cada objeto nuevo dispara un vuelo. */
+  focus?: { lat: number; lng: number; altitude: number } | null;
+  /** Cada objeto nuevo vuelve el planeta a la vista inicial, centrado en ese lugar. */
+  reset?: { lat: number; lng: number } | null;
   /** Tamaño del espacio libre (px) cuando el planeta es el fondo de una pantalla con contenido encima. */
-  frame?: { w: number; h: number } | null;
+  frame?: { w: number; h: number; dx?: number; dy?: number } | null;
   onTap: (tap: GlobeTap) => void;
   /** País de la zona elegida, en el idioma de la app (null si se tocó el mar). */
   onCountry?: (country: { name: string | null; iso: string | null }) => void;
@@ -43,7 +47,9 @@ export type ToGlobe =
   | { type: 'clear' }
   | { type: 'wind'; cells: WindCell[] | null }
   | { type: 'home'; lat: number; lng: number }
-  | { type: 'frame'; w: number; h: number };
+  | { type: 'fly'; lat: number; lng: number; altitude: number }
+  | { type: 'reset'; lat: number; lng: number }
+  | { type: 'frame'; w: number; h: number; dx: number; dy: number };
 
 /** Mensajes del planeta a la app. */
 export type FromGlobe =

@@ -12,7 +12,7 @@ import type { FromGlobe, GlobeProps, ToGlobe } from './types';
 const WebViewView = WebView as unknown as ComponentType<WebViewProps & { ref?: Ref<WebView> }>;
 
 /** Planeta 3D en iOS y Android: la página de globe.gl dentro de un WebView. La versión web está en Globe.web.tsx. */
-export function Globe({ points, layers, selected, wind, home, frame, onTap, onCountry, style, accessibilityLabel }: GlobeProps) {
+export function Globe({ points, layers, selected, wind, home, focus, reset, frame, onTap, onCountry, style, accessibilityLabel }: GlobeProps) {
   const { i18n } = useTranslation();
   const webview = useRef<WebView>(null);
   // Sube cada vez que la página avisa que está lista (también después de recargarse): ahí se le manda todo.
@@ -39,13 +39,23 @@ export function Globe({ points, layers, selected, wind, home, frame, onTap, onCo
   // El espacio libre va antes que la ubicación: así el centrado inicial ya usa el zoom correcto.
   const frameW = frame?.w ?? 0;
   const frameH = frame?.h ?? 0;
+  const frameDx = Math.round(frame?.dx ?? 0);
+  const frameDy = Math.round(frame?.dy ?? 0);
   useEffect(() => {
-    if (ready && frameW > 0 && frameH > 0) send({ type: 'frame', w: frameW, h: frameH });
-  }, [ready, frameW, frameH]);
+    if (ready && frameW > 0 && frameH > 0) send({ type: 'frame', w: frameW, h: frameH, dx: frameDx, dy: frameDy });
+  }, [ready, frameW, frameH, frameDx, frameDy]);
 
   useEffect(() => {
     if (ready && home) send({ type: 'home', lat: home.lat, lng: home.lng });
   }, [ready, home]);
+
+  useEffect(() => {
+    if (ready && focus) send({ type: 'fly', lat: focus.lat, lng: focus.lng, altitude: focus.altitude });
+  }, [ready, focus]);
+
+  useEffect(() => {
+    if (ready && reset) send({ type: 'reset', lat: reset.lat, lng: reset.lng });
+  }, [ready, reset]);
 
   function onMessage(event: WebViewMessageEvent) {
     let msg: FromGlobe;

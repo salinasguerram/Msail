@@ -35,7 +35,8 @@
           "photosPermission": "MSAIL LEAGUE usa tus fotos para tu perfil de navegante y tus embarcaciones.",
           "cameraPermission": "MSAIL LEAGUE usa la cámara para sacar fotos de tu perfil y tus embarcaciones."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "scheme": "msailleague",
     "backgroundColor": "#050b18",
