@@ -188,16 +188,17 @@ GOOGLE_CLIENT_IDS = env_list("GOOGLE_CLIENT_IDS")
 APPLE_CLIENT_IDS = env_list("APPLE_CLIENT_IDS")
 
 
-# Email: en local se imprime en la consola; en producción sale por Twilio SendGrid (SMTP).
-# Con SENDGRID_API_KEY (o EMAIL_HOST_PASSWORD) definida se envía por SMTP; si no, se muestra en la consola.
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD") or env("SENDGRID_API_KEY", "")
-EMAIL_BACKEND = env(
-    "EMAIL_BACKEND",
-    "django.core.mail.backends.smtp.EmailBackend" if EMAIL_HOST_PASSWORD else "django.core.mail.backends.console.EmailBackend",
-)
-EMAIL_HOST = env("EMAIL_HOST", "smtp.sendgrid.net")
-EMAIL_PORT = int(env("EMAIL_PORT", "587"))
-EMAIL_HOST_USER = env("EMAIL_HOST_USER", "apikey")
+# Email: proveedor según EMAIL_PROVIDER o la clave cargada (Resend, SendGrid, Brevo o SMTP propio); sin clave,
+# se muestra en la consola. Ver config/email.py y .env.example.
+from config.email import email_settings  # noqa: E402
+
+_email = email_settings(env)
+EMAIL_PROVIDER = _email["EMAIL_PROVIDER"]
+EMAIL_BACKEND = _email["EMAIL_BACKEND"]
+EMAIL_HOST = _email["EMAIL_HOST"]
+EMAIL_PORT = _email["EMAIL_PORT"]
+EMAIL_HOST_USER = _email["EMAIL_HOST_USER"]
+EMAIL_HOST_PASSWORD = _email["EMAIL_HOST_PASSWORD"]
 EMAIL_USE_TLS = True
 EMAIL_TIMEOUT = 15
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "MSAIL LEAGUE <no-reply@msailleague.com>")

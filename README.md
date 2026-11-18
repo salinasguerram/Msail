@@ -42,7 +42,7 @@ python -m venv .venv
 
 - API: `http://localhost:8000/api/`
 - Panel de administración: `http://localhost:8000/admin/`
-- Sin `.env`, usa SQLite local y muestra los emails en la consola. Ver `backend/.env.example` para Supabase, SendGrid y login social.
+- Sin `.env`, usa SQLite local y muestra los emails en la consola. Ver `backend/.env.example` para Supabase, el envío de emails y login social.
 
 **App**
 
@@ -67,7 +67,7 @@ cd backend
 | Servicio | Uso |
 |---|---|
 | Supabase | Base de datos PostgreSQL y almacenamiento de fotos |
-| Twilio SendGrid | Emails de verificación y recuperación |
+| Resend (o SendGrid / Brevo) | Emails: verificación, recuperación, avisos y solicitudes. Ver `backend/.env.example` |
 | Google Cloud / Apple Developer | Login social y publicación |
 | Expo (EAS) | Builds y envío a las tiendas |
 
