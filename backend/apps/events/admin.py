@@ -180,7 +180,7 @@ class EventAdmin(ModelAdmin):
         ("Organización", {"fields": ("organizer_club", "organizer_name", "boat_classes")}),
         ("Servicios", {"fields": ("professionals",), "description": "Profesionales que se muestran en la página de la regata."}),
         ("Inscripción", {"fields": ("entry_url", "entry_deadline")}),
-        ("Información", {"fields": ("description", "website")}),
+        ("Información", {"fields": ("cover", "description", "website")}),
         ("Resultados", {"fields": ("results_url", "results_partial")}),
     )
 

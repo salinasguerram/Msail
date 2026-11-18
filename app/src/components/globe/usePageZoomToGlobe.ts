@@ -17,16 +17,21 @@ function canScroll(target: EventTarget | null, deltaY: number) {
 }
 
 /**
- * Web: mientras `active` (Explorar a la vista), los gestos de zoom (Ctrl + rueda, pellizco en el trackpad o con dos
- * dedos) no agrandan la página: hacen zoom en el planeta, aunque empiecen sobre el texto o los botones.
+ * Web: los gestos de zoom (Ctrl + rueda, pellizco en el trackpad o con dos dedos) nunca agrandan la página.
+ * - 'explore' (Explorar): hacen zoom en el planeta, y la rueda sola también (salvo sobre algo que se desplaza).
+ * - 'place' (Clima, Eventos, Servicios: el planeta de cerca detrás): el zoom va al planeta; la rueda sola desplaza.
+ * - 'block' (las demás pantallas): el zoom no hace nada; la rueda sola desplaza como siempre.
  */
-export function usePageZoomToGlobe(active: boolean) {
+export function usePageZoomToGlobe(mode: 'explore' | 'place' | 'block') {
   useEffect(() => {
-    if (Platform.OS !== 'web' || !active) return undefined;
+    if (Platform.OS !== 'web') return undefined;
+    const toGlobe = mode !== 'block';
 
     const onWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey && canScroll(e.target, e.deltaY)) return;
+      // Rueda sola: en Explorar mueve el planeta; en el resto, desplaza la pantalla (no se toca).
+      if (!e.ctrlKey && (mode !== 'explore' || canScroll(e.target, e.deltaY))) return;
       e.preventDefault();
+      if (!toGlobe) return;
       const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
       // El pellizco del trackpad llega como Ctrl + rueda con pasos chicos: se amplifica.
       zoomGlobe(Math.exp(delta * (e.ctrlKey ? 0.01 : 0.0015)));
@@ -41,7 +46,7 @@ export function usePageZoomToGlobe(active: boolean) {
       if (e.touches.length !== 2) return;
       e.preventDefault();
       const d = distance(e.touches);
-      if (last && d) zoomGlobe(last / d);
+      if (toGlobe && last && d) zoomGlobe(last / d);
       last = d;
     };
     // Safari (iPhone/iPad) hace zoom de la página con sus propios eventos de gesto.
@@ -60,5 +65,5 @@ export function usePageZoomToGlobe(active: boolean) {
       window.removeEventListener('gesturestart', block);
       window.removeEventListener('gesturechange', block);
     };
-  }, [active]);
+  }, [mode]);
 }

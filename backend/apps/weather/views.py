@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 from apps.events.models import Event
 from apps.geo.models import Region
 
-from .services import ForecastUnavailable, get_forecast, get_wind_grid
+from .services import ForecastUnavailable, get_area, get_forecast, get_wind_grid
 
 HERE_GRID = 0.25  # "Tu ubicación": las coordenadas se redondean a una grilla (~25 km) y comparten caché
 HERE_NEAR_KM = 300  # hasta qué distancia se nombra la zona de navegación más cercana
@@ -142,6 +142,30 @@ class ForecastView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         return Response({"place": place, **forecast})
+
+
+class AreaView(APIView):
+    """
+    Clima marino de una zona (?place= igual que el pronóstico): viento, olas y corrientes en una grilla fina
+    alrededor del lugar, para las próximas 24 h cada 3 h. Lo usa la pantalla Clima sobre el planeta.
+    """
+
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "weather"
+
+    def get(self, request):
+        place = find_place(request.query_params.get("place"))
+        if not place:
+            return Response({"detail": "Elegí una sede de regata, una zona de navegación o tu ubicación."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            area = get_area(place["latitude"], place["longitude"])
+        except ForecastUnavailable:
+            return Response(
+                {"detail": "El servicio de pronóstico no responde. Probá de nuevo en unos minutos."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return Response({"place": place, **area})
 
 
 class WindGridView(APIView):

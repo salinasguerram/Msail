@@ -13,6 +13,9 @@ export type GlobeTap = {
 /** Punto listo para el planeta: con su mini resumen ya escrito en el idioma de la app. */
 export type GlobePoint = MapPoint & { typeLabel: string; summary: string };
 
+/** Punto de la capa de clima marino: fuerza (nudos o metros) y dirección en grados. */
+export type FieldCell = { lat: number; lng: number; value: number | null; direction: number | null };
+
 /** Celda de la grilla de viento para la hora elegida. */
 export type WindCell = { lat: number; lng: number; speed: number | null; direction: number | null };
 
@@ -30,8 +33,13 @@ export type GlobeProps = {
   focus?: { lat: number; lng: number; altitude: number } | null;
   /** Cada objeto nuevo vuelve el planeta a la vista inicial, centrado en ese lugar. */
   reset?: { lat: number; lng: number } | null;
-  /** De fondo (fuera de Explorar): gira despacio y se acomoda al tamaño de fondo; al volver, regresa a la vista anterior. */
-  idle?: boolean;
+  /**
+   * Explorar (se puede tocar), de fondo (fuera de Explorar: gira despacio) o en un lugar (Clima marino: cerca y quieto).
+   * Al volver a Explorar regresa a la vista que se dejó.
+   */
+  view?: { mode: 'explore' | 'background' | 'place'; lat?: number; lng?: number; altitude?: number };
+  /** Clima marino de una zona: viento, olas o corriente (tiene prioridad sobre el viento de todo el planeta). */
+  field?: { kind: 'wind' | 'waves' | 'currents'; step: number; cells: FieldCell[] } | null;
   /** Tamaño del espacio libre (px) cuando el planeta es el fondo de una pantalla con contenido encima. */
   frame?: { w: number; h: number; dx?: number; dy?: number } | null;
   onTap: (tap: GlobeTap) => void;
@@ -52,7 +60,8 @@ export type ToGlobe =
   | { type: 'fly'; lat: number; lng: number; altitude: number }
   | { type: 'reset'; lat: number; lng: number }
   | { type: 'zoom'; factor: number }
-  | { type: 'idle'; on: boolean }
+  | { type: 'view'; mode: 'explore' | 'background' | 'place'; lat?: number; lng?: number; altitude?: number }
+  | { type: 'field'; kind: 'wind' | 'waves' | 'currents'; step: number; cells: FieldCell[] | null }
   | { type: 'frame'; w: number; h: number; dx: number; dy: number };
 
 /** Mensajes del planeta a la app. */

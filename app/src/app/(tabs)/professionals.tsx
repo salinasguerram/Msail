@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -31,7 +31,8 @@ const EMPTY: ProfessionalFilterOptions = { specialties: [], countries: [] };
 export default function ProfessionalsScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const [filters, setFilters] = useState<ProfessionalFilters>({});
+  const params = useLocalSearchParams<{ specialty?: string }>();
+  const [filters, setFilters] = useState<ProfessionalFilters>({ specialty: params.specialty ?? null });
   const [search, setSearch] = useState('');
   const [options, setOptions] = useState<ProfessionalFilterOptions>(EMPTY);
 

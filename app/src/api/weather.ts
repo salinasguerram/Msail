@@ -38,6 +38,7 @@ export type CurrentWeather = {
   temp: number | null;
   weather_code: number | null;
   wind_kn: number | null;
+  gusts_kn?: number | null;
   wind_direction: number | null;
   /** 1 de día, 0 de noche. */
   is_day: number | null;
@@ -66,5 +67,38 @@ export type WindGrid = {
   points: { lat: number; lng: number; speed: (number | null)[]; direction: (number | null)[] }[];
   source: { name: string; url: string; license: string };
 };
+
+/** Clima marino de una zona: grilla de 15 x 15 puntos alrededor del lugar (~800 km), próximas 24 h cada 3 h. */
+export type AreaPoint = {
+  lat: number;
+  lng: number;
+  /** Nudos; dirección de donde viene. */
+  wind: (number | null)[];
+  wind_dir: (number | null)[];
+  gusts: (number | null)[];
+  /** Metros; dirección de donde vienen las olas. */
+  wave: (number | null)[];
+  wave_dir: (number | null)[];
+  /** Nudos; dirección hacia donde va la corriente. */
+  current: (number | null)[];
+  current_dir: (number | null)[];
+};
+
+export type AreaForecast = {
+  place: WeatherPlace;
+  /** Hora UTC de cada columna. */
+  times: string[];
+  /** Diferencia de la hora local del lugar con UTC. */
+  utc_offset_seconds: number;
+  center: { lat: number; lng: number };
+  /** Distancia entre puntos de la grilla, en grados. */
+  step?: number;
+  points: AreaPoint[];
+  has_waves: boolean;
+  has_currents: boolean;
+  source: { name: string; url: string; license: string };
+};
+
+export const getArea = (place: string) => api<AreaForecast>(`/weather/area/?place=${encodeURIComponent(place)}`, { auth: false });
 
 export const getWindGrid = () => api<WindGrid>('/weather/wind/', { auth: false });

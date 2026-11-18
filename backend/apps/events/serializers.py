@@ -18,10 +18,13 @@ class EventListSerializer(serializers.ModelSerializer):
     organizer_club = serializers.IntegerField(source="organizer_club_id", read_only=True)
     boat_classes = serializers.SlugRelatedField(slug_field="slug", many=True, read_only=True)
     status = serializers.CharField(read_only=True)
+    # Foto de la tarjeta: la portada cargada o, si no hay, la primera foto de la galería.
+    cover = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
         fields = [
+            "cover",
             "id",
             "slug",
             "name",
@@ -40,6 +43,14 @@ class EventListSerializer(serializers.ModelSerializer):
             "latitude",
             "longitude",
         ]
+
+
+    def get_cover(self, event):
+        request = self.context.get("request")
+        if event.cover:
+            return absolute(request, event.cover_thumb or event.cover)
+        photo = next((m for m in event.media.all() if m.image), None) if hasattr(event, "media") else None
+        return absolute(request, photo.thumbnail or photo.image) if photo else None
 
 
 class EventCategorySerializer(serializers.ModelSerializer):

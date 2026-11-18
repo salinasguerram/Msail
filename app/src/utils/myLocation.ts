@@ -1,5 +1,8 @@
 import * as Location from 'expo-location';
 
+import { getCountries } from '@/api/catalogs';
+import { approximateLocation } from '@/utils/homeLocation';
+
 export type Coords = { lat: number; lng: number };
 
 /**
@@ -17,6 +20,21 @@ export async function deviceLocation(ask: boolean): Promise<Coords | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Dónde está la persona: el dispositivo (si `ask`, pide permiso; si no, solo si ya lo dio) o, si no se puede,
+ * la ubicación aproximada (país de la cuenta o zona horaria).
+ */
+export async function locateMe(userCountry: string | null | undefined, ask: boolean): Promise<Coords> {
+  const precise = await deviceLocation(ask);
+  if (precise) return precise;
+  let country = null;
+  if (userCountry) {
+    const list = await getCountries().catch(() => []);
+    country = list.find((c) => c.iso_code === userCountry) ?? null;
+  }
+  return approximateLocation(country);
 }
 
 /** Lugar de pronóstico "tu ubicación" (el backend lo redondea a una grilla de ~25 km). */

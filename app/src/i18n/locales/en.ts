@@ -2,6 +2,7 @@ import type { Translations } from './es';
 
 const en: Translations = {
   common: {
+    comingSoon: 'Coming soon',
     comingWeek: 'Coming in week {{week}}',
     or: 'or',
     close: 'Close',
@@ -9,6 +10,8 @@ const en: Translations = {
     cancel: 'Cancel',
   },
   nav: {
+    store: 'Shop',
+    ranking: 'Ranking',
     services: 'Services & berths',
     msailing: 'MSailing',
     home: 'Home',
@@ -22,6 +25,10 @@ const en: Translations = {
     search: 'Search regattas',
   },
   services: {
+    hubTitle: 'Sailing services',
+    backToServices: 'Back to Services',
+    featured: '{{specialty}} in {{city}}',
+    categories: { repair: 'Rigging & repair', berths: 'Marinas & berths', crew: 'Crews', training: 'Sailing training' },
     title: 'Services & berths',
     berths: 'Berths & overnight',
     professionals: 'Professionals',
@@ -60,7 +67,28 @@ const en: Translations = {
     whereFundsGo: 'Where the funds go',
     noSupports: 'No contributions published yet.',
   },
+  store: {
+    title: 'Sailing shop',
+    description: 'Rigging, deck gear and sailing clothes, shipped to your port.',
+  },
+  ranking: {
+    title: 'Sports ranking',
+    description: 'The top sailors of the season, by regattas and trackdays.',
+  },
+  crewDirectory: {
+    title: 'Crews',
+    intro: 'Sailors available to crew, with their positions on board and the classes they sail.',
+    search: 'Search by name or city',
+    allRoles: 'All positions',
+    empty: 'No sailors available with those filters yet.',
+    joinText: 'Want to crew? Tick «Available to crew» in your profile to show up here.',
+    joinEdit: 'Edit my profile',
+    joinLogin: 'Sign up or log in',
+  },
   tabs: {
+    services: 'Services',
+    store: 'Shop',
+    ranking: 'Ranking',
     events: 'Events',
     notifications: 'Notifications',
     explore: 'Explore',
@@ -70,6 +98,13 @@ const en: Translations = {
     profile: 'Profile',
   },
   explore: {
+    sailingNews: 'Sailing news',
+    weatherToday: 'Weather today',
+    gusts: 'Gusts {{value}} kn',
+    today: 'Today in sailing',
+    seeAllNews: 'See all',
+    live: 'Live',
+    onPlanet: 'See on the planet',
     services: 'Services & berths',
     msailing: 'MSailing',
     newsTile: 'News',
@@ -340,6 +375,11 @@ const en: Translations = {
     confirmRemove: 'Remove {{name}} from the crew?',
   },
   calendar: {
+    sections: { regattas: 'Regattas', trackdays: 'Trackdays', results: 'Results' },
+    seeEvent: 'See event',
+    filters: 'Filters',
+    trackdaysTitle: 'Sailing trackdays',
+    trackdaysText: 'Training sessions with each boat GPS track, its speed and the session results.',
     search: 'Search regattas',
     searchPlaceholder: 'Search regattas, countries, classes…',
     clearSearch: 'Clear search',
@@ -662,6 +702,11 @@ const en: Translations = {
     stars_other: '{{count}} stars',
   },
   weather: {
+    fiveDays: '5-day forecast',
+    noLayerData: 'No data at this point',
+    showDetails: 'See each day in detail',
+    hideDetails: 'Hide the detail',
+    layers: { wind: 'Wind', currents: 'Currents', waves: 'Waves' },
     here: 'My location',
     hereHint: 'Forecast where you are now',
     place: 'Venue or area',

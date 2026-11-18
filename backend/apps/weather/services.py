@@ -7,7 +7,8 @@ Cada lugar se guarda en caché una hora para no consultar de más.
 """
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
+from datetime import timezone as dt_timezone
 
 import requests
 from django.core.cache import cache
@@ -37,6 +38,7 @@ CURRENT_FIELDS = {
     "temperature_2m": "temp",
     "weather_code": "weather_code",
     "wind_speed_10m": "wind_kn",
+    "wind_gusts_10m": "gusts_kn",
     "wind_direction_10m": "wind_direction",
     "is_day": "is_day",
 }
@@ -177,6 +179,111 @@ def get_wind_grid():
         "times": [f"{t}Z" for t in wanted],
         "offsets": list(WIND_OFFSETS),
         "points": points,
+        "source": SOURCE,
+    }
+    cache.set(key, result, CACHE_SECONDS)
+    return result
+
+
+# ---------- Clima marino de una zona (grilla fina por hora)
+
+AREA_SIZE = 15  # puntos por lado (15 x 15 = 225)
+AREA_STEP = 0.5  # grados entre puntos (~55 km): unos 800 km de lado, lo que se ve en pantalla con el planeta de cerca
+AREA_HOURS = 24
+AREA_EVERY = 3  # una columna cada 3 horas (8 en total)
+KMH_TO_KN = 1 / 1.852
+
+
+def area_coords(latitude, longitude):
+    half = AREA_SIZE // 2
+    return [
+        (round(latitude + (row - half) * AREA_STEP, 3), round(longitude + (col - half) * AREA_STEP, 3))
+        for row in range(AREA_SIZE)
+        for col in range(AREA_SIZE)
+    ]
+
+
+def _hourly_list(url, coords, fields, extra):
+    params = {
+        "latitude": ",".join(str(lat) for lat, _ in coords),
+        "longitude": ",".join(str(lng) for _, lng in coords),
+        "hourly": ",".join(fields),
+        "forecast_hours": AREA_HOURS,
+        "timeformat": "unixtime",
+        "timezone": "auto",
+        **extra,
+    }
+    response = requests.get(url, params=params, timeout=30)
+    response.raise_for_status()
+    data = response.json()
+    if isinstance(data, dict):  # un solo punto: Open-Meteo devuelve un objeto en vez de una lista
+        data = [data]
+    if not isinstance(data, list) or len(data) != len(coords):
+        raise ValueError("respuesta inesperada")
+    return data
+
+
+def get_area(latitude, longitude):
+    """
+    Viento, olas y corrientes en una grilla de 15 x 15 puntos alrededor del lugar, para las próximas 24 h cada 3 h.
+    Viento y rachas en nudos; olas en metros; corriente en nudos. Las direcciones son de dónde viene (viento, olas)
+    o hacia dónde va (corriente), en grados. Sin datos del mar (tierra adentro) esos valores quedan en None.
+    """
+    lat, lng = round(float(latitude), 2), round(float(longitude), 2)
+    key = f"area:{lat}:{lng}:{timezone.now():%Y%m%d%H}"
+    cached = cache.get(key)
+    if cached:
+        return cached
+
+    coords = area_coords(lat, lng)
+    try:
+        weather = _hourly_list(
+            FORECAST_URL, coords, ["wind_speed_10m", "wind_direction_10m", "wind_gusts_10m"], {"wind_speed_unit": "kn"}
+        )
+    except (requests.RequestException, ValueError) as exc:
+        logger.warning("Open-Meteo (zona) falló para %s,%s: %s", lat, lng, exc)
+        raise ForecastUnavailable from exc
+    try:
+        marine = _hourly_list(
+            MARINE_URL, coords, ["wave_height", "wave_direction", "ocean_current_velocity", "ocean_current_direction"], {}
+        )
+    except (requests.RequestException, ValueError) as exc:
+        logger.info("Open-Meteo (mar, zona) falló para %s,%s: %s", lat, lng, exc)
+        marine = [{} for _ in coords]
+
+    times = (weather[0].get("hourly") or {}).get("time") or []
+    picks = list(range(0, min(len(times), AREA_HOURS), AREA_EVERY))
+    if not picks:
+        raise ForecastUnavailable
+
+    def series(item, field, factor=1.0):
+        values = (item.get("hourly") or {}).get(field) or []
+        return [round(values[i] * factor, 2) if i < len(values) and values[i] is not None else None for i in picks]
+
+    points = []
+    for (plat, plng), w, m in zip(coords, weather, marine):
+        points.append(
+            {
+                "lat": plat,
+                "lng": plng,
+                "wind": series(w, "wind_speed_10m"),
+                "wind_dir": series(w, "wind_direction_10m"),
+                "gusts": series(w, "wind_gusts_10m"),
+                "wave": series(m, "wave_height"),
+                "wave_dir": series(m, "wave_direction"),
+                "current": series(m, "ocean_current_velocity", KMH_TO_KN),
+                "current_dir": series(m, "ocean_current_direction"),
+            }
+        )
+    result = {
+        # Horas en UTC; utc_offset_seconds es la hora local del lugar.
+        "times": [datetime.fromtimestamp(times[i], tz=dt_timezone.utc).isoformat() for i in picks],
+        "utc_offset_seconds": weather[0].get("utc_offset_seconds", 0),
+        "center": {"lat": lat, "lng": lng},
+        "step": AREA_STEP,
+        "points": points,
+        "has_waves": any(v is not None for p in points for v in p["wave"]),
+        "has_currents": any(v is not None for p in points for v in p["current"]),
         "source": SOURCE,
     }
     cache.set(key, result, CACHE_SECONDS)

@@ -105,7 +105,7 @@ class WeatherApiTests(APITestCase):
 
     def test_here_rounds_to_grid_and_names_nearest_zone(self):
         zone = self.zone
-        weather = {**WEATHER, "current": {"temperature_2m": 21.4, "weather_code": 2, "wind_speed_10m": 11.2, "wind_direction_10m": 200, "is_day": 1}}
+        weather = {**WEATHER, "current": {"temperature_2m": 21.4, "weather_code": 2, "wind_speed_10m": 11.2, "wind_gusts_10m": 18.4, "wind_direction_10m": 200, "is_day": 1}}
         with mock.patch("apps.weather.services.requests.get", side_effect=fake_get(weather=weather)) as get:
             lat, lng = float(zone.latitude) + 0.06, float(zone.longitude) - 0.04
             response = self.client.get("/api/weather/forecast/", {"place": f"here:{lat},{lng}"})
@@ -118,6 +118,7 @@ class WeatherApiTests(APITestCase):
         self.assertIn(zone.name, place["subtitle"])
         self.assertEqual(response.data["current"]["temp"], 21.4)
         self.assertEqual(response.data["current"]["wind_kn"], 11.2)
+        self.assertEqual(response.data["current"]["gusts_kn"], 18.4)
 
     def test_here_rejects_bad_coordinates(self):
         for bad in ("here:", "here:abc,def", "here:95,10", "here:10,200", "here:nan,1"):
@@ -170,3 +171,56 @@ class WindGridTests(APITestCase):
         bad = mock.Mock(raise_for_status=mock.Mock(), json=mock.Mock(return_value=self.fake_grid(count=3)))
         with mock.patch("apps.weather.services.requests.get", return_value=bad):
             self.assertEqual(self.client.get("/api/weather/wind/").status_code, 503)
+
+
+@override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "area-tests"}})
+class AreaApiTests(APITestCase):
+    """Clima marino de una zona: grilla de 15 x 15 puntos, cada 3 h, con viento, olas y corrientes."""
+
+    def setUp(self):
+        cache.clear()
+
+    def fake(self, marine_down=False):
+        hours = list(range(1_800_000_000, 1_800_000_000 + 24 * 3600, 3600))
+
+        def _get(url, params=None, timeout=None):
+            count = len(params["latitude"].split(","))
+            response = mock.Mock()
+            response.raise_for_status = mock.Mock()
+            if "marine" in url:
+                if marine_down:
+                    raise requests.ConnectionError("mar caído")
+                hourly = {"time": hours, "wave_height": [1.2] * 24, "wave_direction": [180] * 24,
+                          "ocean_current_velocity": [1.852] * 24, "ocean_current_direction": [90] * 24}
+            else:
+                hourly = {"time": hours, "wind_speed_10m": list(range(24)), "wind_direction_10m": [225] * 24, "wind_gusts_10m": [18] * 24}
+            response.json.return_value = [{"utc_offset_seconds": -10800, "hourly": hourly} for _ in range(count)]
+            return response
+
+        return _get
+
+    def test_grid_every_three_hours_in_knots(self):
+        with mock.patch("apps.weather.services.requests.get", side_effect=self.fake()) as get:
+            response = self.client.get("/api/weather/area/", {"place": "here:-34.6,-58.4"})
+        self.assertEqual(response.status_code, 200)
+        data = response.data
+        self.assertEqual(len(data["points"]), 225)
+        self.assertEqual(data["step"], 0.5)
+        self.assertEqual(len(data["times"]), 8)
+        self.assertEqual(data["utc_offset_seconds"], -10800)
+        center = data["points"][112]  # el del medio
+        self.assertEqual((center["lat"], center["lng"]), (data["center"]["lat"], data["center"]["lng"]))
+        self.assertEqual(center["wind"][:3], [0, 3, 6])  # una de cada 3 horas
+        self.assertEqual(center["current"][0], 1.0)  # 1,852 km/h = 1 nudo
+        self.assertTrue(data["has_waves"] and data["has_currents"])
+        self.assertEqual(get.call_count, 2)  # un pedido para el tiempo y otro para el mar, con los 225 puntos
+
+    def test_without_marine_data_still_has_wind(self):
+        with mock.patch("apps.weather.services.requests.get", side_effect=self.fake(marine_down=True)):
+            data = self.client.get("/api/weather/area/", {"place": "here:-34.6,-58.4"}).data
+        self.assertFalse(data["has_waves"])
+        self.assertIsNone(data["points"][0]["wave"][0])
+        self.assertEqual(data["points"][0]["gusts"][0], 18)
+
+    def test_unknown_place_is_404(self):
+        self.assertEqual(self.client.get("/api/weather/area/", {"place": "zone:999999"}).status_code, 404)

@@ -1,5 +1,6 @@
 const es = {
   common: {
+    comingSoon: 'Próximamente',
     comingWeek: 'Llega en la semana {{week}}',
     or: 'o',
     close: 'Cerrar',
@@ -7,6 +8,8 @@ const es = {
     cancel: 'Cancelar',
   },
   nav: {
+    store: 'Tienda',
+    ranking: 'Ranking',
     services: 'Servicios y amarres',
     msailing: 'MSailing',
     home: 'Inicio',
@@ -20,6 +23,10 @@ const es = {
     search: 'Buscar regatas',
   },
   services: {
+    hubTitle: 'Servicios náuticos',
+    backToServices: 'Volver a Servicios',
+    featured: '{{specialty}} en {{city}}',
+    categories: { repair: 'Rigging y reparación', berths: 'Marinas y amarres', crew: 'Tripulaciones', training: 'Formación en vela' },
     title: 'Servicios y amarres',
     berths: 'Amarres y pernocte',
     professionals: 'Profesionales',
@@ -58,7 +65,28 @@ const es = {
     whereFundsGo: 'A dónde van los fondos',
     noSupports: 'Todavía no hay aportes publicados.',
   },
+  store: {
+    title: 'Tienda náutica',
+    description: 'Rigging, cubierta y ropa para navegar, con envío a tu puerto.',
+  },
+  ranking: {
+    title: 'Ranking deportivo',
+    description: 'Los veleristas destacados de la temporada, por regatas y trackdays.',
+  },
+  crewDirectory: {
+    title: 'Tripulaciones',
+    intro: 'Navegantes que se ofrecen para tripular, con sus puestos a bordo y las clases que navegan.',
+    search: 'Buscar por nombre o ciudad',
+    allRoles: 'Todos los puestos',
+    empty: 'Todavía no hay navegantes disponibles con esos filtros.',
+    joinText: '¿Querés tripular? Marcá «Disponible para tripular» en tu perfil y aparecés acá.',
+    joinEdit: 'Editar mi perfil',
+    joinLogin: 'Crear cuenta o entrar',
+  },
   tabs: {
+    services: 'Servicios',
+    store: 'Tienda',
+    ranking: 'Ranking',
     events: 'Eventos',
     notifications: 'Notificaciones',
     explore: 'Explorar',
@@ -68,6 +96,13 @@ const es = {
     profile: 'Perfil',
   },
   explore: {
+    sailingNews: 'Noticias de vela',
+    weatherToday: 'Clima de hoy',
+    gusts: 'Rachas {{value}} kn',
+    today: 'Hoy en la vela',
+    seeAllNews: 'Ver todas',
+    live: 'En vivo',
+    onPlanet: 'Ver en el planeta',
     services: 'Servicios y amarres',
     msailing: 'MSailing',
     newsTile: 'Noticias',
@@ -338,6 +373,11 @@ const es = {
     confirmRemove: '¿Quitar a {{name}} de la tripulación?',
   },
   calendar: {
+    sections: { regattas: 'Regatas', trackdays: 'Trackdays', results: 'Resultados' },
+    seeEvent: 'Ver evento',
+    filters: 'Filtros',
+    trackdaysTitle: 'Trackdays de vela',
+    trackdaysText: 'Sesiones de entrenamiento con los recorridos GPS de cada barco, su velocidad y los resultados de la sesión.',
     search: 'Buscar regatas',
     searchPlaceholder: 'Buscar regatas, países, clases…',
     clearSearch: 'Borrar búsqueda',
@@ -660,6 +700,11 @@ const es = {
     stars_other: '{{count}} estrellas',
   },
   weather: {
+    fiveDays: 'Pronóstico de 5 días',
+    noLayerData: 'Sin datos en este punto',
+    showDetails: 'Ver el detalle de cada día',
+    hideDetails: 'Ocultar el detalle',
+    layers: { wind: 'Viento', currents: 'Corriente', waves: 'Oleaje' },
     here: 'Mi ubicación',
     hereHint: 'Pronóstico donde estás ahora',
     place: 'Sede o zona',

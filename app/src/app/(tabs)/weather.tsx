@@ -6,17 +6,18 @@ import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'r
 
 import { getCountries } from '@/api/catalogs';
 import { getMyProfile } from '@/api/profiles';
-import { getForecast, getWeatherPlaces, type Forecast, type ForecastDay, type WeatherPlace } from '@/api/weather';
+import { getArea, getForecast, getWeatherPlaces, type AreaForecast, type Forecast, type ForecastDay, type WeatherPlace } from '@/api/weather';
 import { useAuth } from '@/auth/AuthContext';
 import { errorMessage } from '@/auth/errors';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { MarineWeather } from '@/components/MarineWeather';
 import { Screen } from '@/components/Screen';
 import { SelectField, type SelectOption } from '@/components/SelectField';
 import { colors, radius, spacing, typography } from '@/theme';
 import { distanceKm } from '@/utils/geo';
 import { approximateLocation } from '@/utils/homeLocation';
-import { deviceLocation, herePlace, type Coords } from '@/utils/myLocation';
+import { herePlace, locateMe, type Coords } from '@/utils/myLocation';
 import { weatherIcon } from '@/utils/weatherIcon';
 
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
@@ -38,18 +39,6 @@ const round = (value: number | null) => (value === null ? '–' : String(Math.ro
  * 1. la región náutica del perfil de navegante (si es una de las zonas con pronóstico);
  * 2. la zona más cercana al país de la cuenta o, sin sesión, a la ubicación aproximada (zona horaria).
  */
-/** Tu ubicación: la del dispositivo (pide permiso) o, si no se puede, la aproximada (país de la cuenta o zona horaria). */
-async function resolveHere(userCountry: string | null | undefined): Promise<Coords> {
-  const precise = await deviceLocation(true);
-  if (precise) return precise;
-  let country = null;
-  if (userCountry) {
-    const list = await getCountries().catch(() => []);
-    country = list.find((c) => c.iso_code === userCountry) ?? null;
-  }
-  return approximateLocation(country);
-}
-
 async function defaultPlace(zones: WeatherPlace[], userCountry: string | null | undefined, signedIn: boolean) {
   if (!zones.length) return null;
   if (signedIn) {
@@ -123,11 +112,6 @@ export default function WeatherScreen() {
         }}
         placeholder={t('weather.pickPlace')}
       />
-      <Button
-        title={t('planet.wind.openMap')}
-        variant="secondary"
-        onPress={() => router.navigate({ pathname: '/', params: { wind: '1' } })}
-      />
       {placesError ? <Text style={{ color: colors.danger }}>{errorMessage(placesError, t)}</Text> : null}
       {place === 'here' ? (
         <HereForecast userCountry={user?.country} />
@@ -145,7 +129,7 @@ function HereForecast({ userCountry }: { userCountry: string | null | undefined 
   const [coords, setCoords] = useState<Coords | null>(null);
   useEffect(() => {
     let active = true;
-    resolveHere(userCountry).then((c) => active && setCoords(c));
+    locateMe(userCountry, true).then((c) => active && setCoords(c));
     return () => {
       active = false;
     };
@@ -158,9 +142,17 @@ function HereForecast({ userCountry }: { userCountry: string | null | undefined 
 function ForecastView({ place }: { place: string }) {
   const { t, i18n } = useTranslation();
   const [forecast, setForecast] = useState<Forecast | null>(null);
+  const [area, setArea] = useState<AreaForecast | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [details, setDetails] = useState(false);
 
-  const fetchForecast = useCallback(() => getForecast(place).then(setForecast).catch(setError), [place]);
+  // El pronóstico por día y el clima marino de la zona (viento, olas y corriente por hora para el planeta).
+  const fetchForecast = useCallback(() => {
+    getArea(place)
+      .then(setArea)
+      .catch(() => setArea(null));
+    return getForecast(place).then(setForecast).catch(setError);
+  }, [place]);
 
   useEffect(() => {
     fetchForecast();
@@ -185,33 +177,40 @@ function ForecastView({ place }: { place: string }) {
   }
 
   const updated = new Date(forecast.updated_at).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' });
+  const placeName = forecast.place.kind === 'here' ? forecast.place.subtitle.split(' · ')[0] || t('weather.here') : forecast.place.name;
   return (
     <>
-      <Card style={{ gap: 4 }}>
-        <Text style={styles.placeName}>{forecast.place.kind === 'here' ? t('weather.here') : forecast.place.name}</Text>
-        <Text style={typography.caption}>
-          {[forecast.place.subtitle, forecast.place.kind === 'event' ? forecast.place.country_name : null].filter(Boolean).join(' · ')}
-        </Text>
-        <Text style={typography.caption}>{t('weather.updated', { time: updated })}</Text>
-      </Card>
+      {area ? <MarineWeather area={area} forecast={forecast} placeName={placeName} /> : null}
+      <Button title={t(details ? 'weather.hideDetails' : 'weather.showDetails')} variant="secondary" onPress={() => setDetails((d) => !d)} />
+      {!details ? null : (
+        <>
+          <Card style={{ gap: 4 }}>
+            <Text style={styles.placeName}>{forecast.place.kind === 'here' ? t('weather.here') : forecast.place.name}</Text>
+            <Text style={typography.caption}>
+              {[forecast.place.subtitle, forecast.place.kind === 'event' ? forecast.place.country_name : null].filter(Boolean).join(' · ')}
+            </Text>
+            <Text style={typography.caption}>{t('weather.updated', { time: updated })}</Text>
+          </Card>
 
-      {forecast.days.map((day, index) => (
-        <DayRow key={day.date} day={day} today={index === 0} hasWaves={forecast.has_waves} />
-      ))}
+          {forecast.days.map((day, index) => (
+            <DayRow key={day.date} day={day} today={index === 0} hasWaves={forecast.has_waves} />
+          ))}
 
-      <View style={styles.legend}>
-        {[
-          [colors.success, t('weather.legend.light')],
-          [colors.primary, t('weather.legend.moderate')],
-          [colors.warning, t('weather.legend.strong')],
-          [colors.danger, t('weather.legend.gale')],
-        ].map(([color, label]) => (
-          <View key={label} style={styles.legendItem}>
-            <View style={[styles.dot, { backgroundColor: color }]} />
-            <Text style={typography.caption}>{label}</Text>
+          <View style={styles.legend}>
+            {[
+              [colors.success, t('weather.legend.light')],
+              [colors.primary, t('weather.legend.moderate')],
+              [colors.warning, t('weather.legend.strong')],
+              [colors.danger, t('weather.legend.gale')],
+            ].map(([color, label]) => (
+              <View key={label} style={styles.legendItem}>
+                <View style={[styles.dot, { backgroundColor: color }]} />
+                <Text style={typography.caption}>{label}</Text>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
+        </>
+      )}
 
       <Pressable accessibilityRole="link" onPress={() => Linking.openURL(forecast.source.url)} hitSlop={6}>
         <Text style={[typography.caption, { textAlign: 'center' }]}>

@@ -209,6 +209,31 @@ class EventDetailTests(CalendarTestCase):
         self.assertEqual([p["name"] for p in data["items"]], ["Rigging Lejos"])
         self.assertNotIn(near.name, [p["name"] for p in data["items"]])
 
+    def test_cover_falls_back_to_first_gallery_photo(self):
+        from io import BytesIO
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.test import override_settings
+        from PIL import Image
+
+        from apps.core.tests import MEDIA
+
+        def jpeg(name):
+            buffer = BytesIO()
+            Image.new("RGB", (800, 500), "navy").save(buffer, "JPEG")
+            return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/jpeg")
+
+        with override_settings(MEDIA_ROOT=MEDIA):
+            find = lambda: next(e for e in self.client.get("/api/events/?when=live").data["results"] if e["slug"] == self.live.slug)
+            self.assertIsNone(find()["cover"])
+            from .models import EventMedia
+
+            EventMedia.objects.create(event=self.live, image=jpeg("galeria.jpg"))
+            self.assertIn("event_media/thumbs/", find()["cover"])
+            self.live.cover = jpeg("portada.jpg")
+            self.live.save()
+            self.assertIn("events/thumbs/", find()["cover"])
+
     def test_start_only_event_has_no_duration(self):
         data = self.client.get(f"/api/events/{self.later.slug}/").data
         self.assertIsNone(data["duration_days"])

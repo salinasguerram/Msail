@@ -37,6 +37,40 @@ class MyProfileView(generics.RetrieveUpdateAPIView):
         return profile_queryset().get(pk=profile.pk)
 
 
+class CrewListView(generics.ListAPIView):
+    """
+    Tripulaciones: navegantes con perfil público que marcaron "disponible para tripular".
+    Filtros: ?q=nombre o ciudad  ?class=<slug de clase>  ?role=<puesto>  ?country=AR
+    """
+
+    permission_classes = [permissions.AllowAny]
+
+    def get_serializer_class(self):
+        from .serializers import CrewMemberSerializer
+
+        return CrewMemberSerializer
+
+    def get_queryset(self):
+        params = self.request.query_params
+        queryset = (
+            SailorProfile.objects.filter(available_as_crew=True, is_public=True, user__is_active=True)
+            .select_related("user__country", "region")
+            .prefetch_related("boat_classes")
+            .order_by("user__first_name", "user__last_name")
+        )
+        for word in params.get("q", "").split()[:5]:
+            queryset = queryset.filter(Q(user__first_name__icontains=word) | Q(user__last_name__icontains=word) | Q(city__icontains=word))
+        if boat_class := params.get("class", "").strip():
+            queryset = queryset.filter(boat_classes__slug=boat_class)
+        if country := params.get("country", "").strip().upper():
+            queryset = queryset.filter(user__country__iso_code=country)
+        if role := params.get("role", "").strip():
+            # Los puestos se guardan como lista: se filtra en Python (son pocos perfiles disponibles a la vez).
+            ids = [p.pk for p in queryset if role in (p.roles or [])]
+            queryset = queryset.filter(pk__in=ids)
+        return queryset.distinct()
+
+
 class PublicProfileView(generics.RetrieveAPIView):
     """Perfil de otro navegante. Los perfiles privados solo los ve su dueño."""
 

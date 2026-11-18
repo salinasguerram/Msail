@@ -7,18 +7,19 @@ import { colors } from '@/theme';
 
 import { globeHtml } from './globeHtml';
 import type { FromGlobe, GlobeProps, ToGlobe } from './types';
+import { SATELLITE } from './satellite';
 import { onGlobeZoom } from './zoom';
 
 // Los tipos de WebView (componente de clase) no encajan con los de esta versión de React: se tipa a mano.
 const WebViewView = WebView as unknown as ComponentType<WebViewProps & { ref?: Ref<WebView> }>;
 
 /** Planeta 3D en iOS y Android: la página de globe.gl dentro de un WebView. La versión web está en Globe.web.tsx. */
-export function Globe({ points, layers, selected, wind, home, focus, reset, idle, frame, onTap, onCountry, style, accessibilityLabel }: GlobeProps) {
+export function Globe({ points, layers, selected, wind, home, focus, reset, view, field, frame, onTap, onCountry, style, accessibilityLabel }: GlobeProps) {
   const { i18n } = useTranslation();
   const webview = useRef<WebView>(null);
   // Sube cada vez que la página avisa que está lista (también después de recargarse): ahí se le manda todo.
   const [ready, setReady] = useState(0);
-  const html = useMemo(() => globeHtml({ background: colors.background, language: i18n.language }), [i18n.language]);
+  const html = useMemo(() => globeHtml({ background: colors.background, language: i18n.language, satellite: SATELLITE }), [i18n.language]);
 
   function send(msg: ToGlobe) {
     webview.current?.injectJavaScript(`window.msail && window.msail.receive(${JSON.stringify(msg)}); true;`);
@@ -54,10 +55,22 @@ export function Globe({ points, layers, selected, wind, home, focus, reset, idle
     if (ready && focus) send({ type: 'fly', lat: focus.lat, lng: focus.lng, altitude: focus.altitude });
   }, [ready, focus]);
 
-  // Fondo de las otras secciones (va después del efecto de frame: primero cambia el tamaño, después la vista).
+  // Modo de la vista (va después del efecto de frame: primero cambia el tamaño, después la cámara).
+  const viewKey = view ? `${view.mode}:${view.lat ?? ''}:${view.lng ?? ''}:${view.altitude ?? ''}` : 'explore';
   useEffect(() => {
-    if (ready) send({ type: 'idle', on: !!idle });
-  }, [ready, idle]);
+    if (!ready) return;
+    const [mode, lat, lng, altitude] = viewKey.split(':');
+    send({
+      type: 'view',
+      mode: mode as 'explore' | 'background' | 'place',
+      ...(lat ? { lat: Number(lat), lng: Number(lng) } : {}),
+      ...(altitude ? { altitude: Number(altitude) } : {}),
+    });
+  }, [ready, viewKey]);
+
+  useEffect(() => {
+    if (ready) send({ type: 'field', kind: field?.kind ?? 'wind', step: field?.step ?? 0.4, cells: field?.cells ?? null });
+  }, [ready, field]);
 
   // Zoom pedido desde afuera (gestos sobre lo que está encima del planeta).
   useEffect(() => (ready ? onGlobeZoom((factor) => send({ type: 'zoom', factor })) : undefined), [ready]);

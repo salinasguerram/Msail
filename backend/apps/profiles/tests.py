@@ -87,6 +87,18 @@ class PublicProfileTests(ProfileTestCase):
         self.assertEqual(self.client.get(f"/api/profiles/{self.user.id}/").status_code, 200)
 
 
+class CrewDirectoryTests(ProfileTestCase):
+    def test_only_public_profiles_available_as_crew(self):
+        SailorProfile.objects.filter(user=self.user).update(available_as_crew=True, city="Palma", roles=["trimmer", "bow"])
+        SailorProfile.objects.filter(user=self.other).update(available_as_crew=True, is_public=False)
+        names = [p["first_name"] for p in self.client.get("/api/profiles/crew/").data["results"]]
+        self.assertEqual(names, ["Ana"])  # Leo está disponible pero su perfil es privado
+        self.assertEqual(len(self.client.get("/api/profiles/crew/?q=palma").data["results"]), 1)
+        self.assertEqual(len(self.client.get("/api/profiles/crew/?role=trimmer").data["results"]), 1)
+        self.assertEqual(len(self.client.get("/api/profiles/crew/?role=helmsman").data["results"]), 0)
+        self.assertNotIn("email", self.client.get("/api/profiles/crew/").data["results"][0])
+
+
 class RaceResultTests(ProfileTestCase):
     def result(self, **overrides):
         data = {

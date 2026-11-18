@@ -33,9 +33,10 @@ export function onHomeReset(listener: () => void) {
 const ITEMS = [
   { name: 'index', label: 'nav.explore', also: [] },
   { name: 'races', label: 'nav.races', also: [] },
-  { name: 'marinas', label: 'nav.services', also: ['professionals'] },
-  { name: 'news', label: 'nav.news', also: [] },
+  { name: 'services', label: 'nav.services', also: ['marinas', 'professionals', 'crew'] },
   { name: 'weather', label: 'nav.weather', also: [] },
+  { name: 'store', label: 'nav.store', also: [] },
+  { name: 'ranking', label: 'nav.ranking', also: [] },
   { name: 'msailing', label: 'nav.msailing', also: ['learning'] },
 ] as const;
 

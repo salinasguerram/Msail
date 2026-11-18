@@ -65,6 +65,11 @@ class Event(Located):
         help_text=_("Servicios para esta regata (velería, rigging, entrenadores…). Vacío: se muestran los más cercanos a la sede."),
     )
 
+    cover = models.ImageField(
+        _("foto de portada"), upload_to="events/", blank=True, help_text=_("La foto grande de la tarjeta en Eventos. Vacía: la primera de la galería.")
+    )
+    cover_thumb = models.ImageField(upload_to="events/thumbs/", blank=True, editable=False)
+
     description = models.TextField(_("descripción"), blank=True)
     website = models.URLField(_("sitio oficial"), blank=True)
     entry_url = models.URLField(_("link de inscripción"), blank=True)
@@ -132,11 +137,29 @@ class Event(Located):
             parts += list(self.boat_classes.values_list("name", flat=True))
         return normalize(" ".join(p for p in parts if p))
 
+    COVER_THUMB_SIDE = 640
+
     def save(self, *args, **kwargs):
+        from apps.core.images import process_image
+
+        if self.cover and not getattr(self.cover, "_committed", True):
+            # Foto nueva: se recomprime sin datos GPS y se genera la miniatura para las tarjetas.
+            self.cover.seek(0)
+            original = self.cover.file
+            self.cover = process_image(original)
+            original.seek(0)
+            self.cover_thumb = process_image(original, max_side=self.COVER_THUMB_SIDE)
+        elif not self.cover and self.cover_thumb:
+            self.cover_thumb = None
         self.search_text = self.build_search_text()
         super().save(*args, **kwargs)
 
     def clean(self):
+        if self.cover and not getattr(self.cover, "_committed", True):
+            from apps.core.images import process_image
+
+            process_image(self.cover)  # valida que sea una imagen real
+            self.cover.seek(0)
         if self.end_date and self.start_date and self.end_date < self.start_date:
             raise ValidationError({"end_date": _("La fecha de fin no puede ser anterior al inicio.")})
         if self.region_id and self.country_id and self.region.country_id != self.country_id:

@@ -77,6 +77,30 @@ class CrewCandidateSerializer(serializers.ModelSerializer):
         return avatar_url(user, self.context.get("request"))
 
 
+class CrewMemberSerializer(serializers.ModelSerializer):
+    """Navegante disponible para tripular, en el directorio de Tripulaciones (solo datos de su perfil público)."""
+
+    user_id = serializers.IntegerField(source="user.id", read_only=True)
+    first_name = serializers.CharField(source="user.first_name", read_only=True)
+    last_name = serializers.CharField(source="user.last_name", read_only=True)
+    avatar = serializers.SerializerMethodField()
+    country = serializers.CharField(source="user.country.iso_code", read_only=True, default=None)
+    country_name = serializers.CharField(source="user.country.name", read_only=True, default=None)
+    region = serializers.CharField(source="region.name", read_only=True, default=None)
+    boat_classes = serializers.SlugRelatedField(slug_field="slug", many=True, read_only=True)
+
+    class Meta:
+        model = SailorProfile
+        fields = ["user_id", "first_name", "last_name", "avatar", "city", "region", "country", "country_name", "experience_level", "roles", "boat_classes"]
+
+    def get_avatar(self, profile):
+        if not profile.avatar:
+            return None
+        request = self.context.get("request")
+        url = profile.avatar.url
+        return request.build_absolute_uri(url) if request and not url.startswith("http") else url
+
+
 class RaceResultSerializer(serializers.ModelSerializer):
     boat_class = serializers.SlugRelatedField(
         slug_field="slug", queryset=BoatClass.objects.all(), required=False, allow_null=True

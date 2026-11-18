@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router, useGlobalSearchParams, usePathname, type Href } from 'expo-router';
-import { useEffect, useMemo, useState, type ComponentProps, type ReactNode } from 'react';
+import { router, useGlobalSearchParams, usePathname } from 'expo-router';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,26 +8,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Brand } from '@/components/Brand';
 import { Globe } from '@/components/globe/Globe';
 import { usePageZoomToGlobe } from '@/components/globe/usePageZoomToGlobe';
+import { usePlanetFocuses } from './planetFocus';
 import { useNavBarHeight } from './navBar';
 import { LayerChips, usePlanet, WindButton, WindControls, ZonePanel, type Planet } from '@/components/globe/PlanetExplorer';
-import { HomeCard, RegattaArt, WindArt } from '@/components/HomeCards';
 import { NotificationBell } from '@/components/NotificationBell';
-import { WeatherChip } from '@/components/WeatherChip';
+import { NewsCard, TodayFeed, useTodayFeed, type FeedItem } from '@/components/TodayFeed';
+import { WeatherCard, WeatherChip } from '@/components/WeatherChip';
 import { onHomeReset, useWideWeb, TOP_BAR_HEIGHT } from '@/components/TopBar';
 import { colors, fonts, radius, spacing, typography } from '@/theme';
-
-type Shortcut = {
-  key: 'newsTile' | 'services' | 'msailing';
-  icon: ComponentProps<typeof Ionicons>['name'];
-  href: Href;
-};
-
-// Eventos, Notificaciones y Clima están en la barra de abajo: acá van las secciones sin pestaña.
-const SHORTCUTS: Shortcut[] = [
-  { key: 'newsTile', icon: 'newspaper-outline', href: '/news' },
-  { key: 'services', icon: 'boat-outline', href: '/marinas' },
-  { key: 'msailing', icon: 'compass-outline', href: '/msailing' },
-];
 
 // Web ancha: título a la izquierda, planeta en el medio y tarjetas a la derecha (la navegación va en la barra de arriba).
 const SIDEBAR_WIDTH = 400;
@@ -37,6 +25,8 @@ const EXPLORE_ALTITUDE = 0.75;
 const TAB_BAR_ESTIMATE = 64;
 /** Oscurece el planeta cuando está de fondo, para que el contenido de la sección se lea bien. */
 const BACKGROUND_DIM = 'rgba(5,11,24,0.55)';
+/** En Clima marino el planeta es el protagonista: casi sin oscurecer. */
+const PLACE_DIM = 'rgba(5,11,24,0.12)';
 const COMPACT_TOP_ESTIMATE = 160;
 const COMPACT_BOTTOM_ESTIMATE = 90;
 
@@ -52,11 +42,15 @@ export function PlanetLayer() {
   const pathname = usePathname();
   const explore = pathname === '/';
   const navBar = useNavBarHeight();
+  // Pantallas que muestran el planeta de cerca (Clima, Eventos, Servicios): se acerca al lugar que piden.
+  const focuses = usePlanetFocuses();
+  const place = explore ? null : (focuses[pathname] ?? null);
+  const field = place?.field ?? null;
+  // Web: el zoom nunca agranda la página; va al planeta en Explorar y en las pantallas que lo muestran de cerca.
+  usePageZoomToGlobe(explore ? 'explore' : place ? 'place' : 'block');
   // Solo en la web y en pantallas anchas: tres columnas. En iOS/Android (y en la web angosta), en columna.
   const wide = useWideWeb();
   const planet = useExplorePlanet();
-  // Web: los gestos de zoom siempre van al planeta, nunca agrandan la página.
-  usePageZoomToGlobe(explore);
   const [focus, setFocus] = useState<{
     lat: number;
     lng: number;
@@ -78,6 +72,15 @@ export function PlanetLayer() {
     [clearZone, hideWind, home],
   );
   const { t } = useTranslation();
+  // "Hoy en la vela": noticias y campeonatos en curso alrededor del planeta (ya no es una sección aparte).
+  const feed = useTodayFeed();
+  const pointOf = (eventSlug: string) => planet.points.find((p) => p.id === `event:${eventSlug}`);
+  // Ubicar en el planeta: solo para campeonatos que están en el mapa (las tarjetas de los demás no muestran el botón).
+  const locate = (eventSlug: string) => {
+    const point = pointOf(eventSlug);
+    if (point) planet.goTo(point);
+  };
+  const canLocate = (eventSlug: string) => !!pointOf(eventSlug);
 
   // Tamaño de la pantalla y del contenido que tapa cada borde, para centrar el planeta en el hueco libre.
   // Hasta medir la pantalla de verdad (onLayout) se estima con la ventana menos la barra de pestañas.
@@ -108,7 +111,10 @@ export function PlanetLayer() {
   const side = Math.round(Math.min(screen.w, screen.h) * 0.85);
   const frame = explore
     ? { ...(wide ? { w: screen.h, h: screen.h } : { w: freeW, h: freeH }), dx: cx - screen.w / 2, dy: cy - screen.h / 2 }
-    : { w: side, h: side, dx: 0, dy: 0 };
+    : place
+      ? // El lugar queda en la parte de arriba: abajo va el contenido de la pantalla.
+        { w: screen.w, h: screen.h, dx: 0, dy: -Math.round(screen.h * place.raise) }
+      : { w: side, h: side, dx: 0, dy: 0 };
   // En Explorar deja libre la barra de navegación (abajo en el celular, arriba en la web ancha).
   const bar = navBar || (wide ? TOP_BAR_HEIGHT : TAB_BAR_ESTIMATE);
   const placement = explore ? (wide ? { top: bar, bottom: 0 } : { top: 0, bottom: bar }) : { top: 0, bottom: 0 };
@@ -134,7 +140,8 @@ export function PlanetLayer() {
           focus={focus}
           reset={reset}
           frame={frame}
-          idle={!explore}
+          view={explore ? { mode: 'explore' } : place ? { mode: 'place', lat: place.lat, lng: place.lng, altitude: place.altitude } : { mode: 'background' }}
+          field={field}
           onTap={planet.onTap}
           onCountry={planet.onCountry}
           style={{ position: 'absolute', left: 0, top: 0, width: screen.w, height: screen.h }}
@@ -142,7 +149,7 @@ export function PlanetLayer() {
         />
       ) : null}
 
-      {explore ? null : <View style={[StyleSheet.absoluteFill, { backgroundColor: BACKGROUND_DIM }]} />}
+      {explore ? null : <View style={[StyleSheet.absoluteFill, { backgroundColor: place ? PLACE_DIM : BACKGROUND_DIM }]} />}
 
       {!explore ? null : wide ? (
         <WideOverlay
@@ -150,13 +157,16 @@ export function PlanetLayer() {
           onSidebar={measure('left')}
           onCards={measure('right')}
           exploring={exploring}
+          feed={feed}
+          onLocate={locate}
+          canLocate={canLocate}
           onExplore={() => {
             setExploring(true);
             setFocus({ ...planet.home, altitude: EXPLORE_ALTITUDE });
           }}
         />
       ) : (
-        <CompactOverlay planet={planet} onTop={measure('top')} onBottom={measure('bottom')} height={screen.h} />
+        <CompactOverlay planet={planet} feed={feed} onTop={measure('top')} onBottom={measure('bottom')} height={screen.h} />
       )}
     </View>
   );
@@ -174,31 +184,12 @@ function useExplorePlanet() {
   return planet;
 }
 
-function Hero({ titleSize = 32, compact = false }: { titleSize?: number; compact?: boolean }) {
-  const { t } = useTranslation();
-  return (
-    <View style={[styles.hero, compact && { gap: 2 }]}>
-      <Text style={[styles.heroTitle, { fontSize: titleSize, lineHeight: Math.round(titleSize * 1.18) }]}>
-        {t('explore.heroTitle')}
-        {compact ? ' ' : '\n'}
-        <Text style={{ color: colors.primary }}>{t('explore.heroAccent')}</Text>
-      </Text>
-      <Text style={[typography.body, styles.shadow, { color: colors.textMuted }, compact && styles.heroSubtitleCompact]}>
-        {t('explore.heroSubtitle')}
-      </Text>
-    </View>
-  );
-}
-
 /** Hueco libre por donde pasan los gestos al planeta, con el botón y los controles del viento. */
 function FreeArea({ planet, children }: { planet: Planet; children?: ReactNode }) {
   return (
     <View style={styles.free} pointerEvents="box-none">
-      {/* Clima de ahora en tu zona, en la esquina; al tocarlo, el pronóstico de la semana. */}
-      <View style={styles.freeTopLeft} pointerEvents="box-none">
-        <WeatherChip fallback={planet.home} />
-      </View>
-      <View style={styles.freeTop} pointerEvents="box-none">
+      {/* Mapa de viento, arriba a la derecha del planeta (donde el boceto pone "Barcos con GPS"). */}
+      <View style={styles.freeTopRight} pointerEvents="box-none">
         <WindButton planet={planet} />
       </View>
       {children}
@@ -209,14 +200,19 @@ function FreeArea({ planet, children }: { planet: Planet; children?: ReactNode }
   );
 }
 
-/** Celular (y web angosta): marca, título y capas arriba; accesos y zona abajo; el planeta en el medio y detrás. */
+/**
+ * Celular (y web angosta), como el boceto de Miguel: arriba la marca (con MSailing y la campanita), la noticia del
+ * momento y el clima de hoy; en el medio el planeta; abajo las capas o la zona elegida.
+ */
 function CompactOverlay({
   planet,
+  feed,
   onTop,
   onBottom,
   height,
 }: {
   planet: Planet;
+  feed: FeedItem[] | null;
   onTop: (e: LayoutChangeEvent) => void;
   onBottom: (e: LayoutChangeEvent) => void;
   height: number;
@@ -227,42 +223,40 @@ function CompactOverlay({
     <View style={[StyleSheet.absoluteFill, { paddingTop: insets.top }]} pointerEvents="box-none">
       <View style={styles.compactTop} onLayout={onTop}>
         <View style={styles.brandRow}>
-          <Brand size={14} />
-          <NotificationBell />
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel="MSailing"
+            hitSlop={8}
+            onPress={() => router.push('/msailing')}
+            style={styles.headerSide}
+          >
+            <Ionicons name="compass-outline" size={24} color={colors.text} />
+          </Pressable>
+          <Brand size={18} />
+          <View style={[styles.headerSide, { alignItems: 'flex-end' }]}>
+            <NotificationBell />
+          </View>
         </View>
-        <Hero titleSize={20} compact />
-        <LayerChips planet={planet} />
+        {feed?.length ? <NewsCard items={feed} /> : null}
+        <WeatherCard fallback={planet.home} />
       </View>
 
       <FreeArea planet={planet} />
 
       <View style={styles.compactBottom} onLayout={onBottom}>
         {planet.zone ? (
-          <ZonePanel planet={planet} maxHeight={Math.max(140, Math.round(height * 0.28))} />
+          <ZonePanel planet={planet} maxHeight={Math.max(140, Math.round(height * 0.3))} />
         ) : (
-          <Text style={[styles.hint, styles.shadow]}>{t('planet.hint')}</Text>
+          <>
+            <LayerChips planet={planet} />
+            <Text style={[styles.hint, styles.shadow]}>{t('planet.hint')}</Text>
+          </>
         )}
-        <View style={styles.grid}>
-          {SHORTCUTS.map(({ key, icon, href }) => (
-            <Pressable
-              key={key}
-              accessibilityRole="button"
-              onPress={() => router.push(href)}
-              style={({ pressed }) => [styles.tile, pressed && { borderColor: colors.primary }]}
-            >
-              <Ionicons name={icon} size={18} color={colors.primary} />
-              <Text style={styles.tileText} numberOfLines={2}>
-                {t(`explore.${key}`)}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
       </View>
     </View>
   );
 }
 
-/** Próxima regata (o en curso) de las que hay en el planeta, para el subtítulo de la tarjeta. */
 /** Aparece de a poco (al volver al inicio, para que el botón y las tarjetas no salten de golpe). */
 function FadeIn({ children, delay = 0, gap }: { children: ReactNode; delay?: number; gap?: number }) {
   const [opacity] = useState(() => new Animated.Value(0));
@@ -272,34 +266,31 @@ function FadeIn({ children, delay = 0, gap }: { children: ReactNode; delay?: num
   return <Animated.View style={{ opacity, gap }}>{children}</Animated.View>;
 }
 
-function useNextRegatta(planet: Planet) {
-  return useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    const events = planet.points.filter((p) => p.kind === 'event' && (p.live || (p.date && p.date >= today)));
-    events.sort((a, b) => Number(b.live) - Number(a.live) || (a.date ?? '').localeCompare(b.date ?? ''));
-    return events[0] ?? null;
-  }, [planet.points]);
-}
-
 /** Web ancha: título y capas a la izquierda, el planeta en el medio (detrás) y tarjetas a la derecha. */
 function WideOverlay({
   planet,
   onSidebar,
   onCards,
   exploring,
+  feed,
+  onLocate,
+  canLocate,
   onExplore,
 }: {
   planet: Planet;
   onSidebar: (e: LayoutChangeEvent) => void;
   onCards: (e: LayoutChangeEvent) => void;
   exploring: boolean;
+  feed: FeedItem[] | null;
+  onLocate: (eventSlug: string) => void;
+  canLocate: (eventSlug: string) => boolean;
   onExplore: () => void;
 }) {
   const { t } = useTranslation();
   const { width, height } = useWindowDimensions();
-  const next = useNextRegatta(planet);
   const titleSize = width >= 1400 ? 50 : width >= 1200 ? 44 : 38;
-  const cardHeight = Math.max(170, Math.min(250, Math.round((height - 68 - 3 * spacing.xl) / 2)));
+  // Noticias que entran en la columna de la derecha según el alto de la pantalla (cada tarjeta mide ~210 px).
+  const feedCount = Math.max(1, Math.min(4, Math.floor((height - 68 - 80) / 210)));
   return (
     <View style={[StyleSheet.absoluteFill, styles.wideRow]} pointerEvents="box-none">
       <View style={styles.sidebar} onLayout={onSidebar}>
@@ -326,7 +317,6 @@ function WideOverlay({
         )}
         <View style={styles.layersRow}>
           <LayerChips planet={planet} />
-          <WindButton planet={planet} />
         </View>
         <WindControls planet={planet} />
         {planet.zone ? (
@@ -338,28 +328,13 @@ function WideOverlay({
       {/* Hueco del planeta: deja pasar los gestos. */}
       <View style={styles.free} pointerEvents="box-none">
         <View style={styles.freeTopLeft} pointerEvents="box-none">
-          <WeatherChip fallback={planet.home} />
+          <WeatherChip fallback={planet.home} windOn={planet.wind.on} onToggleWind={planet.wind.toggle} />
         </View>
       </View>
-      {exploring ? null : (
+      {exploring || !feed?.length ? null : (
         <View style={styles.cards} onLayout={onCards}>
-          <FadeIn delay={500} gap={spacing.xl}>
-            <HomeCard
-              icon="calendar-outline"
-              title={t('explore.regattasCard')}
-              subtitle={next ? t('explore.nextRegatta', { name: next.name }) : t('explore.regattasCardText')}
-              art={<RegattaArt />}
-              height={cardHeight}
-              onPress={() => router.navigate('/races')}
-            />
-            <HomeCard
-              icon="cloud-outline"
-              title={t('explore.weatherCard')}
-              subtitle={t('explore.weatherCardText')}
-              art={<WindArt />}
-              height={cardHeight}
-              onPress={() => router.navigate('/weather')}
-            />
+          <FadeIn delay={500}>
+            <TodayFeed items={feed.slice(0, feedCount)} onLocate={onLocate} canLocate={canLocate} layout="column" />
           </FadeIn>
         </View>
       )}
@@ -377,16 +352,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  hero: { gap: spacing.sm },
-  heroTitle: {
-    ...typography.title,
-    textTransform: 'uppercase',
-    // Sombra suave: el texto se sigue leyendo si el planeta pasa por detrás.
-    textShadowColor: 'rgba(5,11,24,0.9)',
-    textShadowRadius: 12,
-  },
-  heroSubtitleCompact: { fontSize: 13, lineHeight: 18 },
   shadow: { textShadowColor: 'rgba(5,11,24,0.95)', textShadowRadius: 8 },
+  headerSide: { width: 56, justifyContent: 'center' },
   compactTop: {
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
@@ -398,8 +365,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   free: { flex: 1 },
-  freeTop: { position: 'absolute', top: spacing.sm, right: spacing.lg },
   freeTopLeft: { position: 'absolute', top: spacing.sm, left: spacing.lg },
+  freeTopRight: { position: 'absolute', top: spacing.sm, right: spacing.lg },
   freeBottom: {
     position: 'absolute',
     left: spacing.lg,
@@ -408,28 +375,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   hint: { ...typography.caption, fontSize: 11, textAlign: 'center' },
-  grid: { flexDirection: 'row', gap: spacing.sm },
-  tile: {
-    flex: 1,
-    flexDirection: 'row',
-    minHeight: 44,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-  },
-  tileText: {
-    flexShrink: 1,
-    color: colors.text,
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: '600',
-  },
   wideRow: { flexDirection: 'row' },
   sidebar: {
     width: SIDEBAR_WIDTH + spacing.xxl * 2,

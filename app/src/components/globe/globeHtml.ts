@@ -13,6 +13,7 @@
  * Librería, texturas y países desde jsDelivr con versión fija. Texturas de la NASA (Blue Marble, dominio público).
  */
 
+import type { SatelliteConfig } from './satellite';
 import { SEAS } from './seas';
 
 const GLOBE_GL = 'https://cdn.jsdelivr.net/npm/globe.gl@2.46.2/dist/globe.gl.min.js';
@@ -34,6 +35,38 @@ export const WIND_SCALE = [
   { knots: 34, color: '#ef4444' },
 ] as const;
 
+/**
+ * Clima marino: escalas de color por capa. `value` es el límite inferior de cada color
+ * (viento en nudos, olas en metros, corriente en nudos).
+ */
+export const FIELD_SCALES = {
+  wind: [
+    { value: 0, color: '#1f5fe0' },
+    { value: 5, color: '#2fa8ff' },
+    { value: 10, color: '#2fd4c4' },
+    { value: 15, color: '#8fe06a' },
+    { value: 20, color: '#facc15' },
+    { value: 25, color: '#f97316' },
+  ],
+  waves: [
+    { value: 0, color: '#1f5fe0' },
+    { value: 0.5, color: '#2fa8ff' },
+    { value: 1, color: '#2fd4c4' },
+    { value: 1.5, color: '#8fe06a' },
+    { value: 2.5, color: '#facc15' },
+    { value: 4, color: '#f97316' },
+  ],
+  currents: [
+    { value: 0, color: '#1f5fe0' },
+    { value: 0.25, color: '#2fa8ff' },
+    { value: 0.5, color: '#2fd4c4' },
+    { value: 1, color: '#8fe06a' },
+    { value: 1.5, color: '#facc15' },
+    { value: 2, color: '#f97316' },
+  ],
+} as const;
+export type FieldKind = keyof typeof FIELD_SCALES;
+
 /** Con la cámara más cerca que esto, los pines muestran su nombre. */
 const NEAR_ALTITUDE = 0.9;
 /** Más lejos que esto, los pines que se pisan se juntan en uno con el número; más cerca, se apilan. */
@@ -46,7 +79,7 @@ const ICONS = {
   professional: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.4 2.4-2.6-.6-.6-2.6z"/>',
 };
 
-export function globeHtml({ background, language }: { background: string; language: string }) {
+export function globeHtml({ background, language, satellite = null }: { background: string; language: string; satellite?: SatelliteConfig }) {
   return `<!doctype html>
 <html lang="${language}">
 <head>
@@ -78,6 +111,10 @@ export function globeHtml({ background, language }: { background: string; langua
   .pin.open .card, .pin:hover .card { display: block; }
   .pin.open .label, .pin:hover .label { display: none; }
   .pin:hover, .pin.open { z-index: 10; }
+  /* Crédito de las imágenes satelitales: solo se ve cuando están puestas (de cerca). */
+  #satellite-credit { position: fixed; left: 8px; bottom: 6px; z-index: 5; display: none; pointer-events: none;
+    font: 10px system-ui, sans-serif; color: rgba(255,255,255,.75); text-shadow: 0 1px 3px rgba(0,0,0,.9); }
+  body.satellite #satellite-credit { display: block; }
   .country-label { transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap; color: #fff;
     font-size: 15px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; padding: 4px 12px; border-radius: 999px;
     background: rgba(5,11,24,.55); border: 1px solid rgba(156,200,255,.55); box-shadow: 0 4px 16px rgba(0,0,0,.45);
@@ -99,11 +136,13 @@ export function globeHtml({ background, language }: { background: string; langua
 <body>
 <div id="loading">…</div>
 <div id="globe"></div>
+<div id="satellite-credit"></div>
 <script src="${GLOBE_GL}"></script>
 <script>
 (function () {
   var COLORS = ${JSON.stringify(POINT_COLORS)};
   var WIND_SCALE = ${JSON.stringify(WIND_SCALE)};
+  var FIELD_SCALES = ${JSON.stringify(FIELD_SCALES)};
   var ICONS = ${JSON.stringify(ICONS)};
   var LANG = ${JSON.stringify(language)};
   // Mares y océanos en el idioma de la app.
@@ -114,7 +153,7 @@ export function globeHtml({ background, language }: { background: string; langua
   var SEA_MAX_ALTITUDE = { 1: 99, 2: 1.6, 3: 0.55 };
   var NEAR = ${NEAR_ALTITUDE};
   // Vista de Explorar guardada mientras el planeta está de fondo en otra sección.
-  var idleView = null;
+  var savedView = null;
   // Duración de los cambios de vista (Explorar y volver al inicio): larga y con aceleración suave.
   var TRANSITION_MS = 1400;
   var CLUSTER = ${CLUSTER_ALTITUDE};
@@ -316,7 +355,32 @@ export function globeHtml({ background, language }: { background: string; langua
   // Durante el zoom solo se cambian clases (barato). Lo pesado (agrupar pines, grosor del viento)
   // se hace una vez, cuando la cámara se queda quieta.
   var zoomClasses = '';
+  // Imagen satelital de alta resolución al acercarse (más cerca que SAT_ON); al alejarse vuelve el planeta de siempre.
+  // Se cambia con un margen (SAT_OFF) para que no parpadee justo en el límite.
+  var SATELLITE = ${JSON.stringify(satellite)};
+  var SAT_ON = 0.5, SAT_OFF = 0.62, satOn = false;
+  if (SATELLITE) document.getElementById('satellite-credit').textContent = SATELLITE.attribution;
+  function updateSatellite(altitude) {
+    if (!SATELLITE) return;
+    var want = satOn ? altitude < SAT_OFF : altitude < SAT_ON;
+    if (want === satOn) return;
+    satOn = want;
+    if (want) {
+      globe
+        .globeTileEngineMaxLevel(SATELLITE.maxLevel)
+        .globeTileEngineUrl(function (x, y, level) {
+          return SATELLITE.url.replace('{z}', level).replace('{x}', x).replace('{y}', y);
+        });
+    } else {
+      globe.globeTileEngineUrl(null);
+    }
+    document.body.classList.toggle('satellite', want);
+  }
+  // También cuando la cámara se mueve sola (al acercarse a un lugar en Clima, Eventos o Servicios).
+  if (SATELLITE) setInterval(function () { updateSatellite(globe.pointOfView().altitude); }, 500);
+
   globe.onZoom(function (pov) {
+    updateSatellite(pov.altitude);
     var next = (pov.altitude < NEAR ? 'near ' : '') + (pov.altitude <= SEA_MAX_ALTITUDE[3] ? 'z3' : pov.altitude <= SEA_MAX_ALTITUDE[2] ? 'z2' : '');
     if (next !== zoomClasses) {
       zoomClasses = next;
@@ -574,6 +638,43 @@ export function globeHtml({ background, language }: { background: string; langua
     var l2 = l1 + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(p1), Math.cos(d) - Math.sin(p1) * Math.sin(p2));
     return [p2 / R, ((l2 / R + 540) % 360) - 180];
   }
+  var windCells = null;
+  var field = null;
+  function drawArcs() {
+    if (field) drawField(field);
+    else drawWind(windCells);
+  }
+
+  function scaleColor(scale, value, alpha) {
+    var i = 0;
+    while (i < scale.length - 1 && value >= scale[i + 1].value) i++;
+    var hex = scale[i].color.replace('#', '');
+    var r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+  }
+
+  // Clima marino de una zona: líneas cortas en la dirección del viento, las olas o la corriente, del color de su fuerza.
+  // Viento y olas vienen "de" una dirección (la línea va al revés); la corriente va "hacia" su dirección.
+  function drawField(f) {
+    document.body.classList.add('wind');
+    var scale = FIELD_SCALES[f.kind] || FIELD_SCALES.wind;
+    var top = scale[scale.length - 1].value || 1;
+    var flip = f.kind !== 'currents';
+    var d = f.step / 4;
+    var arcs = [];
+    f.cells.forEach(function (c) {
+      if (c.value == null || c.direction == null) return;
+      [[0, 0], [d, d], [-d, d], [d, -d], [-d, -d]].forEach(function (o, n) {
+        var lat = c.lat + o[0], lng = c.lng + o[1];
+        var length = f.step * (0.35 + 0.65 * Math.min(1, c.value / top));
+        var end = destination(lat, lng, flip ? (c.direction + 180) % 360 : c.direction, length);
+        arcs.push({ lat: lat, lng: lng, endLat: end[0], endLng: end[1],
+          colors: [scaleColor(scale, c.value, 0.05), scaleColor(scale, c.value, 0.95)], gap: ((n * 0.37 + c.lng * 1.7) % 1 + 1) % 1 });
+      });
+    });
+    globe.arcsData(arcs);
+  }
+
   function drawWind(cells) {
     document.body.classList.toggle('wind', !!cells);
     if (!cells) { globe.arcsData([]); return; }
@@ -629,7 +730,11 @@ export function globeHtml({ background, language }: { background: string; langua
       refreshCountries();
       drawPins();
     } else if (msg.type === 'wind') {
-      drawWind(msg.cells);
+      windCells = msg.cells;
+      drawArcs();
+    } else if (msg.type === 'field') {
+      field = msg.cells ? { cells: msg.cells, kind: msg.kind, step: msg.step || 0.4 } : null;
+      drawArcs();
     } else if (msg.type === 'frame') {
       // La primera vez sin animación; después (se ocultan o vuelven las tarjetas) el planeta se desliza.
       var first = !free;
@@ -641,21 +746,29 @@ export function globeHtml({ background, language }: { background: string; langua
       // La primera vez sin animación (el planeta aparece ya centrado); si después cambia (ej. llega el país de la cuenta), con animación.
       if (!interacted) globe.pointOfView({ lat: msg.lat, lng: msg.lng, altitude: fillAltitude() }, homeSet ? 1200 : 0);
       homeSet = true;
-    } else if (msg.type === 'idle') {
-      // Fondo de las otras secciones: se guarda la vista de Explorar, el planeta se ajusta al fondo y gira solo.
-      if (msg.on && !idleView) {
-        idleView = { pov: globe.pointOfView(), interacted: interacted };
-        controls.autoRotate = true;
-        controls.autoRotateSpeed = 0.35;
-        var p = idleView.pov;
-        globe.pointOfView({ lat: p.lat, lng: p.lng, altitude: fillAltitude() }, TRANSITION_MS);
-      } else if (!msg.on && idleView) {
+    } else if (msg.type === 'view') {
+      // Explorar: vuelve exactamente a la vista que se dejó (lugar y altura), aunque después se haya movido.
+      // De fondo (otras secciones): se guarda esa vista, se ajusta al tamaño de fondo y gira solo.
+      // En un lugar (Clima marino): se guarda esa vista, se acerca al lugar y se queda quieto.
+      if (msg.mode === 'explore') {
         controls.autoRotate = false;
-        var back = idleView;
-        idleView = null;
-        interacted = back.interacted;
-        // Vuelve exactamente a la vista que se dejó en Explorar (lugar y altura), aunque de fondo haya girado.
-        globe.pointOfView({ lat: back.pov.lat, lng: back.pov.lng, altitude: back.interacted ? back.pov.altitude : fillAltitude() }, TRANSITION_MS);
+        if (savedView) {
+          var back = savedView;
+          savedView = null;
+          interacted = back.interacted;
+          globe.pointOfView({ lat: back.pov.lat, lng: back.pov.lng, altitude: back.interacted ? back.pov.altitude : fillAltitude() }, TRANSITION_MS);
+        }
+      } else {
+        if (!savedView) savedView = { pov: globe.pointOfView(), interacted: interacted };
+        if (msg.mode === 'place' && msg.lat != null) {
+          controls.autoRotate = false;
+          globe.pointOfView({ lat: msg.lat, lng: msg.lng, altitude: msg.altitude || 0.3 }, TRANSITION_MS);
+        } else {
+          controls.autoRotate = true;
+          controls.autoRotateSpeed = 0.35;
+          var p = globe.pointOfView();
+          globe.pointOfView({ lat: p.lat, lng: p.lng, altitude: fillAltitude() }, TRANSITION_MS);
+        }
       }
     } else if (msg.type === 'zoom') {
       interacted = true;

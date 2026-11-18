@@ -46,7 +46,8 @@ class EventListView(generics.ListAPIView):
         queryset = (
             Event.objects.filter(is_published=True)
             .select_related("country", "region__country", "organizer_club")
-            .prefetch_related("boat_classes")
+            # media: la primera foto de la galería es la portada si no se cargó una.
+            .prefetch_related("boat_classes", "media")
             .annotate(ends_on=Coalesce("end_date", "start_date"))
         )
 

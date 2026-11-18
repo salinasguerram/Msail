@@ -22,4 +22,13 @@ export function applyWebStyles() {
     html, body { background: ${colors.background}; color-scheme: dark; }
   `;
   document.head.appendChild(style);
+
+  // Celulares: sin zoom de la página (pellizco ni doble toque); el zoom es del planeta.
+  let viewport = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+  if (!viewport) {
+    viewport = document.createElement('meta');
+    viewport.name = 'viewport';
+    document.head.appendChild(viewport);
+  }
+  viewport.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';
 }

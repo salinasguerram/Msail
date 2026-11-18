@@ -25,6 +25,10 @@ export type EventSummary = {
   organizer: string;
   organizer_club: number | null;
   boat_classes: string[];
+  /** Foto de la tarjeta (portada o primera de la galería). */
+  cover: string | null;
+  latitude: string | null;
+  longitude: string | null;
 };
 
 export type EventFilters = {

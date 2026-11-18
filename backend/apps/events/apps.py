@@ -9,7 +9,8 @@ class EventsConfig(AppConfig):
         from apps.core.signals import connect
 
         from . import signals  # noqa: F401
-        from .models import EventDocument, EventMedia
+        from .models import Event, EventDocument, EventMedia
 
         connect(EventDocument)
         connect(EventMedia)
+        connect(Event)

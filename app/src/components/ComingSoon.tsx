@@ -9,7 +9,8 @@ type Props = {
   icon: ComponentProps<typeof Ionicons>['name'];
   title: string;
   description: string;
-  week: number;
+  /** Semana del roadmap; sin semana dice "Próximamente". */
+  week?: number;
 };
 
 /** Pantalla provisoria para secciones que se construyen en semanas siguientes del roadmap. */
@@ -23,7 +24,7 @@ export function ComingSoon({ icon, title, description, week }: Props) {
       <Text style={[typography.title, styles.center]}>{title}</Text>
       <Text style={[typography.body, styles.center, styles.muted]}>{description}</Text>
       <View style={styles.badge}>
-        <Text style={styles.badgeText}>{t('common.comingWeek', { week })}</Text>
+        <Text style={styles.badgeText}>{week ? t('common.comingWeek', { week }) : t('common.comingSoon')}</Text>
       </View>
     </View>
   );
