@@ -10,6 +10,9 @@ import { ActivityIndicator, View } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/auth/AuthContext';
 import { DialogsProvider } from '@/components/Dialogs';
+import { PlanetLayer } from '@/components/explore/PlanetLayer';
+import { NotificationBell } from '@/components/NotificationBell';
+import { OnlyWhenFocused } from '@/components/OnlyWhenFocused';
 import { restoreLanguage } from '@/i18n';
 import { colors, navigationTheme } from '@/theme';
 import { applyWebStyles } from '@/utils/webStyles';
@@ -31,11 +34,15 @@ function RootStack() {
 
   return (
     <Stack
+      // Solo se ve la pantalla de adelante (las de atrás quedarían superpuestas: son transparentes).
+      screenLayout={({ navigation, children }) => <OnlyWhenFocused navigation={navigation}>{children}</OnlyWhenFocused>}
       screenOptions={{
         headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.text,
         headerShadowVisible: false,
-        contentStyle: { backgroundColor: colors.background },
+        // Campanita de avisos arriba a la derecha en todas las pantallas (como en las redes sociales).
+        headerRight: () => <NotificationBell />,
+        contentStyle: { backgroundColor: 'transparent' },
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -47,7 +54,6 @@ function RootStack() {
       <Stack.Screen name="results/[id]" options={{ title: t('result.detailTitle') }} />
       <Stack.Screen name="events/[slug]" options={{ title: t('event.title') }} />
       <Stack.Screen name="events/gallery/[slug]" options={{ title: t('gallery.title') }} />
-      <Stack.Screen name="notifications" options={{ title: t('notifications.title') }} />
       <Stack.Screen name="news/[slug]" options={{ title: t('tabs.news') }} />
       <Stack.Screen name="marinas/[slug]" options={{ title: t('marinas.title') }} />
       <Stack.Screen name="marinas/request/[slug]" options={{ title: t('berth.title') }} />
@@ -75,7 +81,13 @@ export default function RootLayout() {
       <AuthProvider>
         <DialogsProvider>
           <StatusBar style="light" />
-          <RootStack />
+          {/* El planeta se monta una vez y se ve siempre: encima en Explorar, de fondo en el resto. */}
+          <View style={{ flex: 1, backgroundColor: colors.background }}>
+            <PlanetLayer />
+            <View style={{ flex: 1, zIndex: 1 }}>
+              <RootStack />
+            </View>
+          </View>
         </DialogsProvider>
       </AuthProvider>
     </ThemeProvider>

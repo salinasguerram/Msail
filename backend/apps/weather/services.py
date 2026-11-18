@@ -32,6 +32,14 @@ WEATHER_FIELDS = {
     "wind_gusts_10m_max": "gusts_kn",
     "wind_direction_10m_dominant": "wind_direction",
 }
+# Condiciones de ahora (el widget de clima de la home).
+CURRENT_FIELDS = {
+    "temperature_2m": "temp",
+    "weather_code": "weather_code",
+    "wind_speed_10m": "wind_kn",
+    "wind_direction_10m": "wind_direction",
+    "is_day": "is_day",
+}
 MARINE_FIELDS = {
     "wave_height_max": "wave_m",
     "wave_direction_dominant": "wave_direction",
@@ -64,7 +72,10 @@ def get_forecast(latitude, longitude):
 
     base = {"latitude": lat, "longitude": lng, "timezone": "auto", "forecast_days": DAYS}
     try:
-        weather = _get(FORECAST_URL, {**base, "wind_speed_unit": "kn", "daily": ",".join(WEATHER_FIELDS)})
+        weather = _get(
+            FORECAST_URL,
+            {**base, "wind_speed_unit": "kn", "daily": ",".join(WEATHER_FIELDS), "current": ",".join(CURRENT_FIELDS)},
+        )
     except (requests.RequestException, ValueError) as exc:
         logger.warning("Open-Meteo (tiempo) falló para %s,%s: %s", lat, lng, exc)
         raise ForecastUnavailable from exc
@@ -91,8 +102,12 @@ def get_forecast(latitude, longitude):
             day[field] = values[j] if j is not None and j < len(values) else None
         days.append(day)
 
+    now = weather.get("current") or {}
+    current = {target: now.get(source) for source, target in CURRENT_FIELDS.items()} if now else None
+
     result = {
         "timezone": weather.get("timezone"),
+        "current": current,
         "days": days,
         "has_waves": any(day["wave_m"] is not None for day in days),
         "updated_at": timezone.now().isoformat(),

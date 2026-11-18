@@ -18,6 +18,7 @@ import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
 import { Stars } from '@/components/Reviews';
 import { Screen } from '@/components/Screen';
+import { ServicesSwitch } from '@/components/ServicesSwitch';
 import { SelectField } from '@/components/SelectField';
 import { colors, radius, spacing, typography } from '@/theme';
 import { initialsOf } from '@/utils/text';
@@ -53,6 +54,7 @@ export default function ProfessionalsScreen() {
 
   return (
     <Screen>
+      <ServicesSwitch current="professionals" />
       {user ? (
         <Pressable
           accessibilityRole="link"

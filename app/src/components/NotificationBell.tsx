@@ -33,7 +33,6 @@ export function NotificationBell() {
     };
   }, [user, pathname]);
 
-  if (!user) return null;
   const badge = unread > 9 ? '9+' : String(unread);
   return (
     <Pressable

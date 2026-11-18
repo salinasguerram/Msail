@@ -113,6 +113,8 @@ export function globeHtml({ background, language }: { background: string; langua
   // Hasta qué altura de la cámara se muestra cada nivel (1: océanos, 2: mares, 3: mares chicos).
   var SEA_MAX_ALTITUDE = { 1: 99, 2: 1.6, 3: 0.55 };
   var NEAR = ${NEAR_ALTITUDE};
+  // Vista de Explorar guardada mientras el planeta está de fondo en otra sección.
+  var idleView = null;
   // Duración de los cambios de vista (Explorar y volver al inicio): larga y con aceleración suave.
   var TRANSITION_MS = 1400;
   var CLUSTER = ${CLUSTER_ALTITUDE};
@@ -639,6 +641,22 @@ export function globeHtml({ background, language }: { background: string; langua
       // La primera vez sin animación (el planeta aparece ya centrado); si después cambia (ej. llega el país de la cuenta), con animación.
       if (!interacted) globe.pointOfView({ lat: msg.lat, lng: msg.lng, altitude: fillAltitude() }, homeSet ? 1200 : 0);
       homeSet = true;
+    } else if (msg.type === 'idle') {
+      // Fondo de las otras secciones: se guarda la vista de Explorar, el planeta se ajusta al fondo y gira solo.
+      if (msg.on && !idleView) {
+        idleView = { pov: globe.pointOfView(), interacted: interacted };
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.35;
+        var p = idleView.pov;
+        globe.pointOfView({ lat: p.lat, lng: p.lng, altitude: fillAltitude() }, TRANSITION_MS);
+      } else if (!msg.on && idleView) {
+        controls.autoRotate = false;
+        var back = idleView;
+        idleView = null;
+        interacted = back.interacted;
+        // Vuelve exactamente a la vista que se dejó en Explorar (lugar y altura), aunque de fondo haya girado.
+        globe.pointOfView({ lat: back.pov.lat, lng: back.pov.lng, altitude: back.interacted ? back.pov.altitude : fillAltitude() }, TRANSITION_MS);
+      }
     } else if (msg.type === 'zoom') {
       interacted = true;
       controls.autoRotate = false;

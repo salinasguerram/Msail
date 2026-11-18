@@ -57,14 +57,14 @@ class MarinaAdmin(ModelAdmin):
         "name", "city", "country", "max_length_m", "max_draft_m", "has_price", "pending_requests", "verified", "is_published",
     ]
     actions = ["publish", "unpublish", "mark_verified"]
-    list_filter = ["is_published", "verified", "country", "fuel", "showers", ("rates", admin.EmptyFieldListFilter)]
+    list_filter = ["is_published", "verified", "kind", "overnight", "country", "fuel", "showers", ("rates", admin.EmptyFieldListFilter)]
     search_fields = ["name", "city", "address"]
     prepopulated_fields = {"slug": ("name",)}
     autocomplete_fields = ["country", "region"]
     inlines = [MarinaRateInline, MarinaPhotoInline, BerthRequestInline]
     readonly_fields = ["app_link"]
     fieldsets = (
-        (None, {"fields": ("name", "slug", "is_published", "verified", "app_link", "description")}),
+        (None, {"fields": ("name", "slug", "kind", "is_published", "verified", "app_link", "description")}),
         ("Ubicación", {"fields": ("country", "region", "city", "address", "latitude", "longitude")}),
         ("Contacto", {"fields": ("website", "email", "phone", "whatsapp", "vhf_channel")}),
         ("Capacidad", {"fields": ("berths", "max_length_m", "max_draft_m")}),
@@ -72,7 +72,7 @@ class MarinaAdmin(ModelAdmin):
         (
             "Servicios informados",
             {
-                "fields": (("water", "electricity", "showers", "fuel"), ("wifi", "laundry", "security", "boatyard")),
+                "fields": (("water", "electricity", "showers", "fuel"), ("wifi", "laundry", "security", "boatyard"), ("overnight",)),
                 "description": "Marcá solo lo que la marina informa. Lo no marcado se muestra como «no informado».",
             },
         ),

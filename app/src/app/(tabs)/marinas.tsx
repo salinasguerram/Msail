@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { getMarinaCountries, getMarinas, MARINA_SERVICES, type MarinaFilters, type MarinaSummary } from '@/api/marinas';
+import { getMarinaCountries, getMarinas, MARINA_SERVICES, PLACE_KINDS, type MarinaFilters, type MarinaSummary } from '@/api/marinas';
 import { useAuth } from '@/auth/AuthContext';
 import { errorMessage } from '@/auth/errors';
 import { Button } from '@/components/Button';
@@ -12,6 +12,7 @@ import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
 import { MarinaServices } from '@/components/MarinaServices';
 import { Screen } from '@/components/Screen';
+import { ServicesSwitch } from '@/components/ServicesSwitch';
 import { SelectField } from '@/components/SelectField';
 import { TextField } from '@/components/TextField';
 import { colors, radius, spacing, typography } from '@/theme';
@@ -53,7 +54,7 @@ export default function MarinasScreen() {
       const current = f.services ?? [];
       return { ...f, services: current.includes(service) ? current.filter((s) => s !== service) : [...current, service] };
     });
-  const hasFilters = Boolean(filters.q || filters.country || services.length || filters.length || filters.draft || filters.withPrice);
+  const hasFilters = Boolean(filters.q || filters.kind || filters.country || services.length || filters.length || filters.draft || filters.withPrice);
 
   function clear() {
     setSearch('');
@@ -64,6 +65,20 @@ export default function MarinasScreen() {
 
   return (
     <Screen>
+      <ServicesSwitch current="marinas" />
+      <Text style={typography.caption}>{t('services.berthsIntro')}</Text>
+      {/* Tipo de lugar: marinas, clubes, fondeaderos o campos de boyas. */}
+      <View style={styles.chips}>
+        <Chip label={t('services.allPlaces')} selected={!filters.kind} onPress={() => setFilters((f) => ({ ...f, kind: null }))} />
+        {PLACE_KINDS.map((kind) => (
+          <Chip
+            key={kind}
+            label={t(`services.kinds.${kind}`)}
+            selected={filters.kind === kind}
+            onPress={() => setFilters((f) => ({ ...f, kind: f.kind === kind ? null : kind }))}
+          />
+        ))}
+      </View>
       {user ? (
         <Pressable
           accessibilityRole="link"
@@ -240,7 +255,9 @@ function MarinaRow({ marina, length }: { marina: MarinaSummary; length: string |
       )}
       <View style={{ flex: 1, gap: 4 }}>
         <Text style={[typography.body, { fontWeight: '700' }]}>{marina.name}</Text>
-        <Text style={typography.caption}>{[marina.city, marina.country_name].filter(Boolean).join(' · ')}</Text>
+        <Text style={typography.caption}>
+          {[t(`services.kindOne.${marina.kind ?? 'marina'}`), marina.city, marina.country_name].filter(Boolean).join(' · ')}
+        </Text>
         {sizes.length ? <Text style={[typography.caption, { color: colors.text }]}>{sizes.join(' · ')}</Text> : null}
         {rate ? (
           <Text style={styles.price}>

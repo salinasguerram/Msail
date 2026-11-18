@@ -40,7 +40,8 @@ export const navigationTheme: Theme = {
   colors: {
     ...DarkTheme.colors,
     primary: colors.primary,
-    background: colors.background,
+    // Transparente: las pantallas dejan ver el planeta de fondo.
+    background: 'transparent',
     card: colors.surface,
     text: colors.text,
     border: colors.border,

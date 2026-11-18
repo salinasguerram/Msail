@@ -9,7 +9,7 @@ import type { FromGlobe, GlobeProps, ToGlobe } from './types';
 import { onGlobeZoom } from './zoom';
 
 /** Planeta 3D en la web: la misma página de globe.gl, dentro de un iframe aislado (sin acceso a la app). */
-export function Globe({ points, layers, selected, wind, home, focus, reset, frame, onTap, onCountry, style, accessibilityLabel }: GlobeProps) {
+export function Globe({ points, layers, selected, wind, home, focus, reset, idle, frame, onTap, onCountry, style, accessibilityLabel }: GlobeProps) {
   const { i18n } = useTranslation();
   const iframe = useRef<HTMLIFrameElement | null>(null);
   // Sube cada vez que la página avisa que está lista (también después de recargarse): ahí se le manda todo.
@@ -66,6 +66,11 @@ export function Globe({ points, layers, selected, wind, home, focus, reset, fram
   useEffect(() => {
     if (ready && focus) send({ type: 'fly', lat: focus.lat, lng: focus.lng, altitude: focus.altitude });
   }, [ready, focus]);
+
+  // Fondo de las otras secciones (va después del efecto de frame: primero cambia el tamaño, después la vista).
+  useEffect(() => {
+    if (ready) send({ type: 'idle', on: !!idle });
+  }, [ready, idle]);
 
   // Zoom pedido desde afuera (gestos sobre lo que está encima del planeta).
   useEffect(() => (ready ? onGlobeZoom((factor) => send({ type: 'zoom', factor })) : undefined), [ready]);

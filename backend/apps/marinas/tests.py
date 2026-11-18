@@ -54,6 +54,15 @@ class MarinaApiTests(APITestCase):
         self.assertEqual(self.names("?services=fuel,showers"), ["Marina Port Vell", "Puerto Portals", "Safe Harbor Newport Shipyard"])
         self.assertEqual(self.client.get("/api/marinas/?services=spa").status_code, 400)
 
+    def test_place_kind_and_overnight(self):
+        # Las de ejemplo son marinas y reciben barcos que pasan la noche a bordo.
+        self.assertEqual(len(self.names("?kind=marina&services=overnight")), 6)
+        self.assertEqual(self.names("?kind=anchorage"), [])
+        self.assertEqual(self.client.get("/api/marinas/?kind=castillo").status_code, 400)
+        first = self.client.get("/api/marinas/").data["results"][0]
+        self.assertEqual(first["kind"], "marina")
+        self.assertIn("overnight", first["services"])
+
     def test_boat_size_filters_leave_out_unknown(self):
         self.assertEqual(self.names("?length=70"), ["Marina Port Vell", "Miami Beach Marina", "Safe Harbor Newport Shipyard"])
         self.assertEqual(self.names("?length=10&draft=4,5"), ["Marina Port Vell", "Safe Harbor Newport Shipyard"])
@@ -64,7 +73,7 @@ class MarinaApiTests(APITestCase):
         data = self.client.get("/api/marinas/cowes-yacht-haven/").data
         self.assertEqual(data["vhf_channel"], "80")
         self.assertEqual(data["max_draft_m"], 3.5)
-        self.assertEqual(data["services"], ["water", "electricity", "showers", "wifi", "laundry"])
+        self.assertEqual(data["services"], ["water", "electricity", "showers", "wifi", "laundry", "overnight"])
         self.assertFalse(data["verified"])
         self.assertEqual(self.client.get("/api/marinas/marina-oculta/").status_code, 404)
         countries = self.client.get("/api/marinas/filters/").data["countries"]

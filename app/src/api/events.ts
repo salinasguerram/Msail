@@ -1,3 +1,4 @@
+import type { ProfessionalSummary } from '@/api/professionals';
 import { api } from '@/api/client';
 import type { ArticleCard } from '@/api/news';
 
@@ -154,6 +155,8 @@ export type EventDetail = Omit<EventSummary, 'organizer_club'> & {
   /** Últimas noticias de la regata y cuántas hay en total. */
   news: ArticleCard[];
   news_count: number;
+  /** Profesionales para esta regata: elegidos por el equipo (linked) o los más cercanos a la sede. */
+  professionals: { linked: boolean; items: (ProfessionalSummary & { distance_km?: number })[] };
 };
 
 // Con token si hay sesión, para saber si la sigo.

@@ -57,6 +57,14 @@ class Event(Located):
         "sailing.BoatClass", verbose_name=_("clases"), blank=True, related_name="events"
     )
 
+    professionals = models.ManyToManyField(
+        "professionals.Professional",
+        verbose_name=_("profesionales recomendados"),
+        blank=True,
+        related_name="events",
+        help_text=_("Servicios para esta regata (velería, rigging, entrenadores…). Vacío: se muestran los más cercanos a la sede."),
+    )
+
     description = models.TextField(_("descripción"), blank=True)
     website = models.URLField(_("sitio oficial"), blank=True)
     entry_url = models.URLField(_("link de inscripción"), blank=True)

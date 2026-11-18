@@ -30,6 +30,8 @@ export type GlobeProps = {
   focus?: { lat: number; lng: number; altitude: number } | null;
   /** Cada objeto nuevo vuelve el planeta a la vista inicial, centrado en ese lugar. */
   reset?: { lat: number; lng: number } | null;
+  /** De fondo (fuera de Explorar): gira despacio y se acomoda al tamaño de fondo; al volver, regresa a la vista anterior. */
+  idle?: boolean;
   /** Tamaño del espacio libre (px) cuando el planeta es el fondo de una pantalla con contenido encima. */
   frame?: { w: number; h: number; dx?: number; dy?: number } | null;
   onTap: (tap: GlobeTap) => void;
@@ -50,6 +52,7 @@ export type ToGlobe =
   | { type: 'fly'; lat: number; lng: number; altitude: number }
   | { type: 'reset'; lat: number; lng: number }
   | { type: 'zoom'; factor: number }
+  | { type: 'idle'; on: boolean }
   | { type: 'frame'; w: number; h: number; dx: number; dy: number };
 
 /** Mensajes del planeta a la app. */

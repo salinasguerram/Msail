@@ -165,7 +165,7 @@ class EventAdmin(ModelAdmin):
     list_filter = [StatusFilter, "event_type", "is_published", "country", "boat_classes"]
     search_fields = ["name", "city", "venue", "organizer_name", "organizer_club__name"]
     prepopulated_fields = {"slug": ("name",)}
-    autocomplete_fields = ["country", "region", "organizer_club"]
+    autocomplete_fields = ["country", "region", "organizer_club", "professionals"]
     filter_horizontal = ["boat_classes"]
     date_hierarchy = "start_date"
     ordering = ["-start_date"]
@@ -178,6 +178,7 @@ class EventAdmin(ModelAdmin):
         ("Fechas", {"fields": ("start_date", "end_date")}),
         ("Lugar", {"fields": ("country", "region", "city", "venue", "latitude", "longitude")}),
         ("Organización", {"fields": ("organizer_club", "organizer_name", "boat_classes")}),
+        ("Servicios", {"fields": ("professionals",), "description": "Profesionales que se muestran en la página de la regata."}),
         ("Inscripción", {"fields": ("entry_url", "entry_deadline")}),
         ("Información", {"fields": ("description", "website")}),
         ("Resultados", {"fields": ("results_url", "results_partial")}),

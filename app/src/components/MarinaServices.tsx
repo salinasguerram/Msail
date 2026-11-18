@@ -7,6 +7,7 @@ import type { MarinaService } from '@/api/marinas';
 import { colors, radius, spacing } from '@/theme';
 
 export const SERVICE_ICONS: Record<MarinaService, ComponentProps<typeof Ionicons>['name']> = {
+  overnight: 'moon-outline',
   water: 'water-outline',
   electricity: 'flash-outline',
   showers: 'rainy-outline',

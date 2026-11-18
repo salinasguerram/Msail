@@ -1,8 +1,6 @@
-import { useTranslation } from 'react-i18next';
+import { Redirect } from 'expo-router';
 
-import { ComingSoon } from '@/components/ComingSoon';
-
+/** Escuelas y formación ahora es parte de MSailing: los links viejos llevan a esa sección. */
 export default function LearningScreen() {
-  const { t } = useTranslation();
-  return <ComingSoon icon="school-outline" title={t('sections.learning.title')} description={t('sections.learning.description')} week={7} />;
+  return <Redirect href={{ pathname: '/msailing', params: { section: 'school' } }} />;
 }

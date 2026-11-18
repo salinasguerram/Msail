@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 
 from apps.core.text import normalize
 
-from .models import SERVICE_KEYS, BerthRequest, Marina, RequestStatus
+from .models import SERVICE_KEYS, BerthRequest, Marina, PlaceKind, RequestStatus
 from .requests import request_created
 from .serializers import BerthRequestCreateSerializer, BerthRequestSerializer, MarinaDetailSerializer, MarinaListSerializer
 
@@ -35,6 +35,7 @@ class MarinaListView(generics.ListAPIView):
     Directorio de marinas (público). Filtros opcionales y combinables:
       ?q=texto          nombre, ciudad, dirección, país o región, sin importar tildes
       ?country=ES  ?region=<id>
+      ?kind=marina|club|anchorage|moorings   tipo de lugar
       ?services=fuel,showers   tienen que tener todos los servicios pedidos
       ?length=12.5      entra un barco de esa eslora (m)
       ?draft=2.1        alcanza la profundidad para ese calado (m)
@@ -54,6 +55,10 @@ class MarinaListView(generics.ListAPIView):
             queryset = queryset.filter(country__iso_code=country)
         if region := params.get("region", "").strip():
             queryset = queryset.filter(region_id=region) if region.isdigit() else queryset.none()
+        if kind := params.get("kind", "").strip():
+            if kind not in PlaceKind.values:
+                raise serializers.ValidationError({"kind": [f"Valores posibles: {', '.join(PlaceKind.values)}."]})
+            queryset = queryset.filter(kind=kind)
         services = [s for s in params.get("services", "").split(",") if s]
         unknown = set(services) - set(SERVICE_KEYS)
         if unknown:

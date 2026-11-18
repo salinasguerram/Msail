@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "apps.professionals",
     "apps.weather",
     "apps.map",
+    "apps.msailing",
 ]
 
 MIDDLEWARE = [
@@ -166,6 +167,7 @@ REST_FRAMEWORK = {
         "verify_code": "10/min",
         "lookup": "20/min",
         "uploads": "30/hour",
+        "weather": "120/min",
     },
     "EXCEPTION_HANDLER": "config.exceptions.api_exception_handler",
 }
@@ -343,6 +345,14 @@ UNFOLD = {
                     },
                     _admin_link("Reseñas", "reviews", "admin:professionals_review_changelist"),
                     _admin_link("Especialidades", "category", "admin:professionals_specialty_changelist"),
+                ],
+            },
+            {
+                "title": "MSailing",
+                "items": [
+                    _admin_link("Secciones", "article", "admin:msailing_section_changelist"),
+                    _admin_link("Videos y tips", "smart_display", "admin:msailing_video_changelist"),
+                    _admin_link("Aportes de la Fundación", "volunteer_activism", "admin:msailing_foundationsupport_changelist"),
                 ],
             },
             {

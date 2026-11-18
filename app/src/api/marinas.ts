@@ -1,8 +1,12 @@
 import { api } from '@/api/client';
 
 /** Servicios que una marina puede informar (lo que no figura es "no informado"). */
-export const MARINA_SERVICES = ['water', 'electricity', 'showers', 'fuel', 'wifi', 'laundry', 'security', 'boatyard'] as const;
+export const MARINA_SERVICES = ['overnight', 'water', 'electricity', 'showers', 'fuel', 'wifi', 'laundry', 'security', 'boatyard'] as const;
 export type MarinaService = (typeof MARINA_SERVICES)[number];
+
+/** Tipo de lugar para amarrar o pasar la noche a bordo. */
+export const PLACE_KINDS = ['marina', 'club', 'anchorage', 'moorings'] as const;
+export type PlaceKind = (typeof PLACE_KINDS)[number];
 
 export type RateUnit = 'meter_night' | 'foot_night' | 'boat_night' | 'meter_month' | 'boat_month';
 
@@ -22,6 +26,7 @@ export type MarinaSummary = {
   id: number;
   slug: string;
   name: string;
+  kind: PlaceKind;
   city: string;
   country: string;
   country_name: string;
@@ -60,6 +65,7 @@ export type MarinaDetail = MarinaSummary & {
 
 export type MarinaFilters = {
   q?: string | null;
+  kind?: PlaceKind | null;
   country?: string | null;
   services?: MarinaService[];
   /** Eslora del barco en metros: marinas donde entra. */
@@ -76,6 +82,7 @@ export function getMarinas(filters: MarinaFilters, page = 1) {
   const query = new URLSearchParams({ page: String(page) });
   if (filters.q?.trim()) query.set('q', filters.q.trim());
   if (filters.country) query.set('country', filters.country);
+  if (filters.kind) query.set('kind', filters.kind);
   if (filters.services?.length) query.set('services', filters.services.join(','));
   if (filters.length) query.set('length', filters.length);
   if (filters.draft) query.set('draft', filters.draft);

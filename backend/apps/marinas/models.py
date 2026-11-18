@@ -18,15 +18,26 @@ SERVICES = [
     ("laundry", _("Lavandería")),
     ("security", _("Seguridad 24 h")),
     ("boatyard", _("Varadero / travel lift")),
+    ("overnight", _("Pernocte a bordo")),
 ]
 SERVICE_KEYS = [key for key, _label in SERVICES]
 
 
+class PlaceKind(models.TextChoices):
+    """Tipo de lugar para amarrar o pasar la noche a bordo."""
+
+    MARINA = "marina", _("Marina / puerto deportivo")
+    CLUB = "club", _("Club náutico")
+    ANCHORAGE = "anchorage", _("Fondeadero")
+    MOORINGS = "moorings", _("Campo de boyas")
+
+
 class Marina(Located):
-    """Marina o puerto deportivo del directorio."""
+    """Lugar del directorio de amarres: marina, club, fondeadero o campo de boyas."""
 
     name = models.CharField(_("nombre"), max_length=200)
     slug = models.SlugField(_("slug"), max_length=200, unique=True)
+    kind = models.CharField(_("tipo"), max_length=12, choices=PlaceKind.choices, default=PlaceKind.MARINA)
     country = models.ForeignKey("geo.Country", verbose_name=_("país"), on_delete=models.PROTECT, related_name="marinas")
     region = models.ForeignKey(
         "geo.Region", verbose_name=_("región"), on_delete=models.SET_NULL, null=True, blank=True, related_name="marinas"
@@ -60,6 +71,9 @@ class Marina(Located):
     laundry = models.BooleanField(_("lavandería"), default=False)
     security = models.BooleanField(_("seguridad 24 h"), default=False)
     boatyard = models.BooleanField(_("varadero / travel lift"), default=False)
+    overnight = models.BooleanField(
+        _("pernocte a bordo"), default=False, help_text=_("Se puede pasar la noche en el barco (amarre o fondeo de visitantes).")
+    )
 
     # Precio orientativo (solo si la marina lo informa)
     prices_updated_on = models.DateField(

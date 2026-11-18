@@ -297,6 +297,32 @@ export default function EventScreen() {
         </Card>
       ) : null}
 
+      {event.professionals?.items.length ? (
+        <Card>
+          <Text style={typography.label}>{t(event.professionals.linked ? 'event.professionals' : 'event.professionalsNearby')}</Text>
+          {event.professionals.items.map((pro) => (
+            <Pressable
+              key={pro.id}
+              accessibilityRole="link"
+              onPress={() => router.push({ pathname: '/professionals/[slug]', params: { slug: pro.slug } })}
+              style={({ pressed }) => [styles.proRow, pressed && { opacity: 0.7 }]}
+            >
+              <Ionicons name="construct-outline" size={18} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.body, { fontWeight: '700' }]}>{pro.name}</Text>
+                <Text style={typography.caption} numberOfLines={1}>
+                  {[pro.specialties.map((s) => s.name).join(' · '), pro.city, pro.distance_km !== undefined ? t('event.km', { km: pro.distance_km }) : null]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </Pressable>
+          ))}
+          <Button title={t('event.allProfessionals')} variant="secondary" onPress={() => router.navigate('/professionals')} />
+        </Card>
+      ) : null}
+
       {event.media_count > 0 ? (
         <Card>
           <Text style={typography.label}>{t('gallery.section', { count: event.media_count })}</Text>
@@ -343,6 +369,7 @@ function LinkRow({ label, url }: { label: string; url: string }) {
 }
 
 const styles = StyleSheet.create({
+  proRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
   hero: { gap: spacing.sm, paddingVertical: spacing.xl },
   followRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.sm, flexWrap: 'wrap' },
   follow: {

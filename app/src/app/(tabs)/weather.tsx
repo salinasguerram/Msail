@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState, type ComponentProps } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -16,19 +16,8 @@ import { SelectField, type SelectOption } from '@/components/SelectField';
 import { colors, radius, spacing, typography } from '@/theme';
 import { distanceKm } from '@/utils/geo';
 import { approximateLocation } from '@/utils/homeLocation';
-
-type IconName = ComponentProps<typeof Ionicons>['name'];
-
-/** Ícono según el código WMO del estado del cielo. */
-function weatherIcon(code: number | null): IconName {
-  if (code === null) return 'help-circle-outline';
-  if (code === 0) return 'sunny-outline';
-  if (code <= 2) return 'partly-sunny-outline';
-  if (code <= 48) return 'cloudy-outline';
-  if (code >= 95) return 'thunderstorm-outline';
-  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'snow-outline';
-  return 'rainy-outline';
-}
+import { deviceLocation, herePlace, type Coords } from '@/utils/myLocation';
+import { weatherIcon } from '@/utils/weatherIcon';
 
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
 const COMPASS_EN = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
@@ -49,6 +38,18 @@ const round = (value: number | null) => (value === null ? '–' : String(Math.ro
  * 1. la región náutica del perfil de navegante (si es una de las zonas con pronóstico);
  * 2. la zona más cercana al país de la cuenta o, sin sesión, a la ubicación aproximada (zona horaria).
  */
+/** Tu ubicación: la del dispositivo (pide permiso) o, si no se puede, la aproximada (país de la cuenta o zona horaria). */
+async function resolveHere(userCountry: string | null | undefined): Promise<Coords> {
+  const precise = await deviceLocation(true);
+  if (precise) return precise;
+  let country = null;
+  if (userCountry) {
+    const list = await getCountries().catch(() => []);
+    country = list.find((c) => c.iso_code === userCountry) ?? null;
+  }
+  return approximateLocation(country);
+}
+
 async function defaultPlace(zones: WeatherPlace[], userCountry: string | null | undefined, signedIn: boolean) {
   if (!zones.length) return null;
   if (signedIn) {
@@ -103,6 +104,7 @@ export default function WeatherScreen() {
   const options = useMemo<SelectOption[]>(() => {
     if (!places) return [];
     return [
+      { value: 'here', label: t('weather.here'), hint: t('weather.hereHint') },
       ...places.events.map((p) => ({ value: p.id, label: p.name, hint: `${t('weather.venue')} · ${p.subtitle}` })),
       ...places.zones.map((p) => ({ value: p.id, label: p.name, hint: `${t('weather.zone')} · ${p.subtitle}` })),
     ];
@@ -127,9 +129,30 @@ export default function WeatherScreen() {
         onPress={() => router.navigate({ pathname: '/', params: { wind: '1' } })}
       />
       {placesError ? <Text style={{ color: colors.danger }}>{errorMessage(placesError, t)}</Text> : null}
-      {place ? <ForecastView key={place} place={place} /> : !places && !placesError ? <ActivityIndicator color={colors.primary} /> : null}
+      {place === 'here' ? (
+        <HereForecast userCountry={user?.country} />
+      ) : place ? (
+        <ForecastView key={place} place={place} />
+      ) : !places && !placesError ? (
+        <ActivityIndicator color={colors.primary} />
+      ) : null}
     </Screen>
   );
+}
+
+/** Pronóstico para tu ubicación (desde el clima de la esquina de Explorar o eligiendo "Mi ubicación"). */
+function HereForecast({ userCountry }: { userCountry: string | null | undefined }) {
+  const [coords, setCoords] = useState<Coords | null>(null);
+  useEffect(() => {
+    let active = true;
+    resolveHere(userCountry).then((c) => active && setCoords(c));
+    return () => {
+      active = false;
+    };
+  }, [userCountry]);
+  if (!coords) return <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />;
+  const place = herePlace(coords);
+  return <ForecastView key={place} place={place} />;
 }
 
 function ForecastView({ place }: { place: string }) {
@@ -165,7 +188,7 @@ function ForecastView({ place }: { place: string }) {
   return (
     <>
       <Card style={{ gap: 4 }}>
-        <Text style={styles.placeName}>{forecast.place.name}</Text>
+        <Text style={styles.placeName}>{forecast.place.kind === 'here' ? t('weather.here') : forecast.place.name}</Text>
         <Text style={typography.caption}>
           {[forecast.place.subtitle, forecast.place.kind === 'event' ? forecast.place.country_name : null].filter(Boolean).join(' · ')}
         </Text>

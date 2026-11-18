@@ -36,7 +36,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: spacing.xxl,
     gap: spacing.md,
-    backgroundColor: colors.background,
   },
   iconRing: {
     width: 88,

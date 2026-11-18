@@ -164,6 +164,7 @@ class EventDetailSerializer(EventListSerializer):
     followers_count = serializers.SerializerMethodField()
     news = serializers.SerializerMethodField()
     news_count = serializers.SerializerMethodField()
+    professionals = serializers.SerializerMethodField()
 
     class Meta(EventListSerializer.Meta):
         fields = EventListSerializer.Meta.fields + [
@@ -185,7 +186,44 @@ class EventDetailSerializer(EventListSerializer):
             "followers_count",
             "news",
             "news_count",
+            "professionals",
         ]
+
+    NEARBY_PROFESSIONALS_KM = 150
+    NEARBY_PROFESSIONALS = 4
+
+    def get_professionals(self, event):
+        """
+        Profesionales para esta regata: los que eligió el equipo en el panel o, si no eligió ninguno,
+        los más cercanos a la sede (hasta 150 km). `linked` dice cuál de los dos casos es.
+        """
+        import math
+
+        from apps.professionals.serializers import ProfessionalListSerializer
+        from apps.professionals.views import published_professionals
+
+        context = self.context
+        linked = list(published_professionals().filter(events=event).order_by("name"))
+        if linked:
+            return {"linked": True, "items": ProfessionalListSerializer(linked, many=True, context=context).data}
+        if event.latitude is None or event.longitude is None:
+            return {"linked": False, "items": []}
+
+        lat0, lng0 = float(event.latitude), float(event.longitude)
+
+        def km(p):
+            r = math.pi / 180
+            a = math.sin((float(p.latitude) - lat0) * r / 2) ** 2 + math.cos(lat0 * r) * math.cos(float(p.latitude) * r) * math.sin(
+                (float(p.longitude) - lng0) * r / 2
+            ) ** 2
+            return 6371 * 2 * math.asin(math.sqrt(a))
+
+        candidates = [(km(p), p) for p in published_professionals().filter(latitude__isnull=False, longitude__isnull=False)]
+        near = sorted((c for c in candidates if c[0] <= self.NEARBY_PROFESSIONALS_KM), key=lambda c: c[0])[: self.NEARBY_PROFESSIONALS]
+        items = ProfessionalListSerializer([p for _d, p in near], many=True, context=context).data
+        for item, (distance, _p) in zip(items, near):
+            item["distance_km"] = round(distance)
+        return {"linked": False, "items": items}
 
     def get_organizer_club(self, event):
         club = event.organizer_club

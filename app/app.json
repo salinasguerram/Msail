@@ -36,7 +36,13 @@
           "cameraPermission": "MSAIL LEAGUE usa la cámara para sacar fotos de tu perfil y tus embarcaciones."
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "MSAIL LEAGUE usa tu ubicación para mostrarte el clima de tu zona."
+        }
+      ]
     ],
     "scheme": "msailleague",
     "backgroundColor": "#050b18",

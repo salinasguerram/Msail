@@ -63,6 +63,7 @@ class MarinaListSerializer(serializers.ModelSerializer):
             "id",
             "slug",
             "name",
+            "kind",
             "city",
             "country",
             "country_name",

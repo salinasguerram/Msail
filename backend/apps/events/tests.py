@@ -187,6 +187,28 @@ class EventDetailTests(CalendarTestCase):
         self.assertEqual([c["name"] for c in data["categories"]], ["J/70 Open", "Sub-21"])
         self.assertEqual(data["categories"][0]["boat_class"], "j70")
 
+    def test_professionals_nearby_or_chosen(self):
+        from apps.professionals.models import Professional
+
+        Event.objects.filter(pk=self.live.pk).update(latitude=25.77, longitude=-80.13)  # Miami
+        near = Professional.objects.create(name="Velería Miami", slug="veleria-miami", country=self.us, city="Miami", latitude=25.8, longitude=-80.2)
+        Professional.objects.create(name="Rigging Lejos", slug="rigging-lejos", country=self.us, city="Newport", latitude=41.49, longitude=-71.31)
+        Professional.objects.create(name="Oculto", slug="oculto", country=self.us, city="Miami", latitude=25.8, longitude=-80.2, is_published=False)
+
+        # Sin elegidos en el panel: los publicados cerca de la sede, con la distancia.
+        data = self.client.get(f"/api/events/{self.live.slug}/").data["professionals"]
+        self.assertFalse(data["linked"])
+        self.assertEqual([p["name"] for p in data["items"]], ["Velería Miami"])
+        self.assertLess(data["items"][0]["distance_km"], 20)
+
+        # Elegidos en el panel: solo esos, aunque estén lejos.
+        lejos = Professional.objects.get(slug="rigging-lejos")
+        self.live.professionals.set([lejos])
+        data = self.client.get(f"/api/events/{self.live.slug}/").data["professionals"]
+        self.assertTrue(data["linked"])
+        self.assertEqual([p["name"] for p in data["items"]], ["Rigging Lejos"])
+        self.assertNotIn(near.name, [p["name"] for p in data["items"]])
+
     def test_start_only_event_has_no_duration(self):
         data = self.client.get(f"/api/events/{self.later.slug}/").data
         self.assertIsNone(data["duration_days"])

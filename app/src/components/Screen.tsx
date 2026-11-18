@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
-import { colors, spacing } from '@/theme';
+import { spacing } from '@/theme';
 
 type Props = {
   children: ReactNode;
@@ -32,7 +32,8 @@ export function Screen({ children, scroll = true, edges = ['left', 'right'], con
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: colors.background },
+  // Transparente: detrás se ve el planeta de fondo (components/explore/PlanetLayer).
+  fill: { flex: 1, backgroundColor: 'transparent' },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

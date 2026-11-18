@@ -103,6 +103,26 @@ class WeatherApiTests(APITestCase):
             response = self.client.get("/api/weather/forecast/", {"place": "event:copa-pronto"})
         self.assertEqual(response.status_code, 503)
 
+    def test_here_rounds_to_grid_and_names_nearest_zone(self):
+        zone = self.zone
+        weather = {**WEATHER, "current": {"temperature_2m": 21.4, "weather_code": 2, "wind_speed_10m": 11.2, "wind_direction_10m": 200, "is_day": 1}}
+        with mock.patch("apps.weather.services.requests.get", side_effect=fake_get(weather=weather)) as get:
+            lat, lng = float(zone.latitude) + 0.06, float(zone.longitude) - 0.04
+            response = self.client.get("/api/weather/forecast/", {"place": f"here:{lat},{lng}"})
+        self.assertEqual(response.status_code, 200)
+        place = response.data["place"]
+        self.assertEqual(place["kind"], "here")
+        # Redondeado a la grilla de 0,25°: Open-Meteo recibe esas coordenadas, no las exactas.
+        self.assertEqual(place["latitude"] % 0.25, 0)
+        self.assertEqual(get.call_args_list[0].kwargs["params"]["latitude"], place["latitude"])
+        self.assertIn(zone.name, place["subtitle"])
+        self.assertEqual(response.data["current"]["temp"], 21.4)
+        self.assertEqual(response.data["current"]["wind_kn"], 11.2)
+
+    def test_here_rejects_bad_coordinates(self):
+        for bad in ("here:", "here:abc,def", "here:95,10", "here:10,200", "here:nan,1"):
+            self.assertEqual(self.client.get("/api/weather/forecast/", {"place": bad}).status_code, 404, bad)
+
     def test_only_known_places(self):
         with mock.patch("apps.weather.services.requests.get") as get:
             for place in ["", "zone:9999", "event:no-existe", "lat:39.5", "event:sin-coords"]:

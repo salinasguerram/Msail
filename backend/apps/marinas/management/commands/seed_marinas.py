@@ -104,6 +104,8 @@ class Command(BaseCommand):
                 "description": data["description"],
                 "verified": False,
                 **{service: service in data["services"] for service in SERVICE_KEYS},
+                # Todas las de ejemplo reciben barcos de visita que pasan la noche a bordo.
+                "overnight": True,
             }
             _marina, was_created = Marina.objects.update_or_create(slug=slugify(data["name"]), defaults=fields)
             created += was_created

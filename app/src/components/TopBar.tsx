@@ -5,11 +5,14 @@ import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from
 
 import { useAuth } from '@/auth/AuthContext';
 import { Brand } from '@/components/Brand';
+import { setNavBarHeight } from '@/components/explore/navBar';
 import { NotificationBell } from '@/components/NotificationBell';
 import { colors, fonts, radius, spacing } from '@/theme';
 
 /** Desde este ancho, en la web, la navegación va en una barra arriba (como un sitio) y la home se arma en tres columnas. */
 export const WIDE_WEB_MIN = 1024;
+/** Alto de la barra de arriba (web ancha). */
+export const TOP_BAR_HEIGHT = 68;
 
 export function useWideWeb() {
   const { width } = useWindowDimensions();
@@ -26,14 +29,14 @@ export function onHomeReset(listener: () => void) {
 }
 
 /** Secciones de la barra, en orden. `name` es la ruta dentro de (tabs). */
+// `also`: otras rutas que cuentan como esa sección (ej. Profesionales es parte de Servicios y amarres).
 const ITEMS = [
-  { name: 'index', label: 'nav.explore' },
-  { name: 'races', label: 'nav.races' },
-  { name: 'marinas', label: 'nav.marinas' },
-  { name: 'professionals', label: 'nav.professionals' },
-  { name: 'news', label: 'nav.news' },
-  { name: 'weather', label: 'nav.weather' },
-  { name: 'learning', label: 'nav.learning' },
+  { name: 'index', label: 'nav.explore', also: [] },
+  { name: 'races', label: 'nav.races', also: [] },
+  { name: 'marinas', label: 'nav.services', also: ['professionals'] },
+  { name: 'news', label: 'nav.news', also: [] },
+  { name: 'weather', label: 'nav.weather', also: [] },
+  { name: 'msailing', label: 'nav.msailing', also: ['learning'] },
 ] as const;
 
 type Props = {
@@ -54,7 +57,7 @@ export function TopBar({ state, navigateToTab }: Props) {
   const roomy = width >= 1200;
 
   return (
-    <View style={styles.bar} accessibilityRole="navigation">
+    <View style={styles.bar} accessibilityRole="navigation" onLayout={(e) => setNavBarHeight(e.nativeEvent.layout.height)}>
       <Pressable
         accessibilityRole="link"
         accessibilityLabel={t('nav.home')}
@@ -69,7 +72,7 @@ export function TopBar({ state, navigateToTab }: Props) {
 
       <View style={[styles.items, { gap: roomy ? spacing.xs : 0 }]}>
         {ITEMS.map((item) => {
-          const active = current === item.name;
+          const active = current === item.name || (item.also as readonly string[]).includes(current ?? '');
           return (
             <Pressable
               key={item.name}
@@ -117,7 +120,7 @@ export function TopBar({ state, navigateToTab }: Props) {
 
 const styles = StyleSheet.create({
   bar: {
-    height: 68,
+    height: TOP_BAR_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.xxl,

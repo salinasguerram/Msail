@@ -1,9 +1,9 @@
 import { api } from '@/api/client';
 
 export type WeatherPlace = {
-  /** 'event:<slug>' o 'zone:<id>' */
+  /** 'event:<slug>', 'zone:<id>' o 'here:<lat>,<lng>' (tu ubicación) */
   id: string;
-  kind: 'event' | 'zone';
+  kind: 'event' | 'zone' | 'here';
   /** Sede (ej. "Bahía de Palma") o nombre de la zona. */
   name: string;
   /** Regata (en sedes) o país (en zonas). */
@@ -33,9 +33,20 @@ export type ForecastDay = {
   wave_period_s: number | null;
 };
 
+/** El tiempo de ahora en el lugar (null si el servicio no lo trajo). */
+export type CurrentWeather = {
+  temp: number | null;
+  weather_code: number | null;
+  wind_kn: number | null;
+  wind_direction: number | null;
+  /** 1 de día, 0 de noche. */
+  is_day: number | null;
+};
+
 export type Forecast = {
   place: WeatherPlace;
   timezone: string;
+  current: CurrentWeather | null;
   days: ForecastDay[];
   has_waves: boolean;
   updated_at: string;
