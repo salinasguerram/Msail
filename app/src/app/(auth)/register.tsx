@@ -8,7 +8,7 @@ import { errorMessage, fieldError, isEmail } from '@/auth/errors';
 import { AuthForm, FormLink } from '@/components/AuthForm';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
-import { spacing, typography } from '@/theme';
+import { colors, spacing, typography } from '@/theme';
 
 export default function RegisterScreen() {
   const { t } = useTranslation();
@@ -96,6 +96,17 @@ export default function RegisterScreen() {
         {!errors.password && <Text style={typography.caption}>{t('auth.passwordHint')}</Text>}
       </View>
       <Button title={t('auth.registerButton')} onPress={submit} loading={loading} />
+      <Text style={[typography.caption, styles.legal]}>
+        {t('legal.acceptPrefix')}{' '}
+        <Text style={styles.legalLink} accessibilityRole="link" onPress={() => router.push({ pathname: '/legal/[key]', params: { key: 'terms' } })}>
+          {t('legal.terms')}
+        </Text>{' '}
+        {t('legal.and')}{' '}
+        <Text style={styles.legalLink} accessibilityRole="link" onPress={() => router.push({ pathname: '/legal/[key]', params: { key: 'privacy' } })}>
+          {t('legal.privacy')}
+        </Text>
+        .
+      </Text>
       <FormLink prompt={t('auth.haveAccount')} action={t('auth.loginButton')} onPress={() => router.replace('/login')} />
     </AuthForm>
   );
@@ -104,4 +115,6 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: spacing.md },
   half: { flex: 1 },
+  legal: { textAlign: 'center' },
+  legalLink: { color: colors.primary, fontWeight: '700' },
 });

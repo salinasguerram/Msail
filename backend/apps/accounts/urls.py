@@ -10,6 +10,7 @@ urlpatterns = [
     path("refresh/", views.RefreshView.as_view(), name="refresh"),
     path("logout/", views.LogoutView.as_view(), name="logout"),
     path("me/", views.MeView.as_view(), name="me"),
+    path("delete-account/", views.DeleteAccountView.as_view(), name="delete-account"),
     path("verify-email/", views.VerifyEmailView.as_view(), name="verify-email"),
     path("verify-email/resend/", views.ResendVerificationView.as_view(), name="verify-email-resend"),
     path("password-reset/", views.PasswordResetRequestView.as_view(), name="password-reset"),

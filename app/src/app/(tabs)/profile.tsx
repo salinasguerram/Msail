@@ -41,6 +41,7 @@ export default function ProfileScreen() {
           </View>
         </Card>
         <LanguageCard />
+        <LegalLinks />
       </Screen>
     );
   }
@@ -309,7 +310,33 @@ function SignedInProfile({ user }: { user: User }) {
           setLoggingOut(false);
         }}
       />
+
+      <LegalLinks />
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push('/profile/delete-account')}
+        style={({ pressed }) => [styles.deleteAccount, pressed && { opacity: 0.7 }]}
+      >
+        <Ionicons name="trash-outline" size={16} color={colors.danger} />
+        <Text style={styles.deleteAccountText}>{t('deleteAccount.title')}</Text>
+      </Pressable>
     </Screen>
+  );
+}
+
+/** Política de privacidad y términos (las tiendas piden que estén a mano en la app). */
+function LegalLinks() {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.legalRow}>
+      <Pressable accessibilityRole="link" onPress={() => router.push({ pathname: '/legal/[key]', params: { key: 'privacy' } })} hitSlop={8}>
+        <Text style={styles.legalLink}>{t('legal.privacy')}</Text>
+      </Pressable>
+      <Text style={typography.caption}>·</Text>
+      <Pressable accessibilityRole="link" onPress={() => router.push({ pathname: '/legal/[key]', params: { key: 'terms' } })} hitSlop={8}>
+        <Text style={styles.legalLink}>{t('legal.terms')}</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -397,6 +424,10 @@ function ResultRow({ result, classLabel }: { result: RaceResult; classLabel: str
 }
 
 const styles = StyleSheet.create({
+  legalRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.sm },
+  legalLink: { color: colors.textMuted, fontSize: 13, textDecorationLine: 'underline' },
+  deleteAccount: { flexDirection: 'row', alignSelf: 'center', alignItems: 'center', gap: 6, padding: spacing.sm },
+  deleteAccountText: { color: colors.danger, fontSize: 14, fontWeight: '600' },
   admin: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -27,6 +27,8 @@ class UserSerializer(serializers.ModelSerializer):
     )
     # Tiene MSAIL Premium (la app muestra el distintivo y abre el contenido exclusivo).
     is_premium = serializers.SerializerMethodField()
+    # Tiene contraseña (si entró con Google o Apple, no): la app sabe cómo pedir la confirmación al borrar la cuenta.
+    has_password = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -42,9 +44,13 @@ class UserSerializer(serializers.ModelSerializer):
             "date_joined",
             "is_staff",
             "is_premium",
+            "has_password",
         ]
         # is_staff: la app muestra el acceso al panel de administración (solo lectura, se da desde el panel).
         read_only_fields = ["id", "email", "email_verified", "date_joined", "is_staff"]
+
+    def get_has_password(self, user):
+        return user.has_usable_password()
 
     def get_is_premium(self, user):
         from apps.premium.models import is_premium

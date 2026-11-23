@@ -80,6 +80,22 @@ def create_portal(customer_id, return_url):
     return _call("POST", "/billing_portal/sessions", {"customer": customer_id, "return_url": return_url})["url"]
 
 
+def cancel_subscriptions(user):
+    """Cancela ya en Stripe las suscripciones del usuario que siguen cobrando (al eliminar la cuenta)."""
+    live = Subscription.objects.filter(user=user, status__in=[Status.ACTIVE, Status.PAST_DUE]).exclude(stripe_subscription_id="")
+    if not live.exists():
+        return
+    if not enabled():
+        raise StripeError("Stripe no está configurado")
+    for subscription in live:
+        try:
+            _call("DELETE", f"/subscriptions/{subscription.stripe_subscription_id}")
+        except StripeError as exc:
+            # Si Stripe ya no la tiene (cancelada antes), no hay nada que cobrar.
+            if "No such subscription" not in str(exc):
+                raise
+
+
 def verify_signature(payload: bytes, header: str, secret: str, now=None):
     """Comprueba la firma Stripe-Signature (t=…,v1=…). Lanza StripeError si no es válida."""
     parts = {}

@@ -19,6 +19,8 @@ export type User = {
   is_staff?: boolean;
   /** Tiene MSAIL Premium (ve el contenido exclusivo). */
   is_premium?: boolean;
+  /** false si entró con Google o Apple y no tiene contraseña. */
+  has_password?: boolean;
 };
 
 type AuthResponse = Tokens & { user: User };
@@ -41,6 +43,8 @@ type AuthContextValue = {
   updateMe: (data: Partial<Pick<User, 'first_name' | 'last_name' | 'country' | 'email_notifications'>>) => Promise<User>;
   /** Vuelve a pedir la cuenta (ej. después de pagar Premium). */
   refreshUser: () => Promise<void>;
+  /** Elimina la cuenta y todos sus datos (con la contraseña, o el email si entró con Google o Apple). */
+  deleteAccount: (confirmation: { password: string } | { email: string }) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -119,6 +123,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       refreshUser: async () => {
         if (user) setUser(await api<User>('/auth/me/'));
+      },
+      deleteAccount: async (confirmation) => {
+        await api('/auth/delete-account/', { method: 'POST', body: confirmation });
+        await setSession(null);
+        setUser(null);
       },
     }),
     [user, loading, startSession],

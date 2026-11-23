@@ -49,6 +49,8 @@ function RootStack() {
       <Stack.Screen name="(auth)" options={{ headerShown: false, presentation: 'modal' }} />
       <Stack.Screen name="profile/edit" options={{ title: t('editProfile.title') }} />
       <Stack.Screen name="profile/result" options={{ title: t('result.newTitle') }} />
+      <Stack.Screen name="profile/delete-account" options={{ title: t('deleteAccount.title') }} />
+      <Stack.Screen name="legal/[key]" options={{ title: t('legal.title') }} />
       <Stack.Screen name="boats/[id]" options={{ title: t('boats.detailTitle') }} />
       <Stack.Screen name="boats/edit" options={{ title: t('boats.newTitle') }} />
       <Stack.Screen name="results/[id]" options={{ title: t('result.detailTitle') }} />

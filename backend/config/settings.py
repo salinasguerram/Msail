@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     "apps.map",
     "apps.msailing",
     "apps.premium",
+    "apps.legal",
 ]
 
 MIDDLEWARE = [
@@ -270,6 +271,9 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 FRONTEND_URL = env("FRONTEND_URL", "http://localhost:8081")
 
 # Cobro de MSAIL Premium con Stripe (ver apps/premium/stripe.py). Sin clave, los planes se ven pero no se pueden pagar.
+# Email de contacto que aparece en la política de privacidad y los términos.
+LEGAL_CONTACT_EMAIL = env("LEGAL_CONTACT_EMAIL", "contacto@msailleague.com")
+
 STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET")
 # Email del equipo que recibe el aviso de cada solicitud de amarre nueva (vacío: solo se ve en el panel).
@@ -392,6 +396,10 @@ UNFOLD = {
                     _admin_link("Videos y lecciones", "smart_display", "admin:msailing_video_changelist"),
                     _admin_link("Aportes de la Fundación", "volunteer_activism", "admin:msailing_foundationsupport_changelist"),
                 ],
+            },
+            {
+                "title": "Legales",
+                "items": [_admin_link("Privacidad y términos", "gavel", "admin:legal_legalpage_changelist")],
             },
             {
                 "title": "Premium",

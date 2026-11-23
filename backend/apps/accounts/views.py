@@ -212,3 +212,42 @@ class GoogleLoginView(SocialLoginView):
 class AppleLoginView(SocialLoginView):
     provider = SocialAccount.Provider.APPLE
     verify = staticmethod(verify_apple_token)
+
+
+class DeleteAccountView(APIView):
+    """
+    El usuario elimina su cuenta y todos sus datos (perfil, barcos, resultados, solicitudes, reseñas, fotos).
+    Lo piden Apple y Google para publicar la app. Se confirma con la contraseña; quien entra con Google o Apple
+    (sin contraseña) confirma escribiendo su email. Si tiene Premium con Stripe, se cancela el cobro antes de borrar.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
+
+    def post(self, request):
+        user = request.user
+        if user.is_superuser:
+            return Response(
+                {"detail": _("Un superusuario no se puede eliminar desde la app: pedíselo a otro administrador.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if user.has_usable_password():
+            if not user.check_password(request.data.get("password") or ""):
+                return Response({"password": [_("La contraseña no es correcta.")]}, status=status.HTTP_400_BAD_REQUEST)
+        elif (request.data.get("email") or "").strip().lower() != user.email:
+            return Response({"email": [_("Escribí tu email tal cual para confirmar.")]}, status=status.HTTP_400_BAD_REQUEST)
+
+        from apps.premium.stripe import StripeError, cancel_subscriptions
+
+        try:
+            cancel_subscriptions(user)
+        except StripeError:
+            logger.exception("No se pudo cancelar la suscripción en Stripe al borrar la cuenta %s", user.pk)
+            return Response(
+                {"detail": _("No pudimos cancelar tu suscripción Premium. Probá de nuevo en unos minutos.")},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        revoke_sessions(user)
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
