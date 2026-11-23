@@ -148,3 +148,36 @@ class RolesTests(AdminPanelTestCase):
         self.assertTrue(administrator.has_perm("accounts.delete_user"))
         self.assertTrue(administrator.has_perm("boats.delete_boat"))
         self.assertFalse(administrator.has_perm("auth.change_group"))
+
+    def test_superuser_adds_and_removes_team_members(self):
+        self.run_action("admin:accounts_user_changelist", "make_moderator", [self.sailor.pk])
+        self.sailor.refresh_from_db()
+        self.assertTrue(self.sailor.is_staff)
+        self.assertEqual(list(self.sailor.groups.values_list("name", flat=True)), [MODERATORS])
+
+        # Pasar a administrador cambia el grupo (no suma los dos).
+        self.run_action("admin:accounts_user_changelist", "make_administrator", [self.sailor.pk])
+        self.assertEqual(list(self.sailor.groups.values_list("name", flat=True)), [ADMINISTRATORS])
+        page = self.client.get(reverse("admin:accounts_user_changelist")).content.decode()
+        self.assertIn("Administrador", page)
+        self.assertIn("Sumar al equipo como Moderador", page)
+
+        # Quitar del equipo: nunca al superusuario ni a la propia cuenta.
+        self.run_action("admin:accounts_user_changelist", "remove_from_team", [self.sailor.pk, self.superuser.pk])
+        self.sailor.refresh_from_db()
+        self.superuser.refresh_from_db()
+        self.assertFalse(self.sailor.is_staff)
+        self.assertFalse(self.sailor.groups.exists())
+        self.assertTrue(self.superuser.is_staff)
+
+    def test_only_superusers_change_permissions(self):
+        administrator = self.make_staff(ADMINISTRATORS)
+        page = self.client.get(reverse("admin:accounts_user_changelist")).content.decode()
+        self.assertNotIn("make_administrator", page)
+        # El formulario no deja que un administrador se dé (ni le dé a otro) superusuario o staff.
+        url = reverse("admin:accounts_user_change", args=[self.sailor.pk])
+        form = self.client.get(url).content.decode()
+        self.assertNotIn('name="is_superuser"', form)
+        self.assertNotIn('name="is_staff"', form)
+        self.assertTrue(administrator.has_perm("premium.change_subscription"))
+        self.assertTrue(administrator.has_perm("msailing.add_video"))

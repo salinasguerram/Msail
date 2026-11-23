@@ -281,7 +281,12 @@ QUOTE_REQUESTS_EMAIL = env("QUOTE_REQUESTS_EMAIL") or MARINA_REQUESTS_EMAIL
 def _static(path):
     from django.templatetags.static import static
 
-    return static(path)
+    # Con la fecha del archivo en la URL: al cambiar el CSS o el JS del panel, el navegador no usa la copia vieja.
+    try:
+        version = int((BASE_DIR / "static" / path).stat().st_mtime)
+    except OSError:
+        return static(path)
+    return f"{static(path)}?v={version}"
 
 
 def _admin_link(title, icon, url_name):
@@ -312,7 +317,7 @@ UNFOLD = {
     "SHOW_VIEW_ON_SITE": False,
     # La barra lateral recuerda si quedó abierta también en notebooks (ver static/msail/).
     "STYLES": [lambda request: _static("msail/admin.css")],
-    "SCRIPTS": [lambda request: _static("msail/admin-sidebar.js")],
+    "SCRIPTS": [lambda request: _static("msail/admin-sidebar.js"), lambda request: _static("msail/admin-actions.js")],
     "LOGIN": {"form": "config.admin_site.MsailLoginForm"},
     "COLORS": {
         # Azul noche de la app (950 = fondo, 100 = texto)
