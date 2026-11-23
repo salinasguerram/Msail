@@ -8,6 +8,8 @@ from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 from apps.boats.models import Boat
+from apps.msailing.models import Video
+from apps.premium.models import Plan, Status, Subscription
 from apps.marinas.models import BerthRequest, RequestStatus
 from apps.news.models import Article
 from apps.profiles.models import RaceResult, SailorProfile
@@ -38,15 +40,49 @@ def signups_by_day(users, days=SIGNUP_DAYS):
     return series
 
 
+def format_money(amount, currency):
+    return f"{amount:,.0f} {currency}".replace(",", ".")
+
+
+def premium_stats(now=None):
+    """Membresías: cuántas hay activas, altas y bajas del mes, ingresos por mes y el reparto por plan."""
+    now = now or timezone.now()
+    month_ago = now - timedelta(days=30)
+    active = Subscription.objects.with_access(now).select_related("plan")
+    revenue = {}
+    for subscription in active:
+        if subscription.plan and subscription.status == Status.ACTIVE:
+            plan = subscription.plan
+            revenue[plan.currency] = revenue.get(plan.currency, 0) + plan.monthly_price
+    by_plan = (
+        Plan.objects.filter(subscriptions__in=active).annotate(total=Count("subscriptions", distinct=True)).order_by("-total")
+    )
+    return {
+        "active": active.count(),
+        "new": Subscription.objects.filter(started_at__gte=month_ago).count(),
+        "canceled": Subscription.objects.filter(canceled_at__gte=month_ago).count(),
+        "past_due": active.filter(status=Status.PAST_DUE).count(),
+        "revenue": " + ".join(format_money(v, c) for c, v in sorted(revenue.items())) or "0",
+        "by_plan": [{"name": p.name_es, "total": p.total} for p in by_plan],
+    }
+
+
 def build_dashboard():
     User = get_user_model()
     users = User.objects.filter(is_active=True)
     total_users = users.count()
     verified = users.filter(email_verified=True).count()
     week_ago = timezone.now() - timedelta(days=7)
+    premium = premium_stats()
 
     return {
         "cards": [
+            {"label": "Premium activos", "value": premium["active"], "hint": f"+{premium['new']} y −{premium['canceled']} en 30 días"},
+            {
+                "label": "Ingresos por mes",
+                "value": premium["revenue"],
+                "hint": f"de las membresías pagas · {premium['past_due']} con el pago pendiente",
+            },
             {"label": "Usuarios activos", "value": total_users, "hint": f"+{users.filter(date_joined__gte=week_ago).count()} en 7 días"},
             {"label": "Emails verificados", "value": f"{percent(verified, total_users)}%", "hint": f"{verified} de {total_users}"},
             {
@@ -78,4 +114,6 @@ def build_dashboard():
         .annotate(total=Count("id"))
         .order_by("-total")[:5],
         "recent_users": User.objects.order_by("-date_joined")[:5],
+        "premium_by_plan": premium["by_plan"],
+        "top_videos": Video.objects.filter(views__gt=0).order_by("-views")[:5],
     }

@@ -25,11 +25,41 @@ class SectionSerializer(serializers.ModelSerializer):
 
 
 class VideoSerializer(serializers.ModelSerializer):
+    """Un video o lección. Si es Premium y quien lo pide no lo es, va sin el link ni el texto (`locked`)."""
+
     thumbnail = serializers.CharField(read_only=True)
+    boat_classes = serializers.SlugRelatedField(slug_field="slug", many=True, read_only=True)
+    has_lesson = serializers.SerializerMethodField()
+    locked = serializers.SerializerMethodField()
 
     class Meta:
         model = Video
-        fields = ["id", "title", "description", "url", "kind", "language", "thumbnail"]
+        fields = [
+            "id", "title", "description", "url", "kind", "language", "thumbnail",
+            "boat_classes", "level", "is_premium", "has_lesson", "locked",
+        ]
+
+    def get_has_lesson(self, video):
+        return bool(video.body.strip())
+
+    def get_locked(self, video):
+        return video.is_premium and not self.context.get("premium", False)
+
+    def to_representation(self, video):
+        data = super().to_representation(video)
+        if data["locked"]:
+            data["url"] = ""
+        return data
+
+
+class VideoDetailSerializer(VideoSerializer):
+    body = serializers.SerializerMethodField()
+
+    class Meta(VideoSerializer.Meta):
+        fields = VideoSerializer.Meta.fields + ["body"]
+
+    def get_body(self, video):
+        return "" if self.get_locked(video) else video.body
 
 
 class FoundationSupportSerializer(serializers.ModelSerializer):

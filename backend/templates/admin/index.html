@@ -83,6 +83,31 @@
     </div>
 
     <div class="msail-panel">
+      <h3>Premium por plan</h3>
+      <ol>
+        {% for p in dashboard.premium_by_plan %}
+        <li><span>{{ p.name }}</span><span class="muted">{{ p.total }}</span></li>
+        {% empty %}
+        <li class="muted">Todavía no hay suscriptores.</li>
+        {% endfor %}
+      </ol>
+    </div>
+
+    <div class="msail-panel">
+      <h3>Contenido más visto</h3>
+      <ol>
+        {% for v in dashboard.top_videos %}
+        <li>
+          <a href="{% url 'admin:msailing_video_change' v.pk %}">{{ v.title }}</a>
+          <span class="muted">{% if v.is_premium %}Premium · {% endif %}{{ v.views }}</span>
+        </li>
+        {% empty %}
+        <li class="muted">Sin vistas todavía.</li>
+        {% endfor %}
+      </ol>
+    </div>
+
+    <div class="msail-panel">
       <h3>Países con más usuarios</h3>
       <ol>
         {% for c in dashboard.top_countries %}

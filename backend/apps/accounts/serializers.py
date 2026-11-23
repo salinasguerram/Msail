@@ -25,6 +25,8 @@ class UserSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
+    # Tiene MSAIL Premium (la app muestra el distintivo y abre el contenido exclusivo).
+    is_premium = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -39,9 +41,15 @@ class UserSerializer(serializers.ModelSerializer):
             "email_verified",
             "date_joined",
             "is_staff",
+            "is_premium",
         ]
         # is_staff: la app muestra el acceso al panel de administración (solo lectura, se da desde el panel).
         read_only_fields = ["id", "email", "email_verified", "date_joined", "is_staff"]
+
+    def get_is_premium(self, user):
+        from apps.premium.models import is_premium
+
+        return is_premium(user)
 
 
 class RegisterSerializer(UserSerializer):

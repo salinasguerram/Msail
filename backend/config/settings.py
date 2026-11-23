@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     "apps.weather",
     "apps.map",
     "apps.msailing",
+    "apps.premium",
 ]
 
 MIDDLEWARE = [
@@ -187,6 +188,7 @@ REST_FRAMEWORK = {
         "lookup": "20/min",
         "uploads": "30/hour",
         "weather": "120/min",
+        "checkout": "20/hour",
     },
     "EXCEPTION_HANDLER": "config.exceptions.api_exception_handler",
 }
@@ -266,6 +268,10 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 # Panel de administración (Unfold) con la identidad de MSAIL.
 # "Ver el sitio" lleva a la app (en local, la versión web de Expo).
 FRONTEND_URL = env("FRONTEND_URL", "http://localhost:8081")
+
+# Cobro de MSAIL Premium con Stripe (ver apps/premium/stripe.py). Sin clave, los planes se ven pero no se pueden pagar.
+STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET")
 # Email del equipo que recibe el aviso de cada solicitud de amarre nueva (vacío: solo se ve en el panel).
 MARINA_REQUESTS_EMAIL = env("MARINA_REQUESTS_EMAIL")
 # Email del equipo que recibe una copia de cada pedido de presupuesto (si no se define, usa el de amarres).
@@ -378,8 +384,15 @@ UNFOLD = {
                 "title": "MSailing",
                 "items": [
                     _admin_link("Secciones", "article", "admin:msailing_section_changelist"),
-                    _admin_link("Videos y tips", "smart_display", "admin:msailing_video_changelist"),
+                    _admin_link("Videos y lecciones", "smart_display", "admin:msailing_video_changelist"),
                     _admin_link("Aportes de la Fundación", "volunteer_activism", "admin:msailing_foundationsupport_changelist"),
+                ],
+            },
+            {
+                "title": "Premium",
+                "items": [
+                    _admin_link("Suscripciones", "workspace_premium", "admin:premium_subscription_changelist"),
+                    _admin_link("Planes", "sell", "admin:premium_plan_changelist"),
                 ],
             },
             {

@@ -20,6 +20,7 @@ import { LanguagePicker } from '@/components/LanguagePicker';
 import { PhotoGallery } from '@/components/PhotoGallery';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/theme';
+import { PremiumEntry } from '@/components/Premium';
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
@@ -178,6 +179,11 @@ function SignedInProfile({ user }: { user: User }) {
           <Ionicons name="open-outline" size={18} color={colors.textMuted} />
         </Pressable>
       ) : null}
+
+      <PremiumEntry
+        active={!!user.is_premium}
+        text={user.is_premium ? t('premium.profileActive') : t('premium.profileInvite')}
+      />
 
       {!profile && !failed && <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.xl }} />}
 

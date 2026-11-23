@@ -62,6 +62,8 @@ function RootStack() {
       <Stack.Screen name="professionals/[slug]" options={{ title: t('professionals.title') }} />
       <Stack.Screen name="professionals/quote/[slug]" options={{ title: t('quotes.title') }} />
       <Stack.Screen name="professionals/quotes" options={{ title: t('quotes.myQuotes') }} />
+      <Stack.Screen name="premium" options={{ title: t('premium.title') }} />
+      <Stack.Screen name="learn/[id]" options={{ title: t('msailing.lessonTitle') }} />
     </Stack>
   );
 }

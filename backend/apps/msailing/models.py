@@ -1,7 +1,8 @@
 """
 MSailing: la sección institucional de la marca dentro de la app.
 - Secciones de texto (Quiénes somos, Escuela de vela y formación, La Fundación), en español e inglés.
-- Videos y tips náuticos (links de YouTube u otra plataforma).
+- Videos, tips y lecciones (contenido educativo), por clase de embarcación. Algunos son gratis y otros exclusivos de
+  MSAIL Premium: a quien no es Premium se le muestra el título y la descripción, pero no el video ni la lección.
 - La Fundación: los aportes solidarios a deportistas (a quién, para qué y cuánto), para mostrar el destino de los fondos.
 Todo se edita desde el panel de administración.
 """
@@ -65,28 +66,59 @@ class Section(models.Model):
 class VideoKind(models.TextChoices):
     VIDEO = "video", _("Video")
     TIP = "tip", _("Tip náutico")
+    LESSON = "lesson", _("Lección")
+
+
+class Level(models.TextChoices):
+    ALL = "all", _("Para todos")
+    BEGINNER = "beginner", _("Iniciación")
+    INTERMEDIATE = "intermediate", _("Intermedio")
+    ADVANCED = "advanced", _("Avanzado")
 
 
 YOUTUBE_ID = re.compile(r"(?:youtube\.com/(?:watch\?v=|shorts/|embed/)|youtu\.be/)([\w-]{11})")
 
 
 class Video(models.Model):
+    """Contenido educativo: un video, un tip o una lección escrita (con o sin video)."""
+
     title = models.CharField(_("título"), max_length=160)
-    description = models.TextField(_("descripción"), blank=True)
-    url = models.URLField(_("link del video"), help_text=_("YouTube, Vimeo, Instagram…"))
+    description = models.TextField(_("descripción"), blank=True, help_text=_("Se ve siempre, aunque el contenido sea Premium."))
+    url = models.URLField(_("link del video"), blank=True, help_text=_("YouTube, Vimeo, Instagram…"))
+    body = models.TextField(
+        _("texto de la lección"), blank=True, help_text=_("Para las lecciones. Párrafos separados por una línea en blanco.")
+    )
     kind = models.CharField(_("tipo"), max_length=10, choices=VideoKind.choices, default=VideoKind.VIDEO)
+    boat_classes = models.ManyToManyField(
+        "sailing.BoatClass",
+        verbose_name=_("clases de embarcación"),
+        blank=True,
+        related_name="videos",
+        help_text=_("Vacío: sirve para cualquier clase."),
+    )
+    level = models.CharField(_("nivel"), max_length=12, choices=Level.choices, default=Level.ALL)
+    is_premium = models.BooleanField(
+        _("exclusivo Premium"), default=False, help_text=_("Solo lo ven completo los suscriptores de MSAIL Premium.")
+    )
+    views = models.PositiveIntegerField(_("vistas"), default=0, editable=False)
     language = models.CharField(_("idioma"), max_length=2, choices=[("es", _("Español")), ("en", _("Inglés"))], default="es")
     order = models.PositiveSmallIntegerField(_("orden"), default=0)
     is_published = models.BooleanField(_("publicado"), default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = _("video o tip")
-        verbose_name_plural = _("videos y tips")
+        verbose_name = _("video o lección")
+        verbose_name_plural = _("videos y lecciones")
         ordering = ["order", "-created_at"]
 
     def __str__(self):
         return self.title
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        if not self.url and not self.body.strip():
+            raise ValidationError(_("Poné el link del video o el texto de la lección."))
 
     @property
     def thumbnail(self):

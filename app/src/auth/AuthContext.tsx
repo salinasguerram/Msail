@@ -17,6 +17,8 @@ export type User = {
   date_joined: string;
   /** Equipo de MSAIL: puede entrar al panel de administración. */
   is_staff?: boolean;
+  /** Tiene MSAIL Premium (ve el contenido exclusivo). */
+  is_premium?: boolean;
 };
 
 type AuthResponse = Tokens & { user: User };
@@ -37,6 +39,8 @@ type AuthContextValue = {
   updateLanguage: (language: 'es' | 'en') => Promise<void>;
   /** Nombre, apellido y país de la cuenta. */
   updateMe: (data: Partial<Pick<User, 'first_name' | 'last_name' | 'country' | 'email_notifications'>>) => Promise<User>;
+  /** Vuelve a pedir la cuenta (ej. después de pagar Premium). */
+  refreshUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -112,6 +116,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const updated = await api<User>('/auth/me/', { method: 'PATCH', body: data });
         setUser(updated);
         return updated;
+      },
+      refreshUser: async () => {
+        if (user) setUser(await api<User>('/auth/me/'));
       },
     }),
     [user, loading, startSession],

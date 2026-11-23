@@ -17,10 +17,31 @@ class SectionAdmin(ModelAdmin):
 
 @admin.register(Video)
 class VideoAdmin(ModelAdmin):
-    list_display = ["title", "kind", "language", "order", "is_published"]
+    list_display = ["title", "kind", "classes", "level", "is_premium", "views", "order", "is_published"]
     list_editable = ["order", "is_published"]
-    list_filter = ["kind", "language", "is_published"]
-    search_fields = ["title", "description"]
+    list_filter = ["kind", "is_premium", "level", "boat_classes", "language", "is_published"]
+    search_fields = ["title", "description", "body"]
+    filter_horizontal = ["boat_classes"]
+    readonly_fields = ["views"]
+    fieldsets = (
+        (None, {"fields": ("title", "kind", "description", "url", "body")}),
+        (
+            "Para quién",
+            {
+                "fields": ("boat_classes", "level", "language", "is_premium"),
+                "description": "Sin clases elegidas, el contenido aparece para todas. "
+                "Si es Premium, el resto de los usuarios ve el título y la descripción con un candado.",
+            },
+        ),
+        (None, {"fields": ("order", "is_published", "views")}),
+    )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("boat_classes")
+
+    @admin.display(description="clases")
+    def classes(self, video):
+        return ", ".join(c.name for c in video.boat_classes.all()) or "Todas"
 
 
 @admin.register(FoundationSupport)
