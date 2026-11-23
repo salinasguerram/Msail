@@ -32,11 +32,29 @@ def env_list(name, default=""):
     return [item.strip() for item in env(name, default).split(",") if item.strip()]
 
 
-SECRET_KEY = env("DJANGO_SECRET_KEY", "dev-insecure-solo-para-desarrollo-local-cambiar-en-produccion")
+DEV_SECRET_KEY = "dev-insecure-solo-para-desarrollo-local-cambiar-en-produccion"
+SECRET_KEY = env("DJANGO_SECRET_KEY", DEV_SECRET_KEY)
 
-DEBUG = env_bool("DJANGO_DEBUG", True)
+# En Vercel (que define VERCEL=1) el modo debug viene apagado si no se dice otra cosa.
+ON_VERCEL = bool(env("VERCEL"))
+DEBUG = env_bool("DJANGO_DEBUG", not ON_VERCEL)
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+if ON_VERCEL:
+    ALLOWED_HOSTS.append(".vercel.app")  # la dirección del proyecto y la de cada versión de prueba
+
+if not DEBUG and SECRET_KEY == DEV_SECRET_KEY:
+    from django.core.exceptions import ImproperlyConfigured
+
+    raise ImproperlyConfigured("En producción hay que definir DJANGO_SECRET_KEY (una clave larga y aleatoria).")
+
+# Detrás de Vercel (o cualquier proxy con https): se confía en el https que informa el proxy.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# Direcciones desde las que se puede iniciar sesión en el panel (ej. https://msail-api.vercel.app).
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 
 INSTALLED_APPS = [
@@ -109,7 +127,8 @@ DATABASES = {
     # `or`: si DATABASE_URL está vacía en el .env (como viene en el ejemplo), también se usa SQLite.
     "default": dj_database_url.parse(
         env("DATABASE_URL") or f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
+        # En Vercel cada pedido puede correr en una máquina distinta: conexiones cortas (sin quedar abiertas).
+        conn_max_age=0 if ON_VERCEL else 600,
     )
 }
 

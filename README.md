@@ -74,3 +74,25 @@ cd backend
 ## Propiedad
 
 Código propiedad de EXISSAILING LLC. Todos los derechos reservados.
+
+## Publicar en Vercel
+
+El repo tiene dos partes y en Vercel van como **dos proyectos** del mismo repositorio (cada uno con su *Root Directory*):
+
+| Proyecto | Root Directory | Qué es |
+|---|---|---|
+| `msail-api` | `backend` | Django (API y panel de administración). Vercel lo detecta solo por `manage.py`. |
+| `msail-web` | `app` | La app en su versión web (Expo). Usa `app/vercel.json`. |
+
+**1. Backend (`msail-api`)** — Variables de entorno (Settings → Environment Variables):
+
+- `DJANGO_SECRET_KEY`: una clave larga y aleatoria.
+- `DATABASE_URL`: la misma de `backend/.env` (Supabase, *Session pooler*, puerto 5432).
+- `CSRF_TRUSTED_ORIGINS`: `https://msail-api.vercel.app` (la dirección del backend, para entrar al panel).
+- `CORS_ALLOWED_ORIGINS` y `FRONTEND_URL`: `https://msail-web.vercel.app` (la dirección de la web).
+- Las de Supabase Storage y email, iguales que en `backend/.env`.
+
+Las migraciones no se corren solas: después de cambios en los modelos, correr `python manage.py migrate` desde la PC con el `DATABASE_URL` de Supabase.
+
+**2. Web (`msail-web`)** — Variable de entorno: `EXPO_PUBLIC_API_URL` = `https://msail-api.vercel.app/api`.
+Se lee al compilar: si se cambia, hay que volver a desplegar (Deployments → Redeploy).
