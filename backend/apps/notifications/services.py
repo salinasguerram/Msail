@@ -65,6 +65,14 @@ def notify_followers(event, kind, key, date=None, article=None):
             Notification(user=user, kind=kind, title=title[:200], body=body[:300], event=event, article=article, key=key)
         )
     Notification.objects.bulk_create(created, ignore_conflicts=True)
+    if created:
+        # También como push en el celular (bulk_create no dispara las señales de cada aviso).
+        from .push import send_by_ids
+
+        user_ids = [n.user_id for n in created]
+        transaction.on_commit(
+            lambda: send_by_ids(list(Notification.objects.filter(key=key, user_id__in=user_ids).values_list("pk", flat=True)))
+        )
     if kind in EMAIL_KINDS and created:
         user_ids = [n.user_id for n in created]
         transaction.on_commit(lambda: send_emails(key, user_ids))

@@ -41,3 +41,20 @@ class Notification(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class PushToken(models.Model):
+    """Celular donde la persona inició sesión y aceptó los avisos push (ver push.py)."""
+
+    user = models.ForeignKey("accounts.User", verbose_name=_("usuario"), on_delete=models.CASCADE, related_name="push_tokens")
+    token = models.CharField(_("token de Expo"), max_length=200, unique=True)
+    platform = models.CharField(_("sistema"), max_length=10, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("celular con avisos push")
+        verbose_name_plural = _("celulares con avisos push")
+
+    def __str__(self):
+        return f"{self.user} · {self.platform or '?'}"

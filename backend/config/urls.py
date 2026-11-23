@@ -21,6 +21,7 @@ urlpatterns = [
     path("api/msailing/", include("apps.msailing.urls")),
     path("api/premium/", include("apps.premium.urls")),
     path("api/legal/", include("apps.legal.urls")),
+    path("api/moderation/", include("apps.moderation.urls")),
     path("api/cron/event-reminders/", cron.event_reminders, name="cron-event-reminders"),
     path("api/boat-classes/", BoatClassListView.as_view(), name="boat-classes"),
     path("api/countries/", CountryListView.as_view(), name="countries"),

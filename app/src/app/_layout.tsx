@@ -15,6 +15,7 @@ import { NotificationBell } from '@/components/NotificationBell';
 import { OnlyWhenFocused } from '@/components/OnlyWhenFocused';
 import { restoreLanguage } from '@/i18n';
 import { colors, navigationTheme } from '@/theme';
+import { usePushNavigation } from '@/utils/push';
 import { applyWebStyles } from '@/utils/webStyles';
 
 // Web: barras de desplazamiento con los colores de la app.
@@ -23,6 +24,8 @@ applyWebStyles();
 function RootStack() {
   const { t } = useTranslation();
   const { loading } = useAuth();
+  // Al tocar un aviso push se abre su pantalla (solo en el celular).
+  usePushNavigation();
 
   if (loading) {
     return (
@@ -50,6 +53,7 @@ function RootStack() {
       <Stack.Screen name="profile/edit" options={{ title: t('editProfile.title') }} />
       <Stack.Screen name="profile/result" options={{ title: t('result.newTitle') }} />
       <Stack.Screen name="profile/delete-account" options={{ title: t('deleteAccount.title') }} />
+      <Stack.Screen name="profile/blocked" options={{ title: t('moderation.blockedTitle') }} />
       <Stack.Screen name="legal/[key]" options={{ title: t('legal.title') }} />
       <Stack.Screen name="boats/[id]" options={{ title: t('boats.detailTitle') }} />
       <Stack.Screen name="boats/edit" options={{ title: t('boats.newTitle') }} />

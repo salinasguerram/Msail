@@ -68,7 +68,9 @@ class CrewListView(generics.ListAPIView):
             # Los puestos se guardan como lista: se filtra en Python (son pocos perfiles disponibles a la vez).
             ids = [p.pk for p in queryset if role in (p.roles or [])]
             queryset = queryset.filter(pk__in=ids)
-        return queryset.distinct()
+        from apps.moderation.models import hidden_user_ids
+
+        return queryset.exclude(user_id__in=hidden_user_ids(self.request.user)).distinct()
 
 
 class PublicProfileView(generics.RetrieveAPIView):
@@ -81,7 +83,10 @@ class PublicProfileView(generics.RetrieveAPIView):
         visible = Q(is_public=True, user__is_active=True)
         if self.request.user.is_authenticated:
             visible |= Q(user=self.request.user)
-        return get_object_or_404(profile_queryset().filter(visible), user_id=self.kwargs["user_id"])
+        from apps.moderation.models import hidden_user_ids
+
+        queryset = profile_queryset().filter(visible).exclude(user_id__in=hidden_user_ids(self.request.user))
+        return get_object_or_404(queryset, user_id=self.kwargs["user_id"])
 
 
 class MyResultsView(generics.ListCreateAPIView):

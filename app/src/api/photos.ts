@@ -8,14 +8,12 @@ export type Photo = { id: number; image: string; caption: string; created_at: st
 export type PickedImage = ImagePicker.ImagePickerAsset;
 
 /**
- * Abre la galería del teléfono. Devuelve null si el usuario cancela o no da permiso.
+ * Abre el selector de fotos del sistema. Devuelve null si el usuario cancela.
+ * No pide permiso para ver toda la galería: el selector del sistema solo entrega la foto elegida
+ * (Google Play rechaza apps que piden acceso a todas las fotos sin necesitarlo).
  * `square` recorta al momento de elegir (para la foto de perfil).
  */
 export async function pickImage({ square = false } = {}): Promise<PickedImage | null> {
-  if (Platform.OS !== 'web') {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return null;
-  }
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: 'images',
     allowsEditing: square,

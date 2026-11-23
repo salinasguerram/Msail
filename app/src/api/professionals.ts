@@ -48,6 +48,8 @@ export type Review = {
   comment: string;
   /** Nombre e inicial del apellido. */
   author: string;
+  /** Para reportar la reseña o bloquear a quien la escribió. */
+  author_id: number;
   /** Pidió presupuesto a este profesional por MSAIL. */
   is_client: boolean;
   is_mine: boolean;

@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { api, getRefreshToken, initSession, setSession, setSessionExpiredHandler } from '@/api/client';
 import type { Tokens } from '@/auth/tokenStorage';
 import { currentLanguage, setLanguage } from '@/i18n';
+import { registerPush, unregisterPush } from '@/utils/push';
 
 export type User = {
   id: number;
@@ -66,6 +67,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
+  // Con sesión, este celular recibe los avisos push de la cuenta (pide permiso la primera vez).
+  const userId = user?.id;
+  useEffect(() => {
+    if (userId) registerPush();
+  }, [userId]);
+
   const startSession = useCallback(async ({ user: nextUser, ...tokens }: AuthResponse) => {
     await setSession(tokens);
     // El idioma guardado en la cuenta manda, así es el mismo en todos los dispositivos.
@@ -90,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ),
       logout: async () => {
         const refresh = getRefreshToken();
+        await unregisterPush();
         if (refresh) await api('/auth/logout/', { method: 'POST', body: { refresh } }).catch(() => {});
         await setSession(null);
         setUser(null);

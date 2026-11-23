@@ -14,6 +14,7 @@ import { Card } from '@/components/Card';
 import { Chip, ChipGroup } from '@/components/Chip';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/theme';
+import { ModerationMenu } from '@/components/Moderation';
 
 const SEARCH_DEBOUNCE_MS = 350;
 
@@ -87,6 +88,11 @@ export default function CrewScreen() {
                   {member.experience_level ? ` · ${t(`sailor.experience.${member.experience_level}`)}` : ''}
                 </Text>
               </View>
+              <ModerationMenu
+                userId={member.user_id}
+                name={`${member.first_name} ${member.last_name}`.trim()}
+                onBlocked={() => setCrew((list) => list?.filter((m) => m.user_id !== member.user_id) ?? null)}
+              />
             </View>
             {member.roles.length ? (
               <ChipGroup>

@@ -12,6 +12,7 @@ import { Card } from '@/components/Card';
 import { useDialogs } from '@/components/Dialogs';
 import { TextField } from '@/components/TextField';
 import { colors, radius, spacing, typography } from '@/theme';
+import { ModerationMenu } from '@/components/Moderation';
 
 const STAR = '#f5c542';
 
@@ -46,7 +47,7 @@ function StarInput({ value, onChange }: { value: number; onChange: (n: number) =
   );
 }
 
-function ReviewItem({ review }: { review: Review }) {
+function ReviewItem({ review, onBlocked }: { review: Review; onBlocked: () => void }) {
   const { t, i18n } = useTranslation();
   const date = new Date(review.created_at).toLocaleDateString(i18n.language, { month: 'short', year: 'numeric' });
   return (
@@ -61,6 +62,7 @@ function ReviewItem({ review }: { review: Review }) {
           </View>
         ) : null}
         <Text style={[typography.caption, { marginLeft: 'auto' }]}>{date}</Text>
+        {review.is_mine ? null : <ModerationMenu userId={review.author_id} name={review.author} reviewId={review.id} onBlocked={onBlocked} />}
       </View>
       {review.comment ? <Text style={typography.body}>{review.comment}</Text> : null}
     </View>
@@ -140,7 +142,7 @@ export function Reviews({ professional, onChange }: { professional: Professional
       )}
 
       {reviews.map((review) => (
-        <ReviewItem key={review.id} review={review} />
+        <ReviewItem key={review.id} review={review} onBlocked={onChange} />
       ))}
       {all === null && professional.reviews_count > professional.latest_reviews.length ? (
         <Button

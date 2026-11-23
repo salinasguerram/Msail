@@ -9,4 +9,5 @@ urlpatterns = [
     path("unread/", views.UnreadCountView.as_view(), name="unread"),
     path("read/", views.MarkReadView.as_view(), name="read-all"),
     path("<int:pk>/read/", views.MarkReadView.as_view(), name="read"),
+    path("push-tokens/", views.PushTokenView.as_view(), name="push-tokens"),
 ]

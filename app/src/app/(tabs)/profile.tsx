@@ -313,6 +313,14 @@ function SignedInProfile({ user }: { user: User }) {
 
       <LegalLinks />
       <Pressable
+        accessibilityRole="link"
+        onPress={() => router.push('/profile/blocked')}
+        style={({ pressed }) => [styles.deleteAccount, pressed && { opacity: 0.7 }]}
+      >
+        <Ionicons name="ban-outline" size={16} color={colors.textMuted} />
+        <Text style={[styles.deleteAccountText, { color: colors.textMuted }]}>{t('moderation.blockedTitle')}</Text>
+      </Pressable>
+      <Pressable
         accessibilityRole="button"
         onPress={() => router.push('/profile/delete-account')}
         style={({ pressed }) => [styles.deleteAccount, pressed && { opacity: 0.7 }]}

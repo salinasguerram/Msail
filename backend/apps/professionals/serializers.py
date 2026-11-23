@@ -82,12 +82,14 @@ class ProfessionalListSerializer(serializers.ModelSerializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
+    # Para reportar la reseña o bloquear a quien la escribió.
+    author_id = serializers.IntegerField(source="user_id", read_only=True)
     is_client = serializers.BooleanField(read_only=True)
     is_mine = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
-        fields = ["id", "rating", "comment", "author", "is_client", "is_mine", "created_at", "updated_at"]
+        fields = ["id", "rating", "comment", "author", "author_id", "is_client", "is_mine", "created_at", "updated_at"]
         read_only_fields = ["id", "created_at", "updated_at"]
 
     def get_author(self, review):
@@ -123,7 +125,11 @@ class ProfessionalDetailSerializer(ProfessionalListSerializer):
         ]
 
     def get_latest_reviews(self, professional):
-        reviews = professional.reviews.filter(is_visible=True).select_related("user")[:3]
+        from apps.moderation.models import hidden_user_ids
+
+        request = self.context.get("request")
+        hidden = hidden_user_ids(request.user) if request else set()
+        reviews = professional.reviews.filter(is_visible=True).exclude(user_id__in=hidden).select_related("user")[:3]
         return ReviewSerializer(reviews, many=True, context=self.context).data
 
     def get_my_review(self, professional):

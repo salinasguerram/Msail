@@ -148,7 +148,10 @@ class ReviewListCreateView(generics.ListCreateAPIView):
         return [ScopedRateThrottle()] if self.request.method == "POST" else []
 
     def get_queryset(self):
-        return get_published(self.kwargs["slug"]).reviews.filter(is_visible=True).select_related("user")
+        from apps.moderation.models import hidden_user_ids
+
+        reviews = get_published(self.kwargs["slug"]).reviews.filter(is_visible=True)
+        return reviews.exclude(user_id__in=hidden_user_ids(self.request.user)).select_related("user")
 
     def create(self, request, *args, **kwargs):
         professional = get_published(kwargs["slug"])

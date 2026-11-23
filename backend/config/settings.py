@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     "apps.msailing",
     "apps.premium",
     "apps.legal",
+    "apps.moderation",
 ]
 
 MIDDLEWARE = [
@@ -190,6 +191,7 @@ REST_FRAMEWORK = {
         "uploads": "30/hour",
         "weather": "120/min",
         "checkout": "20/hour",
+        "report": "20/hour",
     },
     "EXCEPTION_HANDLER": "config.exceptions.api_exception_handler",
 }
@@ -281,6 +283,8 @@ STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET")
 # Email del equipo que recibe el aviso de cada solicitud de amarre nueva (vacío: solo se ve en el panel).
 MARINA_REQUESTS_EMAIL = env("MARINA_REQUESTS_EMAIL")
+# Aviso al equipo de cada reporte de contenido (vacío: usa el de amarres; si tampoco hay, solo se ven en el panel).
+MODERATION_EMAIL = env("MODERATION_EMAIL", MARINA_REQUESTS_EMAIL)
 # Email del equipo que recibe una copia de cada pedido de presupuesto (si no se define, usa el de amarres).
 QUOTE_REQUESTS_EMAIL = env("QUOTE_REQUESTS_EMAIL") or MARINA_REQUESTS_EMAIL
 
@@ -418,6 +422,11 @@ UNFOLD = {
                     _admin_link("Perfiles de navegante", "badge", "admin:profiles_sailorprofile_changelist"),
                     _admin_link("Resultados", "emoji_events", "admin:profiles_raceresult_changelist"),
                     _admin_link("Embarcaciones", "directions_boat", "admin:boats_boat_changelist"),
+                    {
+                        **_admin_link("Reportes de contenido", "flag", "admin:moderation_report_changelist"),
+                        "badge": "apps.moderation.admin.pending_reports_badge",
+                    },
+                    _admin_link("Bloqueos entre usuarios", "block", "admin:moderation_block_changelist"),
                     _admin_link("Avisos enviados", "notifications", "admin:notifications_notification_changelist"),
                 ],
             },

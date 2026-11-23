@@ -16,6 +16,7 @@ Los límites de caracteres de cada campo están entre paréntesis; todos los tex
 | Política de privacidad | https://msail-league.vercel.app/legal/privacy |
 | Términos (Apple los pide en apps con suscripción) | https://msail-league.vercel.app/legal/terms |
 | Sitio / soporte | https://msail-league.vercel.app |
+| Borrar la cuenta (Google Play lo pide como link web) | https://msail-league.vercel.app/profile/delete-account |
 | Email de soporte | **pendiente de Miguel** (el mismo de la política de privacidad) |
 | Idiomas | Español (principal) e inglés |
 
@@ -139,7 +140,7 @@ First release of MSAIL LEAGUE.
 
 Respuestas para el cuestionario (Apple y Google/IARC):
 - Violencia, contenido sexual, lenguaje, drogas, juegos de azar: **no**.
-- Contenido generado por usuarios: **sí** (perfiles, fotos, reseñas), con moderación desde el panel. Apple puede pedir además un botón para reportar contenido o bloquear usuarios: hoy no existe.
+- Contenido generado por usuarios: **sí** (perfiles, fotos, reseñas). Se puede reportar contenido y bloquear usuarios desde la app (botón «…» en Tripulaciones y en las reseñas); los reportes llegan al panel (Comunidad → Reportes de contenido) para revisarlos.
 - Comunicación entre usuarios: **no** hay chat; los pedidos a marinas y profesionales van por email.
 - Ubicación: **sí**, solo para el clima y el mapa, con permiso.
 - Resultado esperado: **4+** (Apple) / **Para todos** (Google).
@@ -163,6 +164,12 @@ Coincide con la política de privacidad. Datos que se recopilan, todos **vincula
 - Los pagos los procesa Stripe: la app no ve ni guarda datos de tarjetas.
 
 ## Para la revisión de Apple / Google
+
+- **Cifrado (Apple):** la app solo usa HTTPS, que está exento. Ya está declarado en la configuración (`usesNonExemptEncryption: false`), así que App Store Connect no lo pregunta en cada envío.
+- **Manifiesto de privacidad (Apple):** declarado en `app.json` (sin rastreo; los usos técnicos estándar de React Native).
+- **Fotos (Google):** la app no pide acceso a la galería entera; usa el selector de fotos del sistema, que solo entrega la foto elegida. Si Google pregunta por permisos de fotos o videos, la respuesta es que no se usan.
+- **Iniciar sesión con Apple:** no hace falta, porque la app solo permite entrar con email (Apple lo exige únicamente si hay login con Google u otra cuenta externa). Si más adelante se agrega «Entrar con Google», hay que sumar también «Entrar con Apple».
+- **Borrar la cuenta:** desde la app (Perfil → Eliminar mi cuenta) y desde la web con el link de arriba.
 
 - **Cuenta de prueba para los revisores:** crear una antes de enviar (con Premium de cortesía, así ven todo) y cargar el email y la contraseña en el formulario de revisión. No dejarla escrita en el repositorio.
 - **Notas para el revisor:** «La app funciona sin cuenta para explorar regatas, clima y servicios. Con la cuenta de prueba se ve el perfil, los barcos y el contenido Premium.»
