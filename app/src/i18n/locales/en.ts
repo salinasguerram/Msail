@@ -85,6 +85,7 @@ const en: Translations = {
     subscribe: 'Subscribe · {{plan}}',
     loginToSubscribe: 'Sign in to subscribe',
     cta: 'Go Premium',
+    lockFiller: 'With MSAIL Premium you get the full lessons, videos and analysis from the best sailors, made for your class and level.',
     cancelAnytime: 'Secure payment with Stripe. Cancel anytime.',
     paymentsSoon: 'Payments open very soon. In the meantime, write to us and we will activate your membership.',
     noPlans: 'You will be able to join MSAIL Premium soon.',

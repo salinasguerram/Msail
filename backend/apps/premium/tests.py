@@ -96,7 +96,7 @@ class PremiumContentApiTests(APITestCase):
         self.premium.refresh_from_db()
         self.assertEqual(self.premium.views, 0)  # bloqueado: no cuenta como vista
 
-    def test_subscribers_and_staff_see_everything(self):
+    def test_only_subscribers_see_premium_content(self):
         user = make_user()
         Subscription.objects.create(user=user, current_period_end=timezone.now() + timedelta(days=30))
         self.client.force_authenticate(user)
@@ -107,9 +107,10 @@ class PremiumContentApiTests(APITestCase):
         self.assertEqual(self.premium.views, 1)
         self.assertTrue(self.client.get("/api/auth/me/").data["is_premium"])
 
+        # El equipo de MSAIL sin membresía lo ve bloqueado como cualquiera (lo revisa desde el panel).
         self.client.force_authenticate(make_user("staff@example.com", is_staff=True))
-        self.assertFalse(self.videos()["Exclusivo"]["locked"])
-        self.assertFalse(self.client.get("/api/auth/me/").data["is_premium"])
+        self.assertTrue(self.videos()["Exclusivo"]["locked"])
+        self.assertEqual(self.client.get(f"/api/msailing/videos/{self.premium.pk}/").data["body"], "")
 
 
 @override_settings(STRIPE_SECRET_KEY="", STRIPE_WEBHOOK_SECRET="whsec_test")

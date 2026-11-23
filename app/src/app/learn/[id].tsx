@@ -80,7 +80,7 @@ export default function LessonScreen() {
       </View>
 
       {video.locked ? (
-        <PremiumLock />
+        <PremiumLock preview={video.description || video.title} />
       ) : (
         <>
           {video.url ? <Button title={t('msailing.watch')} onPress={() => Linking.openURL(video.url)} /> : null}

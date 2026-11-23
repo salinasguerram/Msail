@@ -1,5 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { BlurTargetView, BlurView } from 'expo-blur';
 import { router } from 'expo-router';
+import { useRef, type ComponentRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
@@ -21,18 +23,39 @@ export function PremiumBadge({ locked = false, style }: { locked?: boolean; styl
   );
 }
 
-/** Tarjeta para el contenido exclusivo que el usuario no puede ver: invita a hacerse Premium. */
-export function PremiumLock({ title, text }: { title?: string; text?: string }) {
+/**
+ * Contenido exclusivo que el usuario no puede ver: el contenido se ve desenfocado y encima la invitación a hacerse
+ * Premium, que lleva a la pantalla de pago. El servidor no manda el texto real: lo desenfocado es un relleno.
+ */
+export function PremiumLock({ preview }: { preview: string }) {
   const { t } = useTranslation();
+  const target = useRef<ComponentRef<typeof View>>(null);
+  const filler = [preview, t('premium.lockFiller'), preview, t('premium.lockFiller')];
   return (
-    <View style={styles.lock}>
-      <View style={styles.lockIcon}>
-        <Ionicons name="lock-closed" size={22} color={PREMIUM} />
-      </View>
-      <Text style={styles.lockTitle}>{title ?? t('premium.lockTitle')}</Text>
-      <Text style={[typography.caption, { textAlign: 'center' }]}>{text ?? t('premium.lockText')}</Text>
-      <View style={{ alignSelf: 'stretch' }}>
-        <Button title={t('premium.cta')} onPress={() => router.push('/premium')} />
+    <View style={styles.lockArea}>
+      <BlurTargetView ref={target} style={styles.lockContent}>
+        {filler.map((paragraph, i) => (
+          <Text key={i} style={typography.body}>
+            {paragraph}
+          </Text>
+        ))}
+      </BlurTargetView>
+      <BlurView
+        intensity={45}
+        tint="dark"
+        blurMethod="dimezisBlurViewSdk31Plus"
+        blurTarget={target}
+        style={styles.lockBlur}
+      />
+      <View style={styles.lockOverlay}>
+        <View style={styles.lockIcon}>
+          <Ionicons name="lock-closed" size={22} color={PREMIUM} />
+        </View>
+        <Text style={styles.lockTitle}>{t('premium.lockTitle')}</Text>
+        <Text style={[typography.caption, { textAlign: 'center', color: colors.text }]}>{t('premium.lockText')}</Text>
+        <View style={{ alignSelf: 'stretch' }}>
+          <Button title={t('premium.cta')} onPress={() => router.push('/premium')} />
+        </View>
       </View>
     </View>
   );
@@ -73,14 +96,26 @@ const styles = StyleSheet.create({
     backgroundColor: PREMIUM_SOFT,
   },
   badgeText: { color: PREMIUM, fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
-  lock: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.lg,
+  lockArea: {
+    minHeight: 320,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: PREMIUM,
+    overflow: 'hidden',
     backgroundColor: colors.surface,
+  },
+  lockContent: { gap: spacing.md, padding: spacing.lg },
+  lockBlur: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  lockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    padding: spacing.xl,
   },
   lockIcon: {
     width: 48,

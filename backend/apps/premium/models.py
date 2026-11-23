@@ -134,5 +134,5 @@ def is_premium(user):
 
 
 def can_see_premium(user):
-    """Contenido Premium: lo ven los suscriptores y el equipo de MSAIL (para revisarlo)."""
-    return bool(user and user.is_authenticated and (user.is_staff or is_premium(user)))
+    """Contenido Premium en la app: solo los suscriptores. El equipo lo revisa desde el panel."""
+    return is_premium(user)
