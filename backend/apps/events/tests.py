@@ -242,3 +242,61 @@ class EventDetailTests(CalendarTestCase):
     def test_unpublished_or_missing_is_404(self):
         self.assertEqual(self.client.get(f"/api/events/{self.hidden.slug}/").status_code, 404)
         self.assertEqual(self.client.get("/api/events/no-existe/").status_code, 404)
+
+
+
+class RaceTrackTests(CalendarTestCase):
+    """Track de la carrera: GPX por barco y la repetición en la app."""
+
+    GPX = b"""<?xml version="1.0"?>
+<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"><trk><trkseg>
+<trkpt lat="25.7700" lon="-80.1300"><time>2026-10-29T13:00:00Z</time></trkpt>
+<trkpt lat="25.7701" lon="-80.1300"><time>2026-10-29T13:00:02Z</time></trkpt>
+<trkpt lat="25.7710" lon="-80.1302"><time>2026-10-29T13:00:30Z</time></trkpt>
+<trkpt lat="25.7720" lon="-80.1304"><time>2026-10-29T13:01:00Z</time></trkpt>
+</trkseg></trk></gpx>"""
+
+    def test_gpx_is_read_every_five_seconds(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from .models import BoatTrack, RaceTrack
+
+        race = RaceTrack.objects.create(event=self.live, name="Día 1 · Carrera 1")
+        boat = BoatTrack(race=race, boat_name="Garm", gpx=SimpleUploadedFile("garm.gpx", self.GPX))
+        boat.full_clean()
+        boat.save()
+        self.assertEqual([p[0] - boat.points[0][0] for p in boat.points], [0, 30, 60])  # el de los 2 s se descarta
+        self.assertTrue(boat.color.startswith("#"))
+
+    def test_bad_gpx_is_rejected(self):
+        from django.core.exceptions import ValidationError
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from .models import BoatTrack, RaceTrack
+
+        race = RaceTrack.objects.create(event=self.live, name="Carrera")
+        with self.assertRaises(ValidationError):
+            BoatTrack(race=race, boat_name="X", gpx=SimpleUploadedFile("x.gpx", b"no es un gpx")).full_clean()
+
+    def test_demo_race_in_event_and_track_endpoint(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        Event.objects.filter(pk=self.live.pk).update(latitude=25.77, longitude=-80.13)
+        call_command("seed_demo_track", self.live.slug, "--boats", "3", stdout=StringIO())
+        tracks = self.client.get(f"/api/events/{self.live.slug}/").data["tracks"]
+        self.assertEqual(len(tracks), 1)
+        self.assertTrue(tracks[0]["is_demo"])
+        data = self.client.get(f"/api/events/tracks/{tracks[0]['id']}/").data
+        self.assertEqual(len(data["boats"]), 3)
+        self.assertLess(data["start"], data["end"])
+        first = data["boats"][0]
+        self.assertGreater(len(first["points"]), 100)
+        self.assertGreater(first["max_speed_kn"], 4)
+        # Sin publicar no se ve.
+        from .models import RaceTrack
+
+        RaceTrack.objects.update(is_published=False)
+        self.assertEqual(self.client.get(f"/api/events/tracks/{tracks[0]['id']}/").status_code, 404)
+        self.assertEqual(self.client.get(f"/api/events/{self.live.slug}/").data["tracks"], [])

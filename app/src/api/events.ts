@@ -161,7 +161,30 @@ export type EventDetail = Omit<EventSummary, 'organizer_club'> & {
   news_count: number;
   /** Profesionales para esta regata: elegidos por el equipo (linked) o los más cercanos a la sede. */
   professionals: { linked: boolean; items: (ProfessionalSummary & { distance_km?: number })[] };
+  /** Carreras con recorridos GPS para ver repetidas ("Track de la carrera"). */
+  tracks: { id: number; name: string; is_demo: boolean; boats: number }[];
 };
+
+/** Recorridos GPS de una carrera: cada barco con sus puntos [segundos UNIX, latitud, longitud] cada 5 s. */
+export type RaceTrack = {
+  id: number;
+  name: string;
+  is_demo: boolean;
+  event: { slug: string; name: string };
+  start: number | null;
+  end: number | null;
+  boats: {
+    id: number;
+    boat_name: string;
+    sail_number: string;
+    skipper: string;
+    color: string;
+    max_speed_kn: number;
+    points: [number, number, number][];
+  }[];
+};
+
+export const getRaceTrack = (id: number | string) => api<RaceTrack>(`/events/tracks/${id}/`, { auth: false });
 
 // Con token si hay sesión, para saber si la sigo.
 export const getEvent = (slug: string) => api<EventDetail>(`/events/${encodeURIComponent(slug)}/`);

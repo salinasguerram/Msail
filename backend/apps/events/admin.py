@@ -19,7 +19,7 @@ from unfold.decorators import action, display
 from apps.core.images import thumbnail_html
 
 from . import results_import
-from .models import Event, EventCategory, EventDocument, EventMedia, EventResult, EventStatus, MediaKind
+from .models import BoatTrack, Event, RaceTrack, EventCategory, EventDocument, EventMedia, EventResult, EventStatus, MediaKind
 
 STATUS_LABELS = {
     EventStatus.UPCOMING: "Próxima",
@@ -340,3 +340,31 @@ class EventAdmin(ModelAdmin):
             "change_url": reverse("admin:events_event_change", args=[event.pk]),
         }
         return TemplateResponse(request, "admin/events/upload_photos.html", context)
+
+
+
+class BoatTrackInline(TabularInline):
+    model = BoatTrack
+    extra = 1
+    fields = ["boat_name", "sail_number", "skipper", "color", "gpx", "points_count"]
+    readonly_fields = ["points_count"]
+
+    @admin.display(description="Puntos")
+    def points_count(self, obj):
+        return len(obj.points) if obj and obj.points else "—"
+
+
+@admin.register(RaceTrack)
+class RaceTrackAdmin(ModelAdmin):
+    """Carreras con el recorrido GPS de cada barco (un GPX por barco): en la app se ven repetidas."""
+
+    list_display = ["name", "event", "boats_count", "is_demo", "is_published"]
+    list_filter = ["is_published", "is_demo"]
+    search_fields = ["name", "event__name"]
+    autocomplete_fields = ["event"]
+    inlines = [BoatTrackInline]
+    fields = ["event", "name", "order", "is_published", "is_demo"]
+
+    @admin.display(description="Barcos")
+    def boats_count(self, obj):
+        return obj.boats.count()

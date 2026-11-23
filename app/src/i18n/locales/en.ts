@@ -85,6 +85,7 @@ const en: Translations = {
     joinEdit: 'Edit my profile',
     joinLogin: 'Sign up or log in',
   },
+  track: { title: 'Race track', section: 'Race track', watch: 'Watch', boats_one: '{{count}} boat', boats_other: '{{count}} boats', demo: 'Simulated example tracks: this is how it will look once the real race GPX files are loaded.', demoShort: 'example', empty: 'This race has no tracks loaded yet.', startedAt: 'Start {{time}}', play: 'Play', pause: 'Pause', timeline: 'Race moment', liveResults: 'Positions', finalResults: 'Race results', boat: 'Boat', now: 'Now', maxSpeed: 'Max speed' },
   tabs: {
     services: 'Services',
     store: 'Shop',
@@ -375,6 +376,12 @@ const en: Translations = {
     confirmRemove: 'Remove {{name}} from the crew?',
   },
   calendar: {
+    biggerMap: 'Bigger map',
+    smallerMap: 'Smaller map',
+    zoomIn: 'Zoom in',
+    zoomOut: 'Zoom out',
+    previousEvent: 'Previous event',
+    nextEvent: 'Next event',
     sections: { regattas: 'Regattas', trackdays: 'Trackdays', results: 'Results' },
     seeEvent: 'See event',
     filters: 'Filters',

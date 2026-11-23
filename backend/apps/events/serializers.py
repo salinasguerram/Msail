@@ -176,6 +176,7 @@ class EventDetailSerializer(EventListSerializer):
     news = serializers.SerializerMethodField()
     news_count = serializers.SerializerMethodField()
     professionals = serializers.SerializerMethodField()
+    tracks = serializers.SerializerMethodField()
 
     class Meta(EventListSerializer.Meta):
         fields = EventListSerializer.Meta.fields + [
@@ -198,6 +199,14 @@ class EventDetailSerializer(EventListSerializer):
             "news",
             "news_count",
             "professionals",
+            "tracks",
+        ]
+
+    def get_tracks(self, event):
+        """Carreras con recorridos GPS para ver repetidas ("Track de la carrera")."""
+        return [
+            {"id": race.id, "name": race.name, "is_demo": race.is_demo, "boats": race.boats.count()}
+            for race in event.tracks.filter(is_published=True)
         ]
 
     NEARBY_PROFESSIONALS_KM = 150

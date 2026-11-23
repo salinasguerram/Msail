@@ -2,6 +2,7 @@ from datetime import date
 
 from django.db.models import Prefetch, Q
 from django.db.models.functions import Coalesce
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, permissions, serializers
 from rest_framework.pagination import PageNumberPagination
@@ -150,3 +151,41 @@ class EventFollowView(APIView):
         event = self.get_event(slug)
         EventFollow.objects.filter(user=request.user, event=event).delete()
         return self.response(event, False)
+
+
+class RaceTrackView(APIView):
+    """Recorridos GPS de una carrera, para repetirla en la app: cada barco con sus puntos [t, lat, lng] cada 5 s."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, pk):
+        from .models import RaceTrack
+        from .tracks import max_speed_kn
+
+        race = get_object_or_404(
+            RaceTrack.objects.filter(is_published=True, event__is_published=True).select_related("event").prefetch_related("boats"),
+            pk=pk,
+        )
+        boats = [b for b in race.boats.all() if len(b.points) >= 2]
+        return Response(
+            {
+                "id": race.id,
+                "name": race.name,
+                "is_demo": race.is_demo,
+                "event": {"slug": race.event.slug, "name": race.event.name},
+                "start": min((b.points[0][0] for b in boats), default=None),
+                "end": max((b.points[-1][0] for b in boats), default=None),
+                "boats": [
+                    {
+                        "id": b.id,
+                        "boat_name": b.boat_name,
+                        "sail_number": b.sail_number,
+                        "skipper": b.skipper,
+                        "color": b.color,
+                        "max_speed_kn": max_speed_kn(b.points),
+                        "points": b.points,
+                    }
+                    for b in boats
+                ],
+            }
+        )

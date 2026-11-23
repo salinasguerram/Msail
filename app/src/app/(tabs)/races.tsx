@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 
@@ -17,11 +17,14 @@ import { SelectField } from '@/components/SelectField';
 import { colors, fonts, radius, spacing, typography } from '@/theme';
 import { setPlanetFocus } from '@/components/explore/planetFocus';
 import { RegattaArt } from '@/components/HomeCards';
+import { getArea } from '@/api/weather';
+import type { FieldCell } from '@/components/globe/types';
 
 // Las pasadas van en la pestaña Resultados.
 const WHEN: EventWhen[] = ['upcoming', 'live', 'following'];
-type Section = 'regattas' | 'trackdays' | 'results';
-const SECTIONS: Section[] = ['regattas', 'trackdays', 'results'];
+type Section = 'regattas' | 'results';
+// Los tracks de cada carrera se ven dentro de la página de la regata (como pidió Miguel).
+const SECTIONS: Section[] = ['regattas', 'results'];
 const SEARCH_DEBOUNCE_MS = 350;
 
 // Sin filtros, el mensaje vacío depende de la pestaña (ej. "No hay regatas en curso en este momento").
@@ -67,13 +70,58 @@ export default function RacesScreen() {
   const { height } = useWindowDimensions();
 
   // El planeta (detrás) se acerca a la primera regata de la lista, con sus pines alrededor.
-  const focusEvent = events.find((e) => e.latitude && e.longitude);
-  const focusLat = focusEvent ? Number(focusEvent.latitude) : null;
-  const focusLng = focusEvent ? Number(focusEvent.longitude) : null;
+  // El planeta (detrás) muestra un evento de la lista: el primero, o el que se elija con ‹ ›.
+  // Se puede acercar o alejar (+ / −) y ver el viento alrededor.
+  const mappable = useMemo(() => events.filter((e) => e.latitude && e.longitude), [events]);
+  const [focusSlug, setFocusSlug] = useState<string | null>(null);
+  const focused = mappable.find((e) => e.slug === focusSlug) ?? mappable[0] ?? null;
+  const [altitude, setAltitude] = useState(MAP_ALTITUDE);
+  // Alto del mapa (fracción de la pantalla): se agranda tirando la lista hacia abajo, o tocando la manija.
+  const [mapRatio, setMapRatio] = useState(MAP_SMALL);
+  const mapHeight = Math.round(height * mapRatio);
+  // El lugar queda en el medio del hueco del mapa (el planeta ocupa toda la pantalla, detrás).
+  const raise = Math.max(0, 0.5 - (HEADER_ESTIMATE + mapHeight / 2) / height);
+  // Arrastre de la manija: dónde empezó el dedo y qué alto tenía el mapa.
+  const [dragFrom, setDragFrom] = useState<{ y: number; ratio: number; moved: boolean } | null>(null);
+  const middle = (MAP_SMALL + MAP_BIG) / 2;
+  const [windOn, setWindOn] = useState(false);
+  const [wind, setWind] = useState<{ slug: string; step: number; cells: FieldCell[] } | null>(null);
+
+  useEffect(() => {
+    if (!windOn || !focused || wind?.slug === focused.slug) return undefined;
+    let active = true;
+    const slug = focused.slug;
+    getArea(`event:${slug}`)
+      .then((area) => {
+        if (!active) return;
+        const cells = area.points.map((p) => ({ lat: p.lat, lng: p.lng, value: p.wind[0], direction: p.wind_dir[0] }));
+        setWind({ slug, step: area.step ?? 0.5, cells });
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [windOn, focused, wind?.slug]);
+
+  const focusLat = focused ? Number(focused.latitude) : null;
+  const focusLng = focused ? Number(focused.longitude) : null;
+  const focusedSlug = focused?.slug ?? null;
+  const field = useMemo(
+    () => (windOn && wind && wind.slug === focusedSlug ? { kind: 'wind' as const, step: wind.step, cells: wind.cells } : null),
+    [windOn, wind, focusedSlug],
+  );
   useEffect(() => {
     if (focusLat === null || focusLng === null) return;
-    setPlanetFocus('/races', { lat: focusLat, lng: focusLng, altitude: 0.45, raise: 0.3 });
-  }, [focusLat, focusLng]);
+    setPlanetFocus('/races', { lat: focusLat, lng: focusLng, altitude, raise, field });
+  }, [focusLat, focusLng, altitude, raise, field]);
+
+  const focusIndex = focused ? mappable.indexOf(focused) : -1;
+  const goTo = (step: number) => {
+    if (!mappable.length) return;
+    const next = mappable[(focusIndex + step + mappable.length) % mappable.length];
+    setFocusSlug(next.slug);
+  };
+  const zoomBy = (factor: number) => setAltitude((a) => Math.min(MAX_ALTITUDE, Math.max(MIN_ALTITUDE, a * factor)));
   useEffect(() => () => setPlanetFocus('/races', null), []);
 
   const chooseSection = (next: Section) => {
@@ -143,13 +191,59 @@ export default function RacesScreen() {
   const hasFilters = Boolean(filters.q || filters.type || filters.country || filters.club || filters.boatClass || filters.month);
   const months = useMemo(() => monthOptions(filters.when, i18n.language), [filters.when, i18n.language]);
 
-  const [hero, ...rest] = events;
-  const showList = section !== 'trackdays';
+  // La tarjeta grande es el evento que muestra el planeta; las demás, abajo.
+  const hero = focused ?? events[0];
+  const rest = events.filter((e) => e !== hero);
+  const showList = true;
 
   return (
     <Screen>
-      {/* Hueco para ver el planeta (detrás) acercado a las regatas. */}
-      <View style={{ height: Math.round(height * 0.2) }} pointerEvents="none" />
+      {/* Hueco para ver el planeta (detrás), con los controles del mapa. */}
+      <View style={[styles.mapArea, { height: mapHeight }]} pointerEvents="box-none">
+        <View style={styles.mapTools} pointerEvents="box-none">
+          <MapButton icon="add" label={t('calendar.zoomIn')} onPress={() => zoomBy(0.6)} />
+          <MapButton icon="remove" label={t('calendar.zoomOut')} onPress={() => zoomBy(1 / 0.6)} />
+          <MapButton icon="flag-outline" label={t('planet.wind.button')} active={windOn} onPress={() => setWindOn((v) => !v)} />
+        </View>
+        {focused ? (
+          <View style={styles.mapPicker}>
+            <MapButton icon="chevron-back" label={t('calendar.previousEvent')} onPress={() => goTo(-1)} disabled={mappable.length < 2} />
+            <View style={styles.mapPlace}>
+              <Text style={styles.mapPlaceName} numberOfLines={1}>
+                {focused.name}
+              </Text>
+              <Text style={styles.mapPlaceCount}>
+                {focusIndex + 1} / {mappable.length}
+              </Text>
+            </View>
+            <MapButton icon="chevron-forward" label={t('calendar.nextEvent')} onPress={() => goTo(1)} disabled={mappable.length < 2} />
+          </View>
+        ) : null}
+      </View>
+      {/* Manija: tirando hacia abajo se agranda el mapa; hacia arriba, vuelve. */}
+      <View
+        onStartShouldSetResponder={() => true}
+        onResponderGrant={(e) => setDragFrom({ y: e.nativeEvent.pageY, ratio: mapRatio, moved: false })}
+        onResponderMove={(e) => {
+          if (!dragFrom) return;
+          const dy = e.nativeEvent.pageY - dragFrom.y;
+          if (Math.abs(dy) > 4 && !dragFrom.moved) setDragFrom({ ...dragFrom, moved: true });
+          setMapRatio(Math.min(MAP_BIG, Math.max(MAP_SMALL, dragFrom.ratio + dy / height)));
+        }}
+        onResponderRelease={() => {
+          // Un toque abre o cierra; al soltar un arrastre se acomoda en el tamaño más cercano.
+          if (dragFrom && !dragFrom.moved) setMapRatio(dragFrom.ratio > middle ? MAP_SMALL : MAP_BIG);
+          else setMapRatio((r) => (r > middle ? MAP_BIG : MAP_SMALL));
+          setDragFrom(null);
+        }}
+        onResponderTerminate={() => setDragFrom(null)}
+        accessibilityRole="button"
+        accessibilityLabel={t(mapRatio > MAP_SMALL ? 'calendar.smallerMap' : 'calendar.biggerMap')}
+        style={styles.handleArea}
+      >
+        <View style={styles.handle} />
+        <Ionicons name={mapRatio > MAP_SMALL ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+      </View>
       <View style={styles.heading}>
         <View style={styles.headingLine} />
         <Text style={styles.headingText}>{t('tabs.events')}</Text>
@@ -172,15 +266,6 @@ export default function RacesScreen() {
           );
         })}
       </View>
-
-      {section === 'trackdays' ? (
-        <Card style={{ alignItems: 'center', gap: spacing.sm }}>
-          <Ionicons name="flag-outline" size={30} color={colors.primary} />
-          <Text style={[typography.heading, { textAlign: 'center' }]}>{t('calendar.trackdaysTitle')}</Text>
-          <Text style={[typography.body, { textAlign: 'center', color: colors.textMuted }]}>{t('calendar.trackdaysText')}</Text>
-          <Text style={styles.soon}>{t('common.comingSoon')}</Text>
-        </Card>
-      ) : null}
 
       {!showList ? null : (
         <>
@@ -367,6 +452,35 @@ function groupBy(events: EventSummary[], language: string) {
   return result;
 }
 
+/** Botón redondo sobre el mapa (zoom, viento, cambiar de evento). */
+function MapButton({
+  icon,
+  label,
+  onPress,
+  active = false,
+  disabled = false,
+}: {
+  icon: ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  onPress: () => void;
+  active?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active, disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      hitSlop={6}
+      style={({ pressed }) => [styles.mapButton, active && styles.mapButtonOn, (pressed || disabled) && { opacity: disabled ? 0.35 : 0.7 }]}
+    >
+      <Ionicons name={icon} size={20} color={active ? '#fff' : colors.text} />
+    </Pressable>
+  );
+}
+
 /** Tarjeta grande con la foto del evento, el nombre, el lugar y "Ver evento". */
 function HeroEvent({ event }: { event: EventSummary }) {
   const { t } = useTranslation();
@@ -487,7 +601,43 @@ function EventRow({ event, classLabel }: { event: EventSummary; classLabel: (slu
   );
 }
 
+const MAP_ALTITUDE = 0.45;
+/** Alto del mapa: chico (con la lista) y grande (tirando hacia abajo). */
+const MAP_SMALL = 0.26;
+const MAP_BIG = 0.62;
+const HEADER_ESTIMATE = 60;
+const MIN_ALTITUDE = 0.08;
+const MAX_ALTITUDE = 2.5;
+
 const styles = StyleSheet.create({
+  mapArea: { justifyContent: 'flex-end' },
+  handleArea: { alignItems: 'center', paddingVertical: 4, marginBottom: -spacing.sm },
+  handle: { width: 44, height: 5, borderRadius: 3, backgroundColor: 'rgba(230,237,247,0.55)' },
+  mapTools: { position: 'absolute', top: 0, right: 0, gap: spacing.sm },
+  mapPicker: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'center', maxWidth: '100%' },
+  mapPlace: {
+    flexShrink: 1,
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(120,160,230,0.45)',
+    backgroundColor: 'rgba(11,23,48,0.88)',
+  },
+  mapPlaceName: { color: colors.text, fontFamily: fonts.semibold, fontSize: 13 },
+  mapPlaceCount: { color: colors.textMuted, fontSize: 11 },
+  mapButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(120,160,230,0.45)',
+    backgroundColor: 'rgba(11,23,48,0.88)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapButtonOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   heading: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   headingLine: { flex: 1, height: 1, backgroundColor: '#2fd4e0', opacity: 0.6 },
   headingText: { color: colors.text, fontFamily: fonts.display, fontSize: 30 },

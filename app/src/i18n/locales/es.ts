@@ -83,6 +83,7 @@ const es = {
     joinEdit: 'Editar mi perfil',
     joinLogin: 'Crear cuenta o entrar',
   },
+  track: { title: 'Track de la carrera', section: 'Track de la carrera', watch: 'Ver', boats_one: '{{count}} barco', boats_other: '{{count}} barcos', demo: 'Recorridos simulados de ejemplo: así se va a ver cuando se carguen los GPX reales de la carrera.', demoShort: 'ejemplo', empty: 'Esta carrera todavía no tiene recorridos cargados.', startedAt: 'Largada {{time}}', play: 'Reproducir', pause: 'Pausar', timeline: 'Momento de la carrera', liveResults: 'Posiciones', finalResults: 'Resultados de la carrera', boat: 'Velero', now: 'Ahora', maxSpeed: 'Vel. máx.' },
   tabs: {
     services: 'Servicios',
     store: 'Tienda',
@@ -373,6 +374,12 @@ const es = {
     confirmRemove: '¿Quitar a {{name}} de la tripulación?',
   },
   calendar: {
+    biggerMap: 'Agrandar el mapa',
+    smallerMap: 'Achicar el mapa',
+    zoomIn: 'Acercar',
+    zoomOut: 'Alejar',
+    previousEvent: 'Evento anterior',
+    nextEvent: 'Evento siguiente',
     sections: { regattas: 'Regatas', trackdays: 'Trackdays', results: 'Resultados' },
     seeEvent: 'Ver evento',
     filters: 'Filtros',

@@ -580,6 +580,7 @@ export function globeHtml({ background, language, satellite = null }: { backgrou
   // Las líneas de viento son más finas al acercarse (si no, de cerca se ven como bandas anchas).
   var arcStroke = 0;
   function updateArcStroke(altitude) {
+    if (field) return; // el clima de una zona tiene su propio grosor (según la grilla)
     var next = Math.max(0.05, Math.min(0.6, altitude * 0.26));
     if (Math.abs(next - arcStroke) / (arcStroke || 1) > 0.15) {
       arcStroke = next;
@@ -642,7 +643,11 @@ export function globeHtml({ background, language, satellite = null }: { backgrou
   var field = null;
   function drawArcs() {
     if (field) drawField(field);
-    else drawWind(windCells);
+    else {
+      arcStroke = 0;
+      updateArcStroke(globe.pointOfView().altitude);
+      drawWind(windCells);
+    }
   }
 
   function scaleColor(scale, value, alpha) {
@@ -657,6 +662,9 @@ export function globeHtml({ background, language, satellite = null }: { backgrou
   // Viento y olas vienen "de" una dirección (la línea va al revés); la corriente va "hacia" su dirección.
   function drawField(f) {
     document.body.classList.add('wind');
+    // Líneas finas, en proporción a la distancia entre puntos (si no, de cerca se ven como manchas).
+    arcStroke = f.step * 0.07;
+    globe.arcStroke(arcStroke);
     var scale = FIELD_SCALES[f.kind] || FIELD_SCALES.wind;
     var top = scale[scale.length - 1].value || 1;
     var flip = f.kind !== 'currents';

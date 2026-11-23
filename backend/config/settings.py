@@ -324,7 +324,10 @@ UNFOLD = {
             },
             {
                 "title": "Calendario",
-                "items": [_admin_link("Regatas", "sailing", "admin:events_event_changelist")],
+                "items": [
+                    _admin_link("Regatas", "sailing", "admin:events_event_changelist"),
+                    _admin_link("Tracks de carreras", "route", "admin:events_racetrack_changelist"),
+                ],
             },
             {
                 "title": "Contenido",

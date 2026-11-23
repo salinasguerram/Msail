@@ -120,9 +120,7 @@ export default function EventScreen() {
           </View>
         </View>
         <Text style={styles.name}>{event.name}</Text>
-        <Text style={[typography.body, { color: colors.textMuted }]}>
-          {[event.city, event.country_name].filter(Boolean).join(' · ')}
-        </Text>
+        <Text style={[typography.body, { color: colors.textMuted }]}>{[event.city, event.country_name].filter(Boolean).join(' · ')}</Text>
         <View style={styles.followRow}>
           <Pressable
             accessibilityRole="button"
@@ -132,13 +130,9 @@ export default function EventScreen() {
             style={({ pressed }) => [styles.follow, isFollowing && styles.following, (pressed || followBusy) && { opacity: 0.7 }]}
           >
             <Ionicons name={isFollowing ? 'star' : 'star-outline'} size={18} color={isFollowing ? '#fff' : colors.primary} />
-            <Text style={[styles.followText, isFollowing && { color: '#fff' }]}>
-              {isFollowing ? t('event.following') : t('event.follow')}
-            </Text>
+            <Text style={[styles.followText, isFollowing && { color: '#fff' }]}>{isFollowing ? t('event.following') : t('event.follow')}</Text>
           </Pressable>
-          <Text style={[typography.caption, { flex: 1 }]}>
-            {isFollowing ? t('event.followingHint') : t('event.followHint')}
-          </Text>
+          <Text style={[typography.caption, { flex: 1 }]}>{isFollowing ? t('event.followingHint') : t('event.followHint')}</Text>
         </View>
       </Card>
 
@@ -172,13 +166,9 @@ export default function EventScreen() {
       {event.entry_url && event.status !== 'finished' ? (
         <Card style={styles.entry}>
           <View style={{ flex: 1, gap: 2 }}>
-            <Text style={[typography.body, { fontWeight: '700' }]}>
-              {event.entries_open ? t('event.entriesOpen') : t('event.entriesClosed')}
-            </Text>
+            <Text style={[typography.body, { fontWeight: '700' }]}>{event.entries_open ? t('event.entriesOpen') : t('event.entriesClosed')}</Text>
             {event.entries_open ? (
-              <Text style={typography.caption}>
-                {t('event.entriesUntil', { date: longDate(event.entry_deadline ?? event.start_date) })}
-              </Text>
+              <Text style={typography.caption}>{t('event.entriesUntil', { date: longDate(event.entry_deadline ?? event.start_date) })}</Text>
             ) : null}
           </View>
           {event.entries_open ? <Button title={t('event.enter')} onPress={() => Linking.openURL(event.entry_url)} /> : null}
@@ -192,9 +182,7 @@ export default function EventScreen() {
             {line}
           </Text>
         ))}
-        {mapUrl ? (
-          <Button title={t('event.openMap')} variant="secondary" onPress={() => Linking.openURL(mapUrl)} />
-        ) : null}
+        {mapUrl ? <Button title={t('event.openMap')} variant="secondary" onPress={() => Linking.openURL(mapUrl)} /> : null}
       </Card>
 
       {event.organizer ? (
@@ -218,25 +206,25 @@ export default function EventScreen() {
       {event.categories.length > 0 || event.boat_classes.length > 0 ? (
         <Card>
           <Text style={typography.label}>{event.categories.length > 0 ? t('event.categories') : t('event.classes')}</Text>
-          {event.categories.length > 0
-            ? event.categories.map((category) => (
-                <View key={category.name} style={styles.category}>
-                  <Ionicons name="trophy-outline" size={18} color={colors.primary} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={typography.body}>{category.name}</Text>
-                    {category.notes ? <Text style={typography.caption}>{category.notes}</Text> : null}
-                  </View>
+          {event.categories.length > 0 ? (
+            event.categories.map((category) => (
+              <View key={category.name} style={styles.category}>
+                <Ionicons name="trophy-outline" size={18} color={colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={typography.body}>{category.name}</Text>
+                  {category.notes ? <Text style={typography.caption}>{category.notes}</Text> : null}
                 </View>
-              ))
-            : (
-              <View style={styles.tags}>
-                {event.boat_classes.map((slug) => (
-                  <Text key={slug} style={styles.classTag}>
-                    {className(classes, slug)}
-                  </Text>
-                ))}
               </View>
-            )}
+            ))
+          ) : (
+            <View style={styles.tags}>
+              {event.boat_classes.map((slug) => (
+                <Text key={slug} style={styles.classTag}>
+                  {className(classes, slug)}
+                </Text>
+              ))}
+            </View>
+          )}
         </Card>
       ) : null}
 
@@ -297,6 +285,32 @@ export default function EventScreen() {
         </Card>
       ) : null}
 
+      {/* Track de la carrera: la repetición con el GPS de cada barco (lo que Miguel llama trackdays). */}
+      {event.tracks?.length ? (
+        <Card>
+          <Text style={typography.label}>{t('track.section')}</Text>
+          {event.tracks.map((race) => (
+            <Pressable
+              key={race.id}
+              accessibilityRole="link"
+              onPress={() => router.push({ pathname: '/events/track/[id]', params: { id: String(race.id) } })}
+              style={({ pressed }) => [styles.proRow, pressed && { opacity: 0.7 }]}
+            >
+              <Ionicons name="navigate-circle-outline" size={22} color="#2fd4e0" />
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.body, { fontWeight: '700' }]}>{race.name}</Text>
+                <Text style={typography.caption}>
+                  {t('track.boats', { count: race.boats })}
+                  {race.is_demo ? ` · ${t('track.demoShort')}` : ''}
+                </Text>
+              </View>
+              <Text style={styles.trackLink}>{t('track.watch')}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </Pressable>
+          ))}
+        </Card>
+      ) : null}
+
       {event.professionals?.items.length ? (
         <Card>
           <Text style={typography.label}>{t(event.professionals.linked ? 'event.professionals' : 'event.professionalsNearby')}</Text>
@@ -311,7 +325,11 @@ export default function EventScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={[typography.body, { fontWeight: '700' }]}>{pro.name}</Text>
                 <Text style={typography.caption} numberOfLines={1}>
-                  {[pro.specialties.map((s) => s.name).join(' · '), pro.city, pro.distance_km !== undefined ? t('event.km', { km: pro.distance_km }) : null]
+                  {[
+                    pro.specialties.map((s) => s.name).join(' · '),
+                    pro.city,
+                    pro.distance_km !== undefined ? t('event.km', { km: pro.distance_km }) : null,
+                  ]
                     .filter(Boolean)
                     .join(' · ')}
                 </Text>
@@ -369,6 +387,7 @@ function LinkRow({ label, url }: { label: string; url: string }) {
 }
 
 const styles = StyleSheet.create({
+  trackLink: { color: '#2fd4e0', fontWeight: '700', fontSize: 13 },
   proRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
   hero: { gap: spacing.sm, paddingVertical: spacing.xl },
   followRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.sm, flexWrap: 'wrap' },

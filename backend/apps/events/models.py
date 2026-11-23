@@ -395,3 +395,66 @@ class EventFollow(models.Model):
 
     def __str__(self):
         return f"{self.user} → {self.event}"
+
+
+class RaceTrack(models.Model):
+    """Una carrera de una regata con el recorrido GPS de cada barco, para verla repetida en la app."""
+
+    event = models.ForeignKey(Event, verbose_name=_("regata"), on_delete=models.CASCADE, related_name="tracks")
+    name = models.CharField(_("carrera"), max_length=120, help_text=_("Ej: Día 1 · Carrera 1"))
+    order = models.PositiveSmallIntegerField(_("orden"), default=0)
+    is_demo = models.BooleanField(
+        _("datos de ejemplo"), default=False, help_text=_("Recorridos simulados para mostrar cómo se ve: la app lo avisa.")
+    )
+    is_published = models.BooleanField(_("publicada"), default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("track de carrera")
+        verbose_name_plural = _("tracks de carreras")
+        ordering = ["order", "created_at"]
+
+    def __str__(self):
+        return f"{self.event} · {self.name}"
+
+
+class BoatTrack(models.Model):
+    """El recorrido GPS de un barco en una carrera (de un archivo GPX)."""
+
+    race = models.ForeignKey(RaceTrack, verbose_name=_("carrera"), on_delete=models.CASCADE, related_name="boats")
+    boat_name = models.CharField(_("barco"), max_length=120)
+    sail_number = models.CharField(_("número de vela"), max_length=30, blank=True)
+    skipper = models.CharField(_("timonel / skipper"), max_length=120, blank=True)
+    color = models.CharField(_("color"), max_length=7, blank=True, help_text=_("Vacío: se asigna uno automáticamente."))
+    gpx = models.FileField(_("archivo GPX"), upload_to="event_tracks/", blank=True)
+    # Puntos cada 5 s: [segundos UNIX, latitud, longitud]. Se arman al subir el GPX.
+    points = models.JSONField(default=list, editable=False)
+
+    class Meta:
+        verbose_name = _("barco")
+        verbose_name_plural = _("barcos")
+        ordering = ["boat_name"]
+
+    def __str__(self):
+        return self.boat_name
+
+    def clean(self):
+        from .tracks import parse_gpx
+
+        if self.gpx and not getattr(self.gpx, "_committed", True):
+            self.points = parse_gpx(self.gpx)
+            self.gpx.seek(0)
+        elif not self.points and not self.gpx:
+            raise ValidationError({"gpx": _("Subí el GPX con el recorrido del barco.")})
+
+    def save(self, *args, **kwargs):
+        from .tracks import BOAT_COLORS, parse_gpx
+
+        if self.gpx and not getattr(self.gpx, "_committed", True):
+            # GPX recién subido (también si reemplaza a otro): se leen sus puntos.
+            self.points = parse_gpx(self.gpx)
+            self.gpx.seek(0)
+        if not self.color:
+            used = self.race.boats.exclude(pk=self.pk).count() if self.race_id else 0
+            self.color = BOAT_COLORS[used % len(BOAT_COLORS)]
+        super().save(*args, **kwargs)
