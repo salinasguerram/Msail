@@ -44,6 +44,9 @@ class DashboardTests(AdminPanelTestCase):
         self.assertContains(response, "msail/sails.svg")  # logo de velas, igual que en la app
         self.assertRegex(response.content.decode(), r"<title>\s*MSAIL \| Perfil de administrador\s*</title>")
         self.assertContains(response, "msail/favicon-velas.png")
+        # Menú lateral: los links se resuelven al dibujar el panel (en settings son funciones, no reverse_lazy).
+        self.assertContains(response, 'href="/admin/events/event/"')
+        self.assertContains(response, 'href="/admin/msailing/section/"')
         self.assertContains(response, "http://localhost:8081")  # "Ver el sitio" lleva a la app
 
     def test_regular_user_cannot_enter(self):

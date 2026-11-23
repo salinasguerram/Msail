@@ -279,9 +279,14 @@ def _static(path):
 
 
 def _admin_link(title, icon, url_name):
-    from django.urls import reverse_lazy
+    # El link es una función que Unfold llama al dibujar el menú (no un reverse_lazy): así la configuración se puede
+    # leer y pasar a texto antes de que Django arranque, como hace Vercel al compilar.
+    def link(request, name=url_name):
+        from django.urls import reverse
 
-    return {"title": title, "icon": icon, "link": reverse_lazy(url_name)}
+        return reverse(name)
+
+    return {"title": title, "icon": icon, "link": link}
 
 
 UNFOLD = {
