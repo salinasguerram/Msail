@@ -280,8 +280,9 @@ function WideOverlay({
   const { t } = useTranslation();
   const { width, height } = useWindowDimensions();
   const titleSize = width >= 1400 ? 50 : width >= 1200 ? 44 : 38;
-  // Noticias que entran en la columna de la derecha según el alto de la pantalla (cada tarjeta mide ~210 px).
-  const feedCount = Math.max(1, Math.min(4, Math.floor((height - 68 - 80) / 210)));
+  // Noticias que entran en la columna de la derecha según el alto de la pantalla (cada tarjeta mide ~210 px;
+  // arriba van el clima y el título de la sección).
+  const feedCount = Math.max(1, Math.min(4, Math.floor((height - 68 - 150) / 210)));
   return (
     <View style={[StyleSheet.absoluteFill, styles.wideRow]} pointerEvents="box-none">
       <View style={styles.sidebar} onLayout={onSidebar}>
@@ -318,12 +319,18 @@ function WideOverlay({
       </View>
       {/* Hueco del planeta: deja pasar los gestos. */}
       <View style={styles.free} pointerEvents="box-none">
-        <View style={styles.freeTopLeft} pointerEvents="box-none">
-          <WeatherChip fallback={planet.home} windOn={planet.wind.on} onToggleWind={planet.wind.toggle} />
-        </View>
+        {/* Sin noticias (o explorando), el clima queda arriba a la derecha; si no, va encima de las noticias. */}
+        {exploring || !feed?.length ? (
+          <View style={styles.freeTopRight} pointerEvents="box-none">
+            <WeatherChip fallback={planet.home} windOn={planet.wind.on} onToggleWind={planet.wind.toggle} />
+          </View>
+        ) : null}
       </View>
       {exploring || !feed?.length ? null : (
         <View style={styles.cards} onLayout={onCards}>
+          <View style={styles.cardsWeather}>
+            <WeatherChip fallback={planet.home} windOn={planet.wind.on} onToggleWind={planet.wind.toggle} />
+          </View>
           <FadeIn delay={500}>
             <TodayFeed items={feed.slice(0, feedCount)} onLocate={onLocate} canLocate={canLocate} layout="column" />
           </FadeIn>
@@ -406,7 +413,8 @@ const styles = StyleSheet.create({
   cards: {
     width: CARDS_WIDTH + spacing.xxl,
     paddingRight: spacing.xxl,
-    gap: spacing.xl,
+    gap: spacing.lg,
     justifyContent: 'center',
   },
+  cardsWeather: { alignSelf: 'flex-end' },
 });
