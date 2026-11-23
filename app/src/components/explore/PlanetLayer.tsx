@@ -82,13 +82,12 @@ export function PlanetLayer() {
   };
   const canLocate = (eventSlug: string) => !!pointOf(eventSlug);
 
-  // Tamaño de la pantalla y del contenido que tapa cada borde, para centrar el planeta en el hueco libre.
-  // Hasta medir la pantalla de verdad (onLayout) se estima con la ventana menos la barra de pestañas.
-  const [measured, setMeasured] = useState<{ w: number; h: number } | null>(null);
-  const screen = measured ?? {
-    w: width,
-    h: Math.max(1, height - (explore ? navBar || (wide ? TOP_BAR_HEIGHT : TAB_BAR_ESTIMATE) : 0)),
-  };
+  // En Explorar deja libre la barra de navegación (abajo en el celular, arriba en la web ancha).
+  const bar = navBar || (wide ? TOP_BAR_HEIGHT : TAB_BAR_ESTIMATE);
+  // Tamaño de la capa: la ventana menos la barra (en Explorar). Se calcula de la ventana y no se mide con onLayout:
+  // al pasar de la vista ancha a la de celular (o al girar), la medición a veces llegaba tarde y el planeta quedaba
+  // con el tamaño viejo, corrido o cortado por la mitad.
+  const screen = { w: Math.max(1, width), h: Math.max(1, height - (explore ? bar : 0)) };
   const [cover, setCover] = useState({ left: 0, right: 0, top: 0, bottom: 0 });
   const measure = (key: keyof typeof cover) => (event: LayoutChangeEvent) => {
     const { x, y, width: w, height: h } = event.nativeEvent.layout;
@@ -115,20 +114,12 @@ export function PlanetLayer() {
       ? // El lugar queda en la parte de arriba: abajo va el contenido de la pantalla.
         { w: screen.w, h: screen.h, dx: 0, dy: -Math.round(screen.h * place.raise) }
       : { w: side, h: side, dx: 0, dy: 0 };
-  // En Explorar deja libre la barra de navegación (abajo en el celular, arriba en la web ancha).
-  const bar = navBar || (wide ? TOP_BAR_HEIGHT : TAB_BAR_ESTIMATE);
   const placement = explore ? (wide ? { top: bar, bottom: 0 } : { top: 0, bottom: bar }) : { top: 0, bottom: 0 };
 
   return (
     <View
       style={[styles.root, placement, explore ? styles.front : styles.back]}
       pointerEvents={explore ? 'box-none' : 'none'}
-      onLayout={(e) =>
-        setMeasured({
-          w: Math.round(e.nativeEvent.layout.width),
-          h: Math.round(e.nativeEvent.layout.height),
-        })
-      }
     >
       {screen.w > 0 ? (
         <Globe
