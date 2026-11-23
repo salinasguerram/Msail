@@ -42,12 +42,22 @@
         {
           "locationWhenInUsePermission": "MSAIL LEAGUE usa tu ubicación para mostrarte el clima de tu zona."
         }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#050b18"
+        }
       ]
     ],
     "scheme": "msailleague",
     "backgroundColor": "#050b18",
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "description": "La plataforma de la vela: regatas, clima marino, marinas, profesionales y formación en un solo lugar."
   }
 }

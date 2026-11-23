@@ -56,9 +56,10 @@ export function TopBar({ state, navigateToTab }: Props) {
   };
   const { width } = useWindowDimensions();
   const roomy = width >= 1200;
+  // Entre 1024 y 1200 px (notebooks chicas, iPad horizontal) todo más compacto, para que los ítems no se pisen con la lupa.
 
   return (
-    <View style={styles.bar} accessibilityRole="navigation" onLayout={(e) => setNavBarHeight(e.nativeEvent.layout.height)}>
+    <View style={[styles.bar, !roomy && { paddingHorizontal: spacing.lg }]} accessibilityRole="navigation" onLayout={(e) => setNavBarHeight(e.nativeEvent.layout.height)}>
       <Pressable
         accessibilityRole="link"
         accessibilityLabel={t('nav.home')}
@@ -69,7 +70,7 @@ export function TopBar({ state, navigateToTab }: Props) {
       >
         <Brand size={roomy ? 22 : 19} />
       </Pressable>
-      <View style={styles.divider} />
+      <View style={[styles.divider, !roomy && { marginHorizontal: spacing.md }]} />
 
       <View style={[styles.items, { gap: roomy ? spacing.xs : 0 }]}>
         {ITEMS.map((item) => {
@@ -82,11 +83,13 @@ export function TopBar({ state, navigateToTab }: Props) {
               onPress={() => go(item.name)}
               style={({ hovered }: { hovered?: boolean }) => [
                 styles.item,
-                { paddingHorizontal: roomy ? spacing.md : 10 },
+                { paddingHorizontal: roomy ? spacing.md : 7 },
                 hovered && !active && styles.itemHover,
               ]}
             >
-              <Text style={[styles.itemText, active && styles.itemTextActive]}>{t(item.label)}</Text>
+              <Text style={[styles.itemText, !roomy && { fontSize: 14 }, active && styles.itemTextActive]} numberOfLines={1}>
+                {t(item.label)}
+              </Text>
               <View style={[styles.underline, active && styles.underlineActive]} />
             </Pressable>
           );
@@ -137,6 +140,7 @@ const styles = StyleSheet.create({
   },
   items: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'stretch',
     height: '100%',
@@ -151,8 +155,8 @@ const styles = StyleSheet.create({
   itemTextActive: { color: colors.text },
   underline: {
     position: 'absolute',
-    left: 10,
-    right: 10,
+    left: 7,
+    right: 7,
     bottom: 14,
     height: 3,
     borderRadius: 2,

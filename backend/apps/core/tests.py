@@ -6,7 +6,7 @@ from pathlib import Path
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import override_settings
+from django.test import TestCase, override_settings
 from PIL import Image
 from rest_framework.test import APITestCase
 
@@ -172,3 +172,19 @@ class BoatPhotoTests(PhotoTestCase):
         name = BoatPhoto.objects.get().image.name
         self.client.delete(f"/api/boats/{self.boat.id}/")
         self.assertFalse((Path(MEDIA) / name).exists())
+
+
+class CronTests(TestCase):
+    URL = "/api/cron/event-reminders/"
+
+    @override_settings(CRON_SECRET="s3cret")
+    def test_needs_the_vercel_secret(self):
+        self.assertEqual(self.client.get(self.URL).status_code, 401)
+        self.assertEqual(self.client.get(self.URL, HTTP_AUTHORIZATION="Bearer otro").status_code, 401)
+        response = self.client.get(self.URL, HTTP_AUTHORIZATION="Bearer s3cret")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Recordatorios", response.json()["result"])
+
+    @override_settings(CRON_SECRET="")
+    def test_disabled_without_secret(self):
+        self.assertEqual(self.client.get(self.URL, HTTP_AUTHORIZATION="Bearer ").status_code, 401)

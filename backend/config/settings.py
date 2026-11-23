@@ -271,6 +271,9 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 FRONTEND_URL = env("FRONTEND_URL", "http://localhost:8081")
 
 # Cobro de MSAIL Premium con Stripe (ver apps/premium/stripe.py). Sin clave, los planes se ven pero no se pueden pagar.
+# Tareas programadas de Vercel (apps/core/cron.py): Vercel manda este secreto al llamarlas.
+CRON_SECRET = env("CRON_SECRET")
+
 # Email de contacto que aparece en la política de privacidad y los términos.
 LEGAL_CONTACT_EMAIL = env("LEGAL_CONTACT_EMAIL", "contacto@msailleague.com")
 
