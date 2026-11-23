@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import type { ComponentProps, ReactNode } from 'react';
+import { useId, type ComponentProps, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
@@ -54,11 +54,11 @@ export function HomeCard({
 }
 
 /** Velero visto de costado: casco, mástil, mayor y foque. (x, y) es el centro del casco sobre el agua. */
-function Boat({ x, y, s, shade = 1 }: { x: number; y: number; s: number; shade?: number }) {
+function Boat({ x, y, s, shade = 1, jib }: { x: number; y: number; s: number; shade?: number; jib: string }) {
   const sail = shade === 1 ? '#f7f9fc' : '#dfe7f1';
   return (
     <G transform={`translate(${x} ${y}) scale(${s})`}>
-      <Path d="M-6 -4 C 4 -48, 14 -78, 16 -96 L16 -4 Z" fill="url(#jib)" opacity={0.95} />
+      <Path d="M-6 -4 C 4 -48, 14 -78, 16 -96 L16 -4 Z" fill={`url(#${jib})`} opacity={0.95} />
       <Path d="M19 -100 C 32 -70, 42 -36, 48 -6 L19 -6 Z" fill={sail} />
       <Path d="M18 -102 L18 -2" stroke="#3a4a5e" strokeWidth={1.2} />
       <Path d="M-14 -2 L54 -2 L46 7 L-6 7 Z" fill="#f2f5f9" />
@@ -69,23 +69,28 @@ function Boat({ x, y, s, shade = 1 }: { x: number; y: number; s: number; shade?:
 
 /** Ilustración de regata: cielo de día, mar y veleros (en lugar de una foto). */
 export function RegattaArt() {
+  // Ids propios por dibujo: en la web, con varias ilustraciones en pantalla, un id repetido toma el degradé de otra.
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const sky = `sky${id}`;
+  const sea = `sea${id}`;
+  const jib = `jib${id}`;
   return (
     <Svg width="100%" height="100%" viewBox="0 0 400 210" preserveAspectRatio="xMidYMid slice">
       <Defs>
-        <LinearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+        <LinearGradient id={sky} x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor="#3f7fc6" />
           <Stop offset="1" stopColor="#c4dcf2" />
         </LinearGradient>
-        <LinearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+        <LinearGradient id={sea} x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor="#2a6db5" />
           <Stop offset="1" stopColor="#0b2c5e" />
         </LinearGradient>
-        <LinearGradient id="jib" x1="0" y1="0" x2="1" y2="1">
+        <LinearGradient id={jib} x1="0" y1="0" x2="1" y2="1">
           <Stop offset="0" stopColor="#ffffff" />
           <Stop offset="1" stopColor="#cfdbe8" />
         </LinearGradient>
       </Defs>
-      <Rect width="400" height="120" fill="url(#sky)" />
+      <Rect width="400" height="120" fill={`url(#${sky})`} />
       <G fill="#ffffff" opacity={0.55}>
         <Ellipse cx="70" cy="40" rx="46" ry="9" />
         <Ellipse cx="105" cy="34" rx="30" ry="8" />
@@ -93,18 +98,18 @@ export function RegattaArt() {
         <Ellipse cx="350" cy="58" rx="40" ry="6" />
         <Ellipse cx="190" cy="66" rx="34" ry="5" />
       </G>
-      <Rect y="118" width="400" height="92" fill="url(#sea)" />
+      <Rect y="118" width="400" height="92" fill={`url(#${sea})`} />
       <G stroke="#ffffff" strokeWidth={1.2} opacity={0.22} fill="none">
         <Path d="M0 132 C 40 128, 80 136, 120 131 S 200 128, 240 133 S 330 129, 400 132" />
         <Path d="M0 152 C 50 146, 90 158, 150 151 S 250 146, 300 154 S 370 149, 400 152" />
         <Path d="M0 176 C 60 168, 120 182, 190 174 S 300 168, 400 178" />
       </G>
-      <Boat x={46} y={124} s={0.32} shade={0} />
-      <Boat x={92} y={126} s={0.42} />
-      <Boat x={150} y={124} s={0.3} shade={0} />
-      <Boat x={346} y={126} s={0.4} />
-      <Boat x={384} y={124} s={0.28} shade={0} />
-      <Boat x={232} y={160} s={1.05} />
+      <Boat x={46} y={124} s={0.32} shade={0} jib={jib} />
+      <Boat x={92} y={126} s={0.42} jib={jib} />
+      <Boat x={150} y={124} s={0.3} shade={0} jib={jib} />
+      <Boat x={346} y={126} s={0.4} jib={jib} />
+      <Boat x={384} y={124} s={0.28} shade={0} jib={jib} />
+      <Boat x={232} y={160} s={1.05} jib={jib} />
       <Path d="M210 170 C 230 166, 270 166, 300 171" stroke="#ffffff" strokeWidth={2} opacity={0.5} fill="none" />
     </Svg>
   );

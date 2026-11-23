@@ -1,10 +1,10 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { ArticleCard } from '@/api/news';
 import { colors, radius, spacing, typography } from '@/theme';
+import { BrandCover } from '@/components/BrandCover';
 
 const open = (slug: string) => router.push({ pathname: '/news/[slug]', params: { slug } });
 
@@ -21,14 +21,10 @@ export function useRelativeDate() {
   };
 }
 
-/** Portada de la noticia o, si no tiene foto, un fondo con el ícono de la sección. */
-export function Cover({ uri, style, iconSize = 32 }: { uri: string | null; style: object; iconSize?: number }) {
+/** Portada de la noticia o, si no tiene foto, la ilustración de MSAIL con el evento y las clases. */
+export function Cover({ uri, style, article, compact = false }: { uri: string | null; style: object; article: ArticleCard; compact?: boolean }) {
   if (uri) return <Image source={{ uri }} style={style} accessibilityIgnoresInvertColors />;
-  return (
-    <View style={[style, styles.placeholder]}>
-      <Ionicons name="newspaper-outline" size={iconSize} color={colors.primary} />
-    </View>
-  );
+  return <BrandCover style={style} title={article.event?.name ?? article.country_name} classes={article.boat_classes} compact={compact} />;
 }
 
 function Meta({ article }: { article: ArticleCard }) {
@@ -52,7 +48,7 @@ export function LeadStory({ article }: { article: ArticleCard }) {
       onPress={() => open(article.slug)}
       style={({ pressed }) => [styles.lead, pressed && { opacity: 0.85 }]}
     >
-      <Cover uri={article.cover} style={styles.leadImage} iconSize={48} />
+      <Cover uri={article.cover} style={styles.leadImage} article={article} />
       <View style={styles.leadBody}>
         <Text style={styles.kicker}>{t('news.dayCover')}</Text>
         <Text style={styles.leadTitle}>{article.title}</Text>
@@ -71,7 +67,7 @@ export function WeekCard({ article, rank }: { article: ArticleCard; rank: number
       onPress={() => open(article.slug)}
       style={({ pressed }) => [styles.week, pressed && { opacity: 0.85 }]}
     >
-      <Cover uri={article.cover_thumb} style={styles.weekImage} />
+      <Cover uri={article.cover_thumb} style={styles.weekImage} article={article} />
       <View style={styles.rank}>
         <Text style={styles.rankText}>{rank}</Text>
       </View>
@@ -93,7 +89,7 @@ export function NewsRow({ article }: { article: ArticleCard }) {
       onPress={() => open(article.slug)}
       style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}
     >
-      <Cover uri={article.cover_thumb} style={styles.rowImage} iconSize={22} />
+      <Cover uri={article.cover_thumb} style={styles.rowImage} article={article} compact />
       <View style={{ flex: 1, gap: 4 }}>
         <Text style={[typography.body, { fontWeight: '700' }]} numberOfLines={2}>
           {article.title}
@@ -108,7 +104,6 @@ export function NewsRow({ article }: { article: ArticleCard }) {
 }
 
 const styles = StyleSheet.create({
-  placeholder: { backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
   lead: {
     borderRadius: radius.lg,
     overflow: 'hidden',

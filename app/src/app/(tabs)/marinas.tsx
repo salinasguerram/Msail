@@ -17,6 +17,7 @@ import { SelectField } from '@/components/SelectField';
 import { TextField } from '@/components/TextField';
 import { colors, radius, spacing, typography } from '@/theme';
 import { formatMoney } from '@/utils/marinaRates';
+import { BrandCover } from '@/components/BrandCover';
 
 const SEARCH_DEBOUNCE_MS = 350;
 const meters = (value: string) => value.replace(',', '.').replace(/[^\d.]/g, '').slice(0, 6);
@@ -249,9 +250,7 @@ function MarinaRow({ marina, length }: { marina: MarinaSummary; length: string |
       {marina.cover ? (
         <Image source={{ uri: marina.cover }} style={styles.cover} />
       ) : (
-        <View style={[styles.cover, styles.placeholder]}>
-          <Ionicons name="boat-outline" size={26} color={colors.primary} />
-        </View>
+        <BrandCover compact style={styles.cover} />
       )}
       <View style={{ flex: 1, gap: 4 }}>
         <Text style={[typography.body, { fontWeight: '700' }]}>{marina.name}</Text>
@@ -301,7 +300,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   cover: { width: 76, height: 76, borderRadius: radius.md },
-  placeholder: { backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
   price: { color: colors.primary, fontWeight: '700', fontSize: 13 },
   myRequests: {
     flexDirection: 'row',

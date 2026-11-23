@@ -7,6 +7,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { getEvents } from '@/api/events';
 import { getFrontPage, type ArticleCard } from '@/api/news';
 import { colors, fonts, radius, spacing } from '@/theme';
+import { BrandCover } from '@/components/BrandCover';
 
 /** Una tarjeta de "Hoy en la vela": un campeonato en curso o una noticia. */
 export type FeedItem = {
@@ -21,6 +22,8 @@ export type FeedItem = {
   href: Href;
   /** Campeonato relacionado: con él se puede ver el lugar en el planeta. */
   eventSlug: string | null;
+  /** Clases de embarcación (para la portada cuando no hay foto). */
+  classes: string[];
 };
 
 const MAX_ITEMS = 8;
@@ -42,6 +45,7 @@ export function useTodayFeed() {
           subtitle: [event.venue || event.city, event.country_name].filter(Boolean).join(' · '),
           image: null,
           publishedAt: null,
+          classes: event.boat_classes,
           href: { pathname: '/events/[slug]', params: { slug: event.slug } },
           eventSlug: event.slug,
         }));
@@ -60,6 +64,7 @@ export function useTodayFeed() {
             subtitle: article.event?.name ?? article.country_name ?? '',
             image: article.cover_thumb ?? article.cover,
             publishedAt: article.published_at,
+            classes: article.boat_classes,
             href: { pathname: '/news/[slug]', params: { slug: article.slug } },
             eventSlug: article.event?.slug ?? null,
           });
@@ -154,7 +159,7 @@ export function NewsCard({ items }: { items: FeedItem[] }) {
           {item.image ? (
             <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
           ) : (
-            <Ionicons name={item.kind === 'live' ? 'trophy' : 'newspaper-outline'} size={28} color={colors.primary} />
+            <BrandCover compact style={StyleSheet.absoluteFill} />
           )}
         </View>
         <View style={styles.newsDivider} />
@@ -209,7 +214,12 @@ function FeedCard({ item, onLocate, layout }: { item: FeedItem; onLocate: ((slug
         {item.image ? (
           <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         ) : (
-          <Ionicons name={item.kind === 'live' ? 'trophy' : 'newspaper-outline'} size={column ? 30 : 24} color={colors.primary} />
+          <BrandCover
+            compact={!column}
+            title={item.kind === 'live' ? item.title : item.subtitle}
+            classes={item.classes}
+            style={StyleSheet.absoluteFill}
+          />
         )}
       </View>
       <View style={[styles.body, column && { padding: spacing.md }]}>

@@ -71,7 +71,7 @@ export default function ArticleScreen() {
   return (
     <Screen>
       <View style={{ gap: spacing.xs }}>
-        <Cover uri={article.cover} style={styles.cover} iconSize={48} />
+        <Cover uri={article.cover} style={styles.cover} article={article} />
         {article.cover_credit ? <Text style={[typography.caption, { textAlign: 'right' }]}>{article.cover_credit}</Text> : null}
       </View>
 

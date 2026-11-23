@@ -24,9 +24,12 @@ const es = {
   },
   services: {
     hubTitle: 'Servicios náuticos',
+    search: 'Buscar servicios náuticos',
+    clearSearch: 'Borrar búsqueda',
+    noResults: 'No encontramos marinas ni profesionales con esa búsqueda.',
     backToServices: 'Volver a Servicios',
     featured: '{{specialty}} en {{city}}',
-    categories: { repair: 'Rigging y reparación', berths: 'Marinas y amarres', crew: 'Tripulaciones', training: 'Formación en vela' },
+    categories: { repair: 'Rigging y reparación', berths: 'Marinas y amarres', crew: 'Buscar tripulación', training: 'Formación en vela' },
     title: 'Servicios y amarres',
     berths: 'Amarres y pernocte',
     professionals: 'Profesionales',

@@ -26,9 +26,12 @@ const en: Translations = {
   },
   services: {
     hubTitle: 'Sailing services',
+    search: 'Search marine services',
+    clearSearch: 'Clear search',
+    noResults: 'No marinas or professionals match that search.',
     backToServices: 'Back to Services',
     featured: '{{specialty}} in {{city}}',
-    categories: { repair: 'Rigging & repair', berths: 'Marinas & berths', crew: 'Crews', training: 'Sailing training' },
+    categories: { repair: 'Rigging & Repairs', berths: 'Marinas & Dockage', crew: 'Find Crew', training: 'Sailing Coaching' },
     title: 'Services & berths',
     berths: 'Berths & overnight',
     professionals: 'Professionals',
