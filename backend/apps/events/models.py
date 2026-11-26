@@ -18,6 +18,28 @@ class EventType(models.TextChoices):
     YOUTH = "youth", _("Juvenil")
 
 
+class RankingLevel(models.TextChoices):
+    """Importancia de la regata para el ranking: multiplica los puntos (los coeficientes se editan en el panel)."""
+
+    CLUB = "club", _("Club")
+    REGIONAL = "regional", _("Regional")
+    NATIONAL = "national", _("Nacional")
+    CONTINENTAL = "continental", _("Continental")
+    WORLD = "world", _("Mundial")
+
+
+class Division(models.TextChoices):
+    """División de una categoría, para los rankings por edad y género."""
+
+    OPEN = "open", _("Abierta")
+    WOMEN = "women", _("Femenina")
+    U15 = "u15", _("Sub-15")
+    U17 = "u17", _("Sub-17")
+    U19 = "u19", _("Sub-19")
+    U21 = "u21", _("Sub-21")
+    MASTER = "master", _("Master")
+
+
 class EventStatus(models.TextChoices):
     UPCOMING = "upcoming", _("Próxima")
     LIVE = "live", _("En curso")
@@ -85,6 +107,12 @@ class Event(Located):
         help_text=_("Marcalo si solo están cargados los ganadores o el podio, no la clasificación completa."),
     )
     is_published = models.BooleanField(_("publicada"), default=True)
+    ranking_level = models.CharField(
+        _("nivel para el ranking"), max_length=12, choices=RankingLevel.choices, default=RankingLevel.NATIONAL
+    )
+    counts_for_ranking = models.BooleanField(
+        _("suma para el ranking"), default=True, help_text=_("Desmarcalo para regatas de exhibición o con resultados incompletos.")
+    )
     # Texto normalizado (sin tildes, en minúsculas) para el buscador. Se arma solo al guardar.
     search_text = models.TextField(editable=False, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -180,6 +208,14 @@ class EventCategory(models.Model):
         related_name="event_categories",
     )
     notes = models.CharField(_("detalle"), max_length=200, blank=True)
+    fleet_size = models.PositiveSmallIntegerField(
+        _("barcos en la flota"), null=True, blank=True,
+        help_text=_("Cuántos barcos corrieron. Hace falta si solo cargaste el podio, para calcular los puntos del ranking."),
+    )
+    division = models.CharField(
+        _("división (ranking)"), max_length=10, choices=Division.choices, default=Division.OPEN,
+        help_text=_("Para los rankings por edad y género. La mayoría de las categorías son «Abierta»."),
+    )
     order = models.PositiveSmallIntegerField(_("orden"), default=0)
 
     class Meta:

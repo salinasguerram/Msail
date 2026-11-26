@@ -31,7 +31,7 @@ STATUS_LABELS = {
 class EventCategoryInline(TabularInline):
     model = EventCategory
     extra = 0
-    fields = ["order", "name", "boat_class", "notes"]
+    fields = ["order", "name", "boat_class", "division", "fleet_size", "notes"]
     autocomplete_fields = ["boat_class"]
 
 
@@ -182,6 +182,14 @@ class EventAdmin(ModelAdmin):
         ("Inscripción", {"fields": ("entry_url", "entry_deadline")}),
         ("Información", {"fields": ("cover", "description", "website")}),
         ("Resultados", {"fields": ("results_url", "results_partial")}),
+        (
+            "Ranking",
+            {
+                "fields": ("ranking_level", "counts_for_ranking"),
+                "description": "Los puntos de cada resultado se multiplican según el nivel de la regata "
+                "(los coeficientes están en Ranking → Configuración).",
+            },
+        ),
     )
 
     @display(description="Estado", label={"Próxima": "info", "En curso": "success", "Finalizada": "warning"})

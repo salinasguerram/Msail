@@ -23,6 +23,7 @@ ADMIN_MODELS = {
     "msailing": ["section", "video", "foundationsupport"],
     "premium": ["plan", "subscription"],
     "moderation": ["report", "block"],
+    "ranking": ["rankingconfig"],
     "notifications": ["notification"],
     "news": ["article"],
     "marinas": ["marina", "marinaphoto", "marinarate", "berthrequest"],

@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     "apps.premium",
     "apps.legal",
     "apps.moderation",
+    "apps.ranking",
 ]
 
 MIDDLEWARE = [
@@ -373,6 +374,7 @@ UNFOLD = {
                 "items": [
                     _admin_link("Regatas", "sailing", "admin:events_event_changelist"),
                     _admin_link("Tracks de carreras", "route", "admin:events_racetrack_changelist"),
+                    _admin_link("Configuración del ranking", "leaderboard", "admin:ranking_rankingconfig_changelist"),
                 ],
             },
             {
