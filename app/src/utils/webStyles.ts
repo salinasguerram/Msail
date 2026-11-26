@@ -23,6 +23,20 @@ export function applyWebStyles() {
   `;
   document.head.appendChild(style);
 
+  // Ícono de la pestaña con nombre propio (public/): así el navegador no se queda con uno viejo que tenía guardado.
+  for (const [rel, href, sizes] of [
+    ['icon', '/favicon-velas.png', '192x192'],
+    ['apple-touch-icon', '/apple-touch-icon-velas.png', '180x180'],
+  ]) {
+    document.head.querySelectorAll(`link[rel="${rel}"]`).forEach((link) => link.remove());
+    const link = document.createElement('link');
+    link.rel = rel;
+    link.type = 'image/png';
+    link.sizes.value = sizes;
+    link.href = href;
+    document.head.appendChild(link);
+  }
+
   // Celulares: sin zoom de la página (pellizco ni doble toque); el zoom es del planeta.
   let viewport = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
   if (!viewport) {
