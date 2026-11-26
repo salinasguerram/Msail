@@ -166,8 +166,6 @@ const en: Translations = {
   },
   ranking: {
     seasonLabel: 'Season',
-    olderSeason: 'Previous season',
-    newerSeason: 'Next season',
     demo: 'Includes sample regattas and sailors to show how the ranking works. They will be replaced by real results.',
     demoEvent: 'Sample regatta, made up to show the ranking: not a real competition.',
     title: 'MSAIL Ranking',

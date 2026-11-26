@@ -187,58 +187,45 @@ export default function RankingScreen() {
   );
 }
 
-/**
- * Temporada: flechas para ir a la anterior o la siguiente con resultados, y debajo todas las temporadas.
- * Se ve siempre, aunque haya una sola temporada.
- */
+/** «Temporada» y un selector con los años que tienen resultados, del más nuevo al más viejo. */
 function SeasonPicker({ season, seasons, onChange }: { season: number; seasons: number[]; onChange: (season: number) => void }) {
   const { t } = useTranslation();
-  // Las temporadas vienen de la más nueva a la más vieja.
-  const all = seasons.includes(season) ? seasons : [season, ...seasons].sort((a, b) => b - a);
-  const index = all.indexOf(season);
-  const older = all[index + 1];
-  const newer = all[index - 1];
+  const [open, setOpen] = useState(false);
+  const years = [...new Set(seasons.length ? seasons : [season])].sort((a, b) => b - a);
   return (
     <View style={styles.season}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('ranking.olderSeason')}
-        disabled={older === undefined}
-        onPress={() => older !== undefined && onChange(older)}
-        hitSlop={8}
-        style={[styles.seasonArrow, older === undefined && { opacity: 0.3 }]}
-      >
-        <Ionicons name="chevron-back" size={20} color={colors.text} />
-      </Pressable>
-      <View style={{ flex: 1, alignItems: 'center' }}>
-        <Text style={styles.seasonLabel}>{t('ranking.seasonLabel')}</Text>
-        <Text style={styles.seasonYear}>{season}</Text>
+      <Text style={styles.seasonLabel}>{t('ranking.seasonLabel')}</Text>
+      <View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${t('ranking.seasonLabel')} ${season}`}
+          accessibilityState={{ expanded: open }}
+          onPress={() => setOpen((v) => !v)}
+          style={({ pressed }) => [styles.yearButton, (open || pressed) && { borderColor: colors.primary }]}
+        >
+          <Text style={styles.yearText}>{season}</Text>
+          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
+        </Pressable>
+        {open ? (
+          <View style={styles.yearMenu} accessibilityRole="menu">
+            {years.map((year) => (
+              <Pressable
+                key={year}
+                accessibilityRole="menuitem"
+                accessibilityState={{ selected: year === season }}
+                onPress={() => {
+                  setOpen(false);
+                  if (year !== season) onChange(year);
+                }}
+                style={({ pressed }) => [styles.yearOption, year === season && styles.yearOptionActive, pressed && { opacity: 0.8 }]}
+              >
+                <Text style={[styles.yearOptionText, year === season && { color: '#fff' }]}>{year}</Text>
+                {year === season ? <Ionicons name="checkmark" size={16} color="#fff" /> : null}
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
       </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('ranking.newerSeason')}
-        disabled={newer === undefined}
-        onPress={() => newer !== undefined && onChange(newer)}
-        hitSlop={8}
-        style={[styles.seasonArrow, newer === undefined && { opacity: 0.3 }]}
-      >
-        <Ionicons name="chevron-forward" size={20} color={colors.text} />
-      </Pressable>
-      {all.length > 1 ? (
-        <View style={styles.seasonList}>
-          {all.map((year) => (
-            <Pressable
-              key={year}
-              accessibilityRole="button"
-              accessibilityState={{ selected: year === season }}
-              onPress={() => onChange(year)}
-              style={[styles.seasonChip, year === season && styles.pillActive]}
-            >
-              <Text style={[styles.pillText, year === season && { color: '#fff' }]}>{year}</Text>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -393,35 +380,47 @@ const styles = StyleSheet.create({
   },
   title: { color: colors.text, fontFamily: fonts.display, fontSize: 26 },
   filterRow: { gap: spacing.sm },
-  season: {
+  season: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, zIndex: 10 },
+  seasonLabel: { color: colors.text, fontFamily: fonts.heading, fontSize: 17 },
+  yearButton: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
     gap: spacing.sm,
-    padding: spacing.sm,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(245,197,66,0.35)',
-    backgroundColor: colors.surface,
-  },
-  seasonArrow: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceRaised,
-  },
-  seasonLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
-  seasonYear: { color: colors.text, fontFamily: fonts.display, fontSize: 24 },
-  seasonList: { flexBasis: '100%', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm },
-  seasonChip: {
+    minWidth: 120,
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
+  yearText: { color: colors.text, fontFamily: fonts.display, fontSize: 18 },
+  yearMenu: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    left: 0,
+    marginTop: 4,
+    padding: 4,
+    gap: 2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    zIndex: 20,
+    elevation: 6,
+  },
+  yearOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+  },
+  yearOptionActive: { backgroundColor: colors.primary },
+  yearOptionText: { color: colors.text, fontFamily: fonts.semibold, fontSize: 15 },
   pills: { gap: spacing.sm },
   pill: {
     paddingHorizontal: spacing.md,

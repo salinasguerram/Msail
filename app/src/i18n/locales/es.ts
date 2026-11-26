@@ -164,8 +164,6 @@ const es = {
   },
   ranking: {
     seasonLabel: 'Temporada',
-    olderSeason: 'Temporada anterior',
-    newerSeason: 'Temporada siguiente',
     demo: 'Incluye regatas y navegantes de ejemplo, para ver cómo funciona el ranking. Se reemplazan por los resultados reales.',
     demoEvent: 'Regata de ejemplo, inventada para mostrar el ranking: no es una competencia real.',
     title: 'Ranking MSAIL',
