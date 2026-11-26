@@ -1,5 +1,6 @@
 """
 Regatas de EJEMPLO con clasificaciones completas, para ver el ranking funcionando antes de tener resultados reales.
+Se crean para la temporada actual y la anterior (para ver el selector de temporadas y la historia de cada navegante).
 
 Uso:
   python manage.py seed_demo_ranking            crea (o vuelve a crear) las regatas de ejemplo
@@ -64,6 +65,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--remove", action="store_true", help="Borra todas las regatas de ejemplo.")
         parser.add_argument("--seed", type=int, default=11)
+        parser.add_argument("--seasons", type=int, default=2, help="Cuántas temporadas (la actual y las anteriores).")
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -102,11 +104,20 @@ class Command(BaseCommand):
                         "young": young,
                     }
                 )
-            for name, days_ago, level, fleet, divisions in regattas:
+            plan = [
+                (name, days_ago + 365 * years_back, level, fleet, divisions, years_back)
+                for years_back in range(max(1, options["seasons"]))
+                for name, days_ago, level, fleet, divisions in regattas
+            ]
+            for name, days_ago, level, fleet, divisions, years_back in plan:
                 end = today - timedelta(days=days_ago)
+                # Cada año los navegantes rinden un poco distinto (alguno mejora, otro empeora).
+                if years_back:
+                    for sailor in pool:
+                        sailor.setdefault("past_skill", sailor["skill"] + rng.gauss(0, 0.7))
                 event = Event.objects.create(
-                    name=name,
-                    slug=f"ejemplo-{slug}-{days_ago}",
+                    name=f"{name.replace(' (ejemplo)', '')} {end.year} (ejemplo)",
+                    slug=f"ejemplo-{slug}-{end.isoformat()}",
                     event_type="youth" if slug == "optimist" else "one_design",
                     start_date=end - timedelta(days=3),
                     end_date=end,
@@ -120,23 +131,28 @@ class Command(BaseCommand):
                 event.boat_classes.add(boat_class)
                 entrants = rng.sample(pool, k=min(fleet, len(pool)))
                 # El resultado depende del nivel de cada uno más un poco de azar.
-                entrants.sort(key=lambda s: -(s["skill"] + rng.gauss(0, 0.8)))
+                entrants.sort(key=lambda s: -((s.get("past_skill", s["skill"]) if years_back else s["skill"]) + rng.gauss(0, 0.8)))
                 for order, division in enumerate(divisions):
                     label = {"open": "General", "women": "Femenina", "u15": "Sub-15", "u21": "Sub-21"}[division]
                     category = EventCategory.objects.create(event=event, name=label, boat_class=boat_class, division=division, order=order)
                     group = [s for s in entrants if division == "open" or (division == "women" and s["women"]) or (division in ("u15", "u21") and s["young"])]
+                    rows = []
                     for position, sailor in enumerate(group, start=1):
                         # Algún que otro DNF, como en una regata de verdad.
                         dnf = division == "open" and rng.random() < 0.04
-                        EventResult.objects.create(
-                            event=event,
-                            category=category,
-                            position=None if dnf else position,
-                            status="dnf" if dnf else "finished",
-                            boat_name=f"{boat_class.name} {sailor['sail']}",
-                            sail_number=sailor["sail"],
-                            skipper=sailor["name"],
-                            country=sailor["country"],
+                        rows.append(
+                            EventResult(
+                                event=event,
+                                category=category,
+                                position=None if dnf else position,
+                                status="dnf" if dnf else "finished",
+                                boat_name=f"{boat_class.name} {sailor['sail']}",
+                                sail_number=sailor["sail"],
+                                skipper=sailor["name"],
+                                country=sailor["country"],
+                            )
                         )
+                    # De una (sin avisos a seguidores: nadie sigue estas regatas) y mucho más rápido en Supabase.
+                    EventResult.objects.bulk_create(rows)
                 created += 1
         self.stdout.write(self.style.SUCCESS(f"Regatas de ejemplo: {created} creadas ({removed} anteriores borradas)."))

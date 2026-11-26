@@ -91,35 +91,30 @@ export default function RankingScreen() {
         </View>
       </View>
 
+      {options && season !== null ? (
+        <SeasonPicker
+          season={season}
+          seasons={options.seasons}
+          onChange={(next) => {
+            setSeason(next);
+            setBoatClass(null);
+            setOpen(null);
+          }}
+        />
+      ) : null}
+
       {!options ? (
         <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />
       ) : !options.classes.length ? (
         <Card style={{ alignItems: 'center', gap: spacing.sm }}>
           <Ionicons name="podium-outline" size={32} color={colors.primary} />
           <Text style={[typography.body, { textAlign: 'center' }]}>{t('ranking.empty', { season: options.season })}</Text>
-          {options.seasons.length > 1 ? (
-            <Pills
-              items={options.seasons.map((s) => ({ key: String(s), label: String(s) }))}
-              selected={String(season)}
-              onSelect={(s) => setSeason(Number(s))}
-            />
-          ) : null}
         </Card>
       ) : (
         <>
           {options.has_demo ? <DemoNotice text={t('ranking.demo')} /> : null}
           {/* Filtros: temporada, tipo de barco, clase, división y país. */}
           <View style={{ gap: spacing.sm }}>
-            {options.seasons.length > 1 ? (
-              <Pills
-                items={options.seasons.map((s) => ({ key: String(s), label: t('ranking.season', { season: s }) }))}
-                selected={String(season)}
-                onSelect={(s) => {
-                  setSeason(Number(s));
-                  setBoatClass(null);
-                }}
-              />
-            ) : null}
             {categories.length > 1 ? (
               <Pills
                 items={[{ key: ALL, label: t('ranking.allTypes') }, ...categories.map((c) => ({ key: c, label: t(`ranking.categories.${c}`) }))]}
@@ -189,6 +184,62 @@ export default function RankingScreen() {
         </>
       )}
     </Screen>
+  );
+}
+
+/**
+ * Temporada: flechas para ir a la anterior o la siguiente con resultados, y debajo todas las temporadas.
+ * Se ve siempre, aunque haya una sola temporada.
+ */
+function SeasonPicker({ season, seasons, onChange }: { season: number; seasons: number[]; onChange: (season: number) => void }) {
+  const { t } = useTranslation();
+  // Las temporadas vienen de la más nueva a la más vieja.
+  const all = seasons.includes(season) ? seasons : [season, ...seasons].sort((a, b) => b - a);
+  const index = all.indexOf(season);
+  const older = all[index + 1];
+  const newer = all[index - 1];
+  return (
+    <View style={styles.season}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('ranking.olderSeason')}
+        disabled={older === undefined}
+        onPress={() => older !== undefined && onChange(older)}
+        hitSlop={8}
+        style={[styles.seasonArrow, older === undefined && { opacity: 0.3 }]}
+      >
+        <Ionicons name="chevron-back" size={20} color={colors.text} />
+      </Pressable>
+      <View style={{ flex: 1, alignItems: 'center' }}>
+        <Text style={styles.seasonLabel}>{t('ranking.seasonLabel')}</Text>
+        <Text style={styles.seasonYear}>{season}</Text>
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('ranking.newerSeason')}
+        disabled={newer === undefined}
+        onPress={() => newer !== undefined && onChange(newer)}
+        hitSlop={8}
+        style={[styles.seasonArrow, newer === undefined && { opacity: 0.3 }]}
+      >
+        <Ionicons name="chevron-forward" size={20} color={colors.text} />
+      </Pressable>
+      {all.length > 1 ? (
+        <View style={styles.seasonList}>
+          {all.map((year) => (
+            <Pressable
+              key={year}
+              accessibilityRole="button"
+              accessibilityState={{ selected: year === season }}
+              onPress={() => onChange(year)}
+              style={[styles.seasonChip, year === season && styles.pillActive]}
+            >
+              <Text style={[styles.pillText, year === season && { color: '#fff' }]}>{year}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -342,6 +393,35 @@ const styles = StyleSheet.create({
   },
   title: { color: colors.text, fontFamily: fonts.display, fontSize: 26 },
   filterRow: { gap: spacing.sm },
+  season: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(245,197,66,0.35)',
+    backgroundColor: colors.surface,
+  },
+  seasonArrow: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceRaised,
+  },
+  seasonLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
+  seasonYear: { color: colors.text, fontFamily: fonts.display, fontSize: 24 },
+  seasonList: { flexBasis: '100%', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm },
+  seasonChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   pills: { gap: spacing.sm },
   pill: {
     paddingHorizontal: spacing.md,

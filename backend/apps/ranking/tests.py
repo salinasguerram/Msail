@@ -115,9 +115,10 @@ class DemoRankingTests(APITestCase):
 
     def test_demo_regattas_fill_the_ranking_and_can_be_removed(self):
         call_command("seed_demo_ranking", stdout=StringIO())
-        self.assertEqual(Event.objects.filter(is_demo=True).count(), 15)
+        self.assertEqual(Event.objects.filter(is_demo=True).count(), 30)
         options = self.client.get("/api/ranking/options/").data
         self.assertTrue(options["has_demo"])
+        self.assertEqual(len(options["seasons"]), 2)  # la actual y la anterior
         self.assertEqual({c["slug"] for c in options["classes"]}, {"ilca-7", "ilca-6", "optimist", "j70"})
         ilca6 = next(c for c in options["classes"] if c["slug"] == "ilca-6")
         self.assertEqual(ilca6["divisions"], ["open", "women", "u21"])
@@ -128,7 +129,7 @@ class DemoRankingTests(APITestCase):
         self.assertEqual(self.client.get(f"/api/events/{Event.objects.filter(is_demo=True).first().slug}/").status_code, 200)
         # Volver a correrlo no duplica; --remove las borra todas.
         call_command("seed_demo_ranking", stdout=StringIO())
-        self.assertEqual(Event.objects.filter(is_demo=True).count(), 15)
+        self.assertEqual(Event.objects.filter(is_demo=True).count(), 30)
         call_command("seed_demo_ranking", "--remove", stdout=StringIO())
         self.assertFalse(Event.objects.filter(is_demo=True).exists())
         self.assertFalse(EventResult.objects.exists())
