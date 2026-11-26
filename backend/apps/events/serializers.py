@@ -42,6 +42,7 @@ class EventListSerializer(serializers.ModelSerializer):
             "boat_classes",
             "latitude",
             "longitude",
+            "is_demo",
         ]
 
 

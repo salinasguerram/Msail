@@ -100,3 +100,36 @@ class RankingTests(APITestCase):
         response = self.client.get("/admin/ranking/rankingconfig/", follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "oeficiente mundial")
+
+
+class DemoRankingTests(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_base", stdout=StringIO())
+        for slug, name, category in (("ilca-6", "ILCA 6", "dinghy"), ("optimist", "Optimist", "dinghy"), ("j70", "J/70", "keelboat")):
+            BoatClass.objects.get_or_create(slug=slug, defaults={"name": name, "category": category})
+        BoatClass.objects.get_or_create(slug="ilca-7", defaults={"name": "ILCA 7", "category": "dinghy"})
+
+    def setUp(self):
+        cache.clear()
+
+    def test_demo_regattas_fill_the_ranking_and_can_be_removed(self):
+        call_command("seed_demo_ranking", stdout=StringIO())
+        self.assertEqual(Event.objects.filter(is_demo=True).count(), 15)
+        options = self.client.get("/api/ranking/options/").data
+        self.assertTrue(options["has_demo"])
+        self.assertEqual({c["slug"] for c in options["classes"]}, {"ilca-7", "ilca-6", "optimist", "j70"})
+        ilca6 = next(c for c in options["classes"] if c["slug"] == "ilca-6")
+        self.assertEqual(ilca6["divisions"], ["open", "women", "u21"])
+        table = self.client.get("/api/ranking/", {"season": options["season"], "class": "ilca-7"}).data["entries"]
+        self.assertGreater(len(table), 20)
+        # No aparecen en el calendario ni en el mapa, pero su página sí se abre.
+        self.assertEqual(self.client.get("/api/events/").data["count"], 0)
+        self.assertEqual(self.client.get(f"/api/events/{Event.objects.filter(is_demo=True).first().slug}/").status_code, 200)
+        # Volver a correrlo no duplica; --remove las borra todas.
+        call_command("seed_demo_ranking", stdout=StringIO())
+        self.assertEqual(Event.objects.filter(is_demo=True).count(), 15)
+        call_command("seed_demo_ranking", "--remove", stdout=StringIO())
+        self.assertFalse(Event.objects.filter(is_demo=True).exists())
+        self.assertFalse(EventResult.objects.exists())
+        self.assertFalse(self.client.get("/api/ranking/options/").data["has_demo"])

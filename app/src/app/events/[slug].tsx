@@ -18,6 +18,7 @@ import { NewsRow } from '@/components/NewsCards';
 import { Screen } from '@/components/Screen';
 import { colors, radius, spacing, typography } from '@/theme';
 import { goBack } from '@/utils/navigation';
+import { DemoNotice } from '@/components/DemoNotice';
 
 const parseDate = (value: string) => new Date(`${value}T12:00:00`);
 
@@ -112,6 +113,7 @@ export default function EventScreen() {
 
   return (
     <Screen>
+      {event.is_demo ? <DemoNotice text={t('ranking.demoEvent')} /> : null}
       <Card style={styles.hero}>
         <View style={styles.badges}>
           <Text style={styles.typeTag}>{t(`calendar.types.${event.event_type}`)}</Text>

@@ -45,7 +45,7 @@ class EventListView(generics.ListAPIView):
         params = self.request.query_params
         today = timezone.localdate()
         queryset = (
-            Event.objects.filter(is_published=True)
+            Event.objects.filter(is_published=True, is_demo=False)
             .select_related("country", "region__country", "organizer_club")
             # media: la primera foto de la galería es la portada si no se cargó una.
             .prefetch_related("boat_classes", "media")

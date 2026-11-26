@@ -22,7 +22,7 @@ UPCOMING_DAYS = 60  # regatas que se muestran como sede: en curso o que empiezan
 def upcoming_events():
     today = timezone.localdate()
     return (
-        Event.objects.filter(is_published=True, latitude__isnull=False, longitude__isnull=False)
+        Event.objects.filter(is_published=True, is_demo=False, latitude__isnull=False, longitude__isnull=False)
         .annotate(ends_on=Coalesce("end_date", "start_date"))
         .filter(ends_on__gte=today, start_date__lte=today + timedelta(days=UPCOMING_DAYS))
         .select_related("country")

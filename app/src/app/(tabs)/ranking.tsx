@@ -11,6 +11,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { colors, fonts, radius, spacing, typography } from '@/theme';
+import { DemoNotice } from '@/components/DemoNotice';
 
 const MEDALS = ['#f5c542', '#c9d3e0', '#d9925b'];
 const ALL = 'all';
@@ -106,6 +107,7 @@ export default function RankingScreen() {
         </Card>
       ) : (
         <>
+          {options.has_demo ? <DemoNotice text={t('ranking.demo')} /> : null}
           {/* Filtros: temporada, tipo de barco, clase, división y país. */}
           <View style={{ gap: spacing.sm }}>
             {options.seasons.length > 1 ? (

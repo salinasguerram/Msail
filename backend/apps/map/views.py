@@ -25,7 +25,7 @@ def _coords(obj):
 def event_points():
     today = timezone.localdate()
     events = (
-        Event.objects.filter(is_published=True, latitude__isnull=False, longitude__isnull=False)
+        Event.objects.filter(is_published=True, is_demo=False, latitude__isnull=False, longitude__isnull=False)
         .annotate(ends_on=Coalesce("end_date", "start_date"))
         .filter(ends_on__gte=today)
         .select_related("country")

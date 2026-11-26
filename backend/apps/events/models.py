@@ -110,6 +110,12 @@ class Event(Located):
     ranking_level = models.CharField(
         _("nivel para el ranking"), max_length=12, choices=RankingLevel.choices, default=RankingLevel.NATIONAL
     )
+    is_demo = models.BooleanField(
+        _("datos de ejemplo"),
+        default=False,
+        help_text=_("Regata inventada para mostrar el ranking. No aparece en el calendario ni en el mapa; "
+                    "se borran todas con «manage.py seed_demo_ranking --remove»."),
+    )
     counts_for_ranking = models.BooleanField(
         _("suma para el ranking"), default=True, help_text=_("Desmarcalo para regatas de exhibición o con resultados incompletos.")
     )

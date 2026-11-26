@@ -11,6 +11,8 @@ export type RankingOptions = {
   /** Clases con resultados en la temporada, las más concurridas primero. */
   classes: { slug: string; name: string; category: BoatCategory; divisions: Division[]; competitors: number }[];
   countries: { iso: string; name: string }[];
+  /** Hay regatas de ejemplo en la temporada (se avisa arriba de la tabla). */
+  has_demo: boolean;
   rules: { best_of: number; min_fleet: number; levels: { key: RankingLevel; coefficient: number }[] };
 };
 

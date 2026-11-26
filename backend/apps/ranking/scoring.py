@@ -133,6 +133,7 @@ def score_rows(season, cutoff=None):
                     "level": event.ranking_level,
                     "coefficient": coefficient,
                     "points": round(base * coefficient, 1),
+                    "demo": event.is_demo,
                 }
             )
     cache.set(key, rows, CACHE_SECONDS)
@@ -216,6 +217,8 @@ def options(season):
             key=lambda c: (-c["competitors"], c["name"]),
         ),
         "countries": [{"iso": iso, "name": name} for iso, name in sorted(countries.items(), key=lambda x: x[1] or "")],
+        # Hay regatas de ejemplo (seed_demo_ranking): la app lo avisa.
+        "has_demo": any(row["demo"] for row in rows),
     }
 
 

@@ -29,6 +29,8 @@ export type EventSummary = {
   cover: string | null;
   latitude: string | null;
   longitude: string | null;
+  /** Regata inventada para mostrar el ranking (no sale en el calendario). */
+  is_demo?: boolean;
 };
 
 export type EventFilters = {

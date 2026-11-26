@@ -165,6 +165,8 @@ const en: Translations = {
     description: 'Rigging, deck gear and sailing clothes, shipped to your port.',
   },
   ranking: {
+    demo: 'Includes sample regattas and sailors to show how the ranking works. They will be replaced by real results.',
+    demoEvent: 'Sample regatta, made up to show the ranking: not a real competition.',
     title: 'MSAIL Ranking',
     subtitle: 'The best sailors of the season, by class and category.',
     description: 'The top sailors of the season.',

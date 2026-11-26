@@ -162,7 +162,7 @@ def next_year(value):
 @admin.register(Event)
 class EventAdmin(ModelAdmin):
     list_display = ["name", "start_date", "end_date", "status_label", "event_type", "country", "organizer_display", "is_published"]
-    list_filter = [StatusFilter, "event_type", "is_published", "country", "boat_classes"]
+    list_filter = [StatusFilter, "event_type", "is_published", "is_demo", "country", "boat_classes"]
     search_fields = ["name", "city", "venue", "organizer_name", "organizer_club__name"]
     prepopulated_fields = {"slug": ("name",)}
     autocomplete_fields = ["country", "region", "organizer_club", "professionals"]
@@ -185,7 +185,7 @@ class EventAdmin(ModelAdmin):
         (
             "Ranking",
             {
-                "fields": ("ranking_level", "counts_for_ranking"),
+                "fields": ("ranking_level", "counts_for_ranking", "is_demo"),
                 "description": "Los puntos de cada resultado se multiplican según el nivel de la regata "
                 "(los coeficientes están en Ranking → Configuración).",
             },
